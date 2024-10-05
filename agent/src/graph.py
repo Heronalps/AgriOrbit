@@ -1,34 +1,57 @@
-# Import necessary modules from LangGraph
-from langgraph import LangGraph, Node, Edge
+from langgraph.graph import StateGraph, END
+from langchain.chat_models import ChatOpenAI
+from langchain.tools import Tool
+from typing import TypedDict, Annotated
+import operator
 
-# Define a simple node that processes input
-class SimpleResponseNode(Node):
-    def process(self, input_text):
-        # Basic response logic
-        if "hello" in input_text.lower():
-            return "Hello! How can I help you today?"
-        elif "bye" in input_text.lower():
-            return "Goodbye! Have a great day!"
-        else:
-            return "I'm not sure how to respond to that."
+# Assume these functions exist to interact with Instabase
+from instabase_api import extract_document_data, process_workflow
 
-# Create a LangGraph instance
-graph = LangGraph()
+# Define the state
+class State(TypedDict):
+    messages: Annotated[list[str], operator.add]
+    document_data: dict
+    processed_result: dict
 
-# Add the node to the graph
-response_node = SimpleResponseNode()
-graph.add_node(response_node)
+# Create tools
+tools = [
+    Tool(name="extract_data", func=extract_document_data, description="Extract data from a document using Instabase"),
+    Tool(name="process_workflow", func=process_workflow, description="Run an Instabase workflow on extracted data")
+]
 
-# Define an edge that connects input to the response node
-edge = Edge(input_node=None, output_node=response_node)
-graph.add_edge(edge)
+# Create LLM
+llm = ChatOpenAI()
 
-# Function to interact with the agent
-def interact_with_agent(user_input):
-    response = graph.process(user_input)
-    print(response)
+# Define graph nodes
+def extract_document_node(state):
+    document_id = state["messages"][-1]  # Assume last message is document ID
+    data = extract_document_data(document_id)
+    return {"document_data": data}
 
-# Example interaction
-interact_with_agent("Hello")
-interact_with_agent("What's up?")
-interact_with_agent("Bye")
+def process_data_node(state):
+    result = process_workflow(state["document_data"])
+    return {"processed_result": result}
+
+def analyze_result_node(state):
+    prompt = f"Analyze this result: {state['processed_result']}"
+    response = llm.predict(prompt)
+    return {"messages": [response]}
+
+# Create graph
+workflow = StateGraph(State)
+
+# Add nodes
+workflow.add_node("extract_document", extract_document_node)
+workflow.add_node("process_data", process_data_node)
+workflow.add_node("analyze_result", analyze_result_node)
+
+# Define edges
+workflow.set_entry_point("extract_document")
+workflow.add_edge("extract_document", "process_data")
+workflow.add_edge("process_data", "analyze_result")
+workflow.add_edge("analyze_result", END)
+
+# Run the graph
+inputs = {"messages": ["DOC123"]}  # Assume DOC123 is a valid document ID in Instabase
+for output in workflow.stream(inputs):
+    print(output)
