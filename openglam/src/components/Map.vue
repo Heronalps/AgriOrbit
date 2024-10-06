@@ -32,7 +32,6 @@ function toggleSetLocationMode() {
   console.log('Set Location Mode:', isSetLocationMode.value);
 }
 
-
 function handleClick(event) {
   console.log('Click detected:', event);
 
@@ -65,6 +64,16 @@ function onMapLoaded(map) {
   mapInstance.value = map;
   console.log('Mapbox instance ready');
   renderTargetMarker(); // Initial render of target marker if exists
+  
+  // Ensure marker stays on top when new layers are added
+  map.on('sourcedata', bringMarkerToFront);
+}
+
+function createCustomMarkerElement() {
+  const el = document.createElement('div');
+  el.className = 'custom-marker';
+  el.innerHTML = '📍';
+  return el;
 }
 
 function renderTargetMarker() {
@@ -74,16 +83,27 @@ function renderTargetMarker() {
       if (targetMarker.value) {
         targetMarker.value.setLngLat([targetLocation.longitude, targetLocation.latitude]);
       } else {
-        targetMarker.value = new mapboxgl.Marker()
+        targetMarker.value = new mapboxgl.Marker({
+          element: createCustomMarkerElement(),
+          anchor: 'bottom'
+        })
           .setLngLat([targetLocation.longitude, targetLocation.latitude])
           .addTo(mapInstance.value);
       }
+      bringMarkerToFront();
     } else if (targetMarker.value) {
       targetMarker.value.remove();
       targetMarker.value = null;
     }
   } else {
     console.warn('Map instance not ready');
+  }
+}
+
+function bringMarkerToFront() {
+  if (targetMarker.value && targetMarker.value.getElement()) {
+    const markerElement = targetMarker.value.getElement();
+    markerElement.style.zIndex = '1000'; // High z-index to ensure it's on top
   }
 }
 
@@ -125,12 +145,22 @@ watch(() => locationStore.getTargetLocation(), (newLocation) => {
   </div>
 </template>
 
-<style scoped>
+<style>
 .map-container {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+}
+
+.custom-marker {
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Ensure Mapbox controls are below our marker */
+.mapboxgl-control-container {
+  z-index: 999 !important;
 }
 </style>
