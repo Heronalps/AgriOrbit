@@ -4,3 +4,4 @@
 *.egg-info/
 .env
 /openglam/node_modules
+/__pycache__/
