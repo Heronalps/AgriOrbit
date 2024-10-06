@@ -1,7 +1,7 @@
 <template>
     <div class="chat-widget">
         <div class="chat-header">
-            <h3>Chat with LLM</h3>
+            <h3>AgriOrbit Copilot</h3>
         </div>
         <div class="chat-body">
             <div class="message" v-for="(msg, index) in messages" :key="index"
@@ -45,6 +45,14 @@ async function sendSuggestion(suggestion: string) {
     await sendToChat(suggestion);
 }
 
+// Test messages
+
+const m1 = 'Give me irrigation recommendations for my location based on my regional water data'
+const m2 = 'Over the last two weeks, rainfall has been above typical averages for this time of year at your location. However, this season has seen less rainfall then expected. Evapotranspiration data shows that an abnormally low amount of water is being utilized by the crop in your field. Weather forecasts indicate continued increased in rainfall. Therefore, irrigation may be reduced to conserve water without negative impact to plant development or end yield'
+
+messages.value.push({ text: m1, isSent: true });
+messages.value.push({ text: m2, isSent: false });
+
 async function sendToChat(text: string) {
     // Add sent message to chat
     messages.value.push({ text: text, isSent: true });
@@ -69,17 +77,18 @@ async function sendToChat(text: string) {
 .chat-widget {
     border: 1px solid #ccc;
     border-radius: 8px;
-    width: 300px;
-    height: 500px;
+    width: 30vw;
+    height: 100vh;
     display: flex;
     flex-direction: column;
-    background: white;
+    /* background: rgba(33, 28, 28, 0.818); */
+    background: #231f1fc8;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     position: relative;
 }
 
 .chat-header {
-    background: #007bff;
+    background: #368535;
     color: white;
     padding: 10px;
     text-align: center;
@@ -109,13 +118,14 @@ async function sendToChat(text: string) {
 }
 
 .sent .message-bubble {
-    background: #007bff;
+    background: #215221;
     color: white;
     margin-left: auto;
 }
 
 .received .message-bubble {
-    background: #e5e5ea;
+    background: #4f4f58;
+    color: white;
 }
 
 .suggestions {
@@ -129,7 +139,8 @@ async function sendToChat(text: string) {
     flex: 0 0 auto;
     margin-right: 10px;
     padding: 5px 10px;
-    background: #f0f0f0;
+    background: #4fbd4d6e;
+    color: white;
     border: 1px solid #ccc;
     border-radius: 15px;
     white-space: nowrap;
@@ -137,7 +148,7 @@ async function sendToChat(text: string) {
 }
 
 .suggestions button:hover {
-    background: #e0e0e0;
+    background: #4fbd4dcd;
 }
 
 .chat-input {
@@ -156,13 +167,13 @@ async function sendToChat(text: string) {
     padding: 10px;
     margin-left: 10px;
     border: none;
-    background: #007bff;
+    background: #368535;
     color: white;
     border-radius: 4px;
     cursor: pointer;
 }
 
 .chat-input button:hover {
-    background: #0056b3;
+    background: #215221;
 }
 </style>
