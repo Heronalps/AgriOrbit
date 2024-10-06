@@ -24,24 +24,28 @@ function handleClick(info, event) {
 </script>
 
 <template>
-  <div class="w-screen overflow-hidden relative">
+  <div class="map-container relative w-screen h-screen overflow-hidden">
     <div class="absolute z-50 top-10 left-10">
       <p class="text-3xl font-bold text-center text-white">
         AgriOrbit
       </p>
     </div>
-    <div class="flex flex-col h-screen overflow-y-hidden h-screen">
-      <DeckGL @click="handleClick" class="overflow-hidden h-[70vh] md:h-screen flex-shrink">
-        <Mapbox :accessToken="mapboxAccessToken" :mapStyle="MAP_STYLES.DARK"></Mapbox>
-        <TileLayer :data="productStore.getTileLayerURL()"></TileLayer>
-      </DeckGL>
-      <ControlPanel class="right-0 bottom-10 md:absolute md:right-10"></ControlPanel>
-    </div>
+    <DeckGL @click="handleClick" class="w-full h-full">
+      <Mapbox :accessToken="mapboxAccessToken" :mapStyle="MAP_STYLES.DARK"></Mapbox>
+      <TileLayer :data="productStore.getTileLayerURL()"></TileLayer>
+    </DeckGL>
+    <ControlPanel class="absolute right-10 bottom-10"></ControlPanel>
     <Popup></Popup>
-    <ChatWidget class="absolute z-60 bottom-10 right-10" /> <!-- Add ChatWidget as an overlay -->
+    <!-- <ChatWidget class="absolute z-60 bottom-10 right-10" /> -->
   </div>
 </template>
 
 <style scoped>
-/* You can adjust the positioning of the ChatWidget here if necessary */
+.map-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
 </style>

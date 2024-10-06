@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 import os
@@ -9,10 +10,24 @@ import uvicorn
 load_dotenv()
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Add your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 class Message(BaseModel):
     text: str
+
+@app.options("/chat")
+async def options_chat():
+    return {"message": "OK"}
 
 @app.post("/chat")
 async def chat(message: Message):
@@ -47,4 +62,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
