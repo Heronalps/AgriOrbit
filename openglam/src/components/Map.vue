@@ -6,6 +6,7 @@ import DeckGL from './Map/DeckGL.vue';
 import Mapbox from './Map/Mapbox.vue';
 import Popup from './Map/Popup.vue';
 import TileLayer from './Map/TileLayer.vue';
+import ChatWidget from './Chat/ChatWidget.vue'; // Import the ChatWidget
 
 const mapboxAccessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 console.log("mapbox token", mapboxAccessToken);
@@ -23,9 +24,9 @@ function handleClick(info, event) {
 </script>
 
 <template>
-  <div class="w-screen overflow-hidden">
+  <div class="w-screen overflow-hidden relative">
     <div class="absolute z-50 top-10 left-10">
-      <p class="text-3xl font-bold text-center text-white" style="">
+      <p class="text-3xl font-bold text-center text-white">
         AgriOrbit
       </p>
     </div>
@@ -37,5 +38,10 @@ function handleClick(info, event) {
       <ControlPanel class="right-0 bottom-10 md:absolute md:right-10"></ControlPanel>
     </div>
     <Popup></Popup>
+    <ChatWidget class="absolute z-60 bottom-10 right-10" /> <!-- Add ChatWidget as an overlay -->
   </div>
 </template>
+
+<style scoped>
+/* You can adjust the positioning of the ChatWidget here if necessary */
+</style>
