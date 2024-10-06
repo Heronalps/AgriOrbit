@@ -1,7 +1,7 @@
 <template>
     <div class="chat-widget">
         <div class="chat-header">
-            <h3>AgriOrbit Copilot</h3>
+            <h3>Agribot</h3>
         </div>
         <div class="chat-body">
             <div class="message" v-for="(msg, index) in messages" :key="index"
@@ -81,13 +81,15 @@ async function sendToChat(text: string) {
     border: 1px solid #ccc;
     border-radius: 8px;
     width: 30vw;
-    height: 100vh;
+    height: 85vh;
     display: flex;
     flex-direction: column;
     /* background: rgba(33, 28, 28, 0.818); */
     background: #231f1fc8;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    position: relative;
+    position: absolute;
+    bottom: 35px;
+    left: 10px;
 }
 
 .chat-header {
