@@ -20,6 +20,15 @@ class InstabaseSearchTool:
         """
         pass
 
+    def commit(self, data): 
+        """ Implement Instabase database commit logic.
+        Args:
+            data (str): The data to be committed.
+        Returns:
+            str: The commit results.
+        """
+        pass
+
 class GLAMDataProcessorTool:
     
     def getEvapotranspiration(self, raw_data):

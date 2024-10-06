@@ -41,9 +41,9 @@ workflow.add_conditional_edges("request", route_agent,{"search": "search", "proc
 graph = workflow.compile()
 
 # Use the graph
-config = {"configurable": {"thread_id": "abc123"}}
 for chunk in graph.stream({
     "messages": [HumanMessage(content="Search for recent Evapotranspiration data")],
+    # "messages": [HumanMessage(content="Seae")],
     "current_agent": "search"
-}, config=config):
+}):
     print(chunk)
