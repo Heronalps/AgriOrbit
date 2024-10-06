@@ -48,11 +48,15 @@ async function sendSuggestion(suggestion: string) {
 //////// Test messages. /////// 
 //Comment out for real runs
 
-const m1 = 'Give me irrigation recommendations for my location based on my regional water data'
-const m2 = 'Over the last two weeks, rainfall has been above typical averages for this time of year at your location. However, this season has seen less rainfall then expected. Evapotranspiration data shows that an abnormally low amount of water is being utilized by the crop in your field. Weather forecasts indicate continued increased in rainfall. Therefore, irrigation may be reduced to conserve water without negative impact to plant development or end yield'
+// const m1 = 'Give me irrigation recommendations for my location based on my regional water data'
+// const m2 = 'Over the last two weeks, rainfall has been above typical averages for this time of year at your location. However, this season has seen less rainfall then expected. Evapotranspiration data shows that an abnormally low amount of water is being utilized by the crop in your field. Weather forecasts indicate continued increased in rainfall. Therefore, irrigation may be reduced to conserve water without negative impact to plant development or end yield'
+
+// messages.value.push({ text: m1, isSent: true });
+// messages.value.push({ text: m2, isSent: false });
+
+const m1 = 'Set yer sights on the farm, and let’s talk ‘bout them crops or how we’re keepin’ ‘em watered.'
 
 messages.value.push({ text: m1, isSent: true });
-messages.value.push({ text: m2, isSent: false });
 
 ////// End test messages /////////
 
