@@ -70,3 +70,6 @@ venv.bak/
 
 # VSCode
 .vscode/
+.env
+/openglam/node_modules
+/__pycache__/
