@@ -81,7 +81,7 @@ async function sendToChat(text: string) {
     border: 1px solid #ccc;
     border-radius: 8px;
     width: 30vw;
-    height: 85vh;
+    height: 88vh;
     display: flex;
     flex-direction: column;
     /* background: rgba(33, 28, 28, 0.818); */

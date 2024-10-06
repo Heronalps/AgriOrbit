@@ -8,6 +8,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 const availableDataStore = useAvailableDataStore()
 
 onMounted(async () => {
+  document.title = 'AgriOrbit'
   availableDataStore.loadAvailableProducts()
   availableDataStore.loadAvailableCropmasks()
 })
