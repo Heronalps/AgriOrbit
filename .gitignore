@@ -3,3 +3,4 @@
 /env/
 *.egg-info/
 .env
+/openglam/node_modules
