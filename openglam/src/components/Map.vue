@@ -9,7 +9,7 @@ import TileLayer from './Map/TileLayer.vue';
 import ChatWidget from './Chat/ChatWidget.vue'; // Import the ChatWidget
 
 const mapboxAccessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-console.log("mapbox token", mapboxAccessToken);
+// console.log("mapbox token", mapboxAccessToken);
 
 const productStore = useProductStore();
 
