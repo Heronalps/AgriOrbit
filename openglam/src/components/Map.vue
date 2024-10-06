@@ -39,7 +39,7 @@ function handleClick(event) {
   if (info && info.coordinate && Array.isArray(info.coordinate) && info.coordinate.length >= 2) {
     const [longitude, latitude] = info.coordinate;
     console.log('Valid click at:', { longitude, latitude });
-    
+
     if (isSetLocationMode.value) {
       locationStore.setTargetLocation({ longitude, latitude });
       console.log('Target location set:', { longitude, latitude });
@@ -64,7 +64,7 @@ function onMapLoaded(map) {
   mapInstance.value = map;
   console.log('Mapbox instance ready');
   renderTargetMarker(); // Initial render of target marker if exists
-  
+
   // Ensure marker stays on top when new layers are added
   map.on('sourcedata', bringMarkerToFront);
 }
@@ -84,8 +84,10 @@ function renderTargetMarker() {
         targetMarker.value.setLngLat([targetLocation.longitude, targetLocation.latitude]);
       } else {
         targetMarker.value = new mapboxgl.Marker({
-          element: createCustomMarkerElement(),
-          anchor: 'bottom'
+          // element: createCustomMarkerElement(),
+          anchor: 'bottom',
+          color: "#FF2400", // Blue color
+          scale: 2 // Twice the default size
         })
           .setLngLat([targetLocation.longitude, targetLocation.latitude])
           .addTo(mapInstance.value);
@@ -127,19 +129,11 @@ watch(() => locationStore.getTargetLocation(), (newLocation) => {
       </button>
     </div>
     <DeckGL @click="handleClick" class="w-full h-full">
-      <Mapbox 
-        :accessToken="mapboxAccessToken" 
-        :mapStyle="MAP_STYLES.DARK"
-        @map-loaded="onMapLoaded"
-      ></Mapbox>
-      <TileLayer 
-        v-if="productStore.getTileLayerURL()" 
-        :data="productStore.getTileLayerURL()"
-        :minZoom="0"
-        :maxZoom="19"
-      ></TileLayer>
+      <Mapbox :accessToken="mapboxAccessToken" :mapStyle="MAP_STYLES.DARK" @map-loaded="onMapLoaded"></Mapbox>
+      <TileLayer v-if="productStore.getTileLayerURL()" :data="productStore.getTileLayerURL()" :minZoom="0"
+        :maxZoom="19"></TileLayer>
     </DeckGL>
-    
+
     <ControlPanel class="absolute right-10 bottom-10"></ControlPanel>
     <Popup></Popup>
   </div>
