@@ -1,0 +1,1 @@
+export default 'https://api.glam2.app'
