@@ -71,5 +71,6 @@ venv.bak/
 # VSCode
 .vscode/
 .env
+*secrets.py
 /openglam/node_modules
 **/__pycache__/

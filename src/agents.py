@@ -5,29 +5,103 @@ from langgraph.prebuilt import create_react_agent
 from langchain.agents import Tool 
 from langchain.memory import ConversationBufferMemory
 
-import os
+import secrets
+import os, time, json, requests
+from requests import Response
+from typing import Dict, Text, Tuple, Any
 from dotenv import load_dotenv
 load_dotenv()
 
+
 # Define custom tools for Instabase search and GLAM data processing
 class InstabaseSearchTool:
-    def search(self, query):
-        """ Implement Instabase database search logic.
+    """
+
+    """
+    self.api_headers = {
+    'Authorization': f'Bearer {secrets.API_TOKEN}',
+    'IB-Context': f'{secrets.IB_CONTEXT}'
+    }
+    self.url = 'https://aihub.instabase.com/api/v2/queries'
+    
+    def query_chatbot(self, api_response, query: Text):
+        """ Implement Instabase knowledgebase query logic.
         Args:
+            api_response (str): The API response from GLAM.
             query (str): The search query.
         Returns:
-            str: The search results.
+            query_id (str): The query id.
         """
-        pass
+        print('Querying chatbot')
 
-    def commit(self, data): 
-        """ Implement Instabase database commit logic.
+        prompt_eng = f"Weather data: {api_response}\nFarmer's question: {query}"  ##TODO: engineer this better
+
+        payload = {
+            "query": prompt_eng,
+            "source_app": {
+                "type": "CHATBOT",
+                "id": secrets.CHATBOT_ID
+            },
+            "model": "multistep",
+            "include_source_info": True
+            }
+
+        response = requests.post(url=self.url, headers=self.api_headers, data=json.dumps(payload))
+        return response.json()['query_id']
+    
+    def run_query(self, api_response, query: Text):
+        # Query the chatbot
+        response = self.query_chatbot(api_response, query: Text)
+        query_id = None
+        if response.ok:
+            resp_data = response.json()
+            query_id = resp_data.get('query_id')
+            if not query_id:
+                print('Unable to query the chatbot.')
+
+            print(f'Response from query chatbot : {resp_data}')
+        else:
+            print(f'Unable to connect to the chatbot query API - {response}.')
+            print(f'Response status code: {response.status_code}')
+            print(f'Response content: {response.text}')
+
+    def get_query_status(query_id: Text) -> Tuple[Dict, Text]:
+        # API call to get response for query_id
+        print(f'Getting query request status for {query_id}')
+        while True:
+            response = requests.get(f'{url}/{query_id}', headers=self.api_headers)
+            if not response.ok:
+                return None, f'Error while getting the status for query request :  {response.status_code} - {response.text}'
+
+            response_json = response.json()
+            status = response_json.get('status')
+            if not status:
+                return None, f'Getting the status for query request : {response_json}'
+
+            # If status of query request is COMPLETE stop polling and return
+            if status in ['COMPLETE']:
+                return response_json, None
+
+            print('Query still processing, please wait!')
+
+            # If it is RUNNING, the script waits for 5 seconds before the next poll
+            time.sleep(5)
+
+    def get_answer(self, query_id: Text): 
+        """ Implement Instabase logic to get query response.
         Args:
-            data (str): The data to be committed.
+            query_id (str): The query id.
         Returns:
             str: The commit results.
         """
-        pass
+        # Get the status of query request
+        if query_id:
+            response_json, err = self.get_query_status(query_id=query_id)
+        if err:
+            print(f'Error occurred: {err}')
+        else:
+            print(f'Query request status : {response_json}')
+
 
 class GLAMDataProcessorTool:
     
