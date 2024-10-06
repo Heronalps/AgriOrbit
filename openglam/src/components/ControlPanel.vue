@@ -50,41 +50,41 @@ const dateFormat = (date) => {
 </script>
 
 <template>
-  <div class="max-w-lg bg-white rounded-sm shadow-dark-500 md:w-96 w-full h-auto" >
+  <div class="max-w-lg bg-[#231f1fc8] rounded-md shadow-dark-500 md:w-96 w-full h-auto" >
+  <!-- <div class="control-panel"> -->
     <div class="flex flex-col w-full h-full p-3 md:p-7 md:space-y-3 space-y-2">
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold">Product</p>
-        <SelectMenu
-          placeholder="Select Product"
-          :data="availableDataStore.getProducts"
-          key-by="product_id"
-          label-by="display_name"
-          @change="handleProductSelection"
-        ></SelectMenu>
+        <p class="text-xl md:text-2xl font-semibold text-white">Product</p>
+        <SelectMenu placeholder="Select Product" :data="availableDataStore.getProducts" key-by="product_id"
+          label-by="display_name" @change="handleProductSelection"></SelectMenu>
       </div>
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold">Date</p>
-        <Datepicker
-          v-model="selectedDate"
-          :enableTimePicker="false"
-          :allowedDates="productStore.getProductDates"
-          :altPosition="false"
-          @update:modelValue="handleDateSelection"
-        >
+        <p class="text-xl md:text-2xl font-semibold text-white">Date</p>
+        <Datepicker v-model="selectedDate" :enableTimePicker="false" :allowedDates="productStore.getProductDates"
+          :altPosition="false" @update:modelValue="handleDateSelection">
           <!-- productStore.getProductDates  :format="dateFormat"  handleDateSelection-->
         </Datepicker>
       </div>
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold">Cropmask</p>
-        <SelectMenu
-          v-model="selectedDate"
-          :data="availableDataStore.getCropmasks"
-          key-by="cropmask_id"
-          label-by="display_name"
-          placeholder="Select Cropmask"
-          @change="handleCropmaskSelection"
-        ></SelectMenu>
+        <p class="text-xl md:text-2xl font-semibold text-white">Cropmask</p>
+        <SelectMenu v-model="selectedDate" :data="availableDataStore.getCropmasks" key-by="cropmask_id"
+          label-by="display_name" placeholder="Select Cropmask" @change="handleCropmaskSelection"></SelectMenu>
       </div>
     </div>
   </div>
 </template>
+
+
+<!-- <style scoped>
+.control-panel {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 30vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(33, 28, 28, 0.818);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+</style> -->
