@@ -2,6 +2,7 @@
 import { ref, onMounted, watch, provide } from 'vue';
 import mapboxgl from 'mapbox-gl';
 import { useProductStore } from '@/stores/productStore';
+import { useLocationStore } from '@/stores/locationStore';
 import { MAP_STYLES } from '@/utils/defaultSettings';
 import ControlPanel from './ControlPanel.vue';
 import DeckGL from './Map/DeckGL.vue';
@@ -11,6 +12,7 @@ import TileLayer from './Map/TileLayer.vue';
 
 const mapboxAccessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 const productStore = useProductStore();
+const locationStore = useLocationStore();
 const isSetLocationMode = ref(false);
 const mapInstance = ref(null);
 const targetMarker = ref(null);
@@ -30,6 +32,7 @@ function toggleSetLocationMode() {
   console.log('Set Location Mode:', isSetLocationMode.value);
 }
 
+
 function handleClick(event) {
   console.log('Click detected:', event);
 
@@ -39,18 +42,16 @@ function handleClick(event) {
     console.log('Valid click at:', { longitude, latitude });
     
     if (isSetLocationMode.value) {
-      productStore.setTargetLocation({ longitude, latitude });
-      // console.log('Target location set:', { longitude, latitude });
-      console.log('Target location set:', productStore.getTargetLocation());
+      locationStore.setTargetLocation({ longitude, latitude });
+      console.log('Target location set:', { longitude, latitude });
       isSetLocationMode.value = false;
       renderTargetMarker();
     } else {
-      productStore.setClickedPoint({
+      productStore.clickedPoint = {
         value: null,
-        show: true,
-        longitude,
-        latitude
-      });
+        x: info.x,
+        y: info.y
+      };
       productStore.loadValueAtPoint(longitude, latitude);
       console.log('Clicked point updated:', productStore.clickedPoint);
     }
@@ -68,7 +69,7 @@ function onMapLoaded(map) {
 
 function renderTargetMarker() {
   if (mapInstance.value) {
-    const targetLocation = productStore.getTargetLocation();
+    const targetLocation = locationStore.getTargetLocation();
     if (targetLocation) {
       if (targetMarker.value) {
         targetMarker.value.setLngLat([targetLocation.longitude, targetLocation.latitude]);
@@ -87,11 +88,10 @@ function renderTargetMarker() {
 }
 
 // Watch for changes in target location and update the marker
-watch(() => productStore.getTargetLocation(), (newLocation) => {
+watch(() => locationStore.getTargetLocation(), (newLocation) => {
   console.log('Target location updated:', newLocation);
   renderTargetMarker();
 }, { deep: true });
-
 </script>
 
 <template>
