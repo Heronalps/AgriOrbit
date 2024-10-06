@@ -25,8 +25,8 @@ function handleClick(info, event) {
 <template>
   <div class="w-screen overflow-hidden">
     <div class="absolute z-50 top-10 left-10">
-      <p class="text-3xl font-bold text-center text-white" style="text-shadow: 2px 3px 0 #1db980">
-        OpenGLAM
+      <p class="text-3xl font-bold text-center text-white" style="">
+        AgriOrbit
       </p>
     </div>
     <div class="flex flex-col h-screen overflow-y-hidden h-screen">
