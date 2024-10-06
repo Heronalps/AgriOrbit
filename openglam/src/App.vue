@@ -3,6 +3,7 @@ import Map from '@/components/Map.vue'
 import ChatWidget from '@/components/Chat/ChatWidget.vue'
 import { useAvailableDataStore } from '@/stores/availableDataStore'
 import { onMounted } from 'vue'
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 const availableDataStore = useAvailableDataStore()
 

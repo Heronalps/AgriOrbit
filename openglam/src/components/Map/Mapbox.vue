@@ -1,22 +1,29 @@
 <script setup lang="ts">
 import { MAPBOX_SETTINGS } from '@/utils/defaultSettings'
 import mapboxgl from 'mapbox-gl'
-import { inject, onMounted, useAttrs, watch } from 'vue'
+import { inject, onMounted, useAttrs, watch, ref } from 'vue'
 
 const props = defineProps<{
   accessToken: string
   mapStyle?: string
 }>()
 
-let map: any = null
+const emit = defineEmits(['map-loaded'])
+
+const map = ref(null)
 const attrs = useAttrs()
 const viewState = inject('viewState')
+
 onMounted(() => {
   mapboxgl.accessToken = props.accessToken
-  map = new mapboxgl.Map({
+  map.value = new mapboxgl.Map({
     ...MAPBOX_SETTINGS,
     ...attrs,
     style: props.mapStyle,
+  })
+
+  map.value.on('load', () => {
+    emit('map-loaded', map.value)
   })
 })
 
@@ -29,12 +36,14 @@ watch(
 )
 
 function handleMapChange(viewState) {
-  map.jumpTo({
-    center: [viewState.longitude, viewState.latitude],
-    zoom: viewState.zoom,
-    bearing: viewState.bearing,
-    pitch: viewState.pitch,
-  })
+  if (map.value) {
+    map.value.jumpTo({
+      center: [viewState.longitude, viewState.latitude],
+      zoom: viewState.zoom,
+      bearing: viewState.bearing,
+      pitch: viewState.pitch,
+    })
+  }
 }
 </script>
 

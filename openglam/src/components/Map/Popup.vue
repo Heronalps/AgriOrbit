@@ -15,22 +15,10 @@ const value = computed(() =>
 
 <template>
   <div
-    v-if="productStore.clickedPoint.show && productStore.clickedPoint.value"
+    v-if="productStore.clickedPoint.show && !isNaN(productStore.clickedPoint.value)"
     :class="productStore.clickedPoint.show ? 'absolute' : 'hidden'"
-    :style="{
-      left: absX,
-      top: absY,
-    }"
-    class="
-      font-bold
-      text-lg
-      p-2
-      rounded-xl
-      flex flex-row
-      space-x-3
-      items-center
-    "
-    bg="white"
+    :style="{ left: absX, top: absY }"
+    class="font-bold text-lg p-2 rounded-xl flex flex-row space-x-3 items-center bg-white"
   >
     <p>{{ value }}</p>
     <div

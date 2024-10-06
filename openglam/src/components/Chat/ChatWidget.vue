@@ -29,7 +29,7 @@ import { ref } from 'vue';
 const messages = ref<{ text: string; isSent: boolean }[]>([]);
 const message = ref('');
 const suggestions = ref([
-    "What crops are grown here?",
+    "Make recommendations for irrigating my crops",
     "Show me rainfall data",
     "Explain NDVI values"
 ]);

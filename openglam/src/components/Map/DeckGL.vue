@@ -31,11 +31,18 @@ function handleViewChange(newState: viewStateType): void {
   viewState.zoom = newState.zoom
 }
 
+// function updateLayer(newLayer) {
+//   if (!deck) {
+//     return
+//   }
+//   deck.setProps({ layers: [newLayer] })
+// }
+
 function updateLayer(newLayer) {
-  if (!deck) {
-    return
+  // Update the layer in your deck instance
+  if (deck) {
+    deck.setProps({ layers: [newLayer] })
   }
-  deck.setProps({ layers: [newLayer] })
 }
 
 provide('viewState', viewState)
