@@ -72,4 +72,4 @@ venv.bak/
 .vscode/
 .env
 /openglam/node_modules
-/__pycache__/
+**/__pycache__/
