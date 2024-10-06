@@ -1,11 +1,7 @@
 <template>
     <div class="chat-widget">
         <div class="chat-header">
-<<<<<<< HEAD
-            <h3>Agribot</h3>
-=======
             <h2>AgriBot</h2>
->>>>>>> da1d0af (mz - change the pos and size of the AgriBot)
         </div>
         <div class="chat-body">
             <div class="message" v-for="(msg, index) in messages" :key="index"

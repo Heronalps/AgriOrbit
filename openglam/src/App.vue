@@ -10,6 +10,7 @@ const availableDataStore = useAvailableDataStore()
 onMounted(async () => {
   availableDataStore.loadAvailableProducts()
   availableDataStore.loadAvailableCropmasks()
+  document.title = 'AgriOrbit'
 })
 </script>
 
