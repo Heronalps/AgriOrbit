@@ -16,6 +16,6 @@ npm install
 
 npm run dev
 
-# ???
+# result
 
 view the app on port 3000
