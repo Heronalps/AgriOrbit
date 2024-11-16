@@ -1,3 +1,5 @@
+# prepare the environment
+
 poetry install
 
 poetry shell
@@ -13,3 +15,7 @@ cd client
 npm install
 
 npm run dev
+
+# ???
+
+view the app on port 3000
