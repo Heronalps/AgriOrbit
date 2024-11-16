@@ -5,9 +5,11 @@ import httpx
 import os
 from dotenv import load_dotenv
 import uvicorn
+from pathlib import Path
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file in config folder
+env_path = Path(__file__).parents[1] / 'config' / '.env'
+load_dotenv(dotenv_path=env_path)
 
 app = FastAPI()
 
@@ -34,7 +36,6 @@ async def chat(message: Message):
     if not openai_api_key:
         raise HTTPException(status_code=500, detail="OpenAI API key is not set.")
 
-    # Prepare the OpenAI API request
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -44,11 +45,11 @@ async def chat(message: Message):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "gpt-3.5-turbo",  # or the model you're using
+                    "model": "gpt-3.5-turbo",
                     "messages": [{"role": "user", "content": message.text}],
                 },
             )
-            response.raise_for_status()  # Raise an error for bad responses
+            response.raise_for_status()
 
         openai_response = response.json()
         reply_text = openai_response['choices'][0]['message']['content']
@@ -58,7 +59,7 @@ async def chat(message: Message):
 
 def main():
     """Run the FastAPI app."""
-    uvicorn.run("main:app", host="127.0.0.1", port=8157, reload=True)
+    uvicorn.run("api.main:app", host="127.0.0.1", port=8157, reload=True)
 
 if __name__ == "__main__":
     main()
