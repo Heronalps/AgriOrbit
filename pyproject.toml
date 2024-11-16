@@ -1,36 +1,53 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "AgriOrbit"
+[tool.poetry]
+name = "ag-advisor-map"
 version = "0.1.0"
-description = "AgriOrbit's AI agent using LangGraph"
+description = "Agricultural advice application"
 authors = [
-    { name = "Michael", email = "heronalps@gmail.com" },
-    { name = "Brenan", email = "lundquist.Brenan@gmail.com" },
-    { name = "Nathaniel", email = "thenathanielwatkins@gmail.com" },
-    { name = "Eric", email = "ericssimpson2021@gmail.com" },
-    { name = "Dawson", email = "dawson.whipple@gmail.com" },
-    { name = "Logan", email = "loganbugenig01@gmail.com" },
+    "Michael <heronalps@gmail.com>",
+    "Brenan <lundquist.Brenan@gmail.com>",
+    "Nathaniel <thenathanielwatkins@gmail.com>",
+    "Eric <ericssimpson2021@gmail.com>",
+    "Dawson <dawson.whipple@gmail.com>",
+    "Logan <loganbugenig01@gmail.com>"
 ]
-license = { text = "MIT" }
+license = "MIT"
 readme = "README.md"
-keywords = ["AI", "LangGraph", "agent"]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-dependencies = [
-    "langchain-community>=0.3.1",
-    "langchain-openai>=0.2.2",
-    "langchain>=0.3.2",
-    "langgraph-cli>=0.1.52",
-    "langgraph>=0.2.34",
-    "openai>=1.51.0",
-]
+package-mode = false
 
-[project.urls]
-"Homepage" = "https://agriorbit.co"
-"Repository" = "https://github.com/Heronalps/AgriOrbit"
+[tool.poetry.dependencies]
+python = ">=3.9,<3.13"
+fastapi = "*"
+uvicorn = "*"
+httpx = "*"
+python-dotenv = "*"
+pydantic-settings = "*"
+langchain-community = "*"
+langchain-openai = "*"
+langchain = "*"
+langgraph-cli = "*"
+langgraph = "*"
+openai = "*"
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+flake8 = "*"
+pytest = "*"
+pytest-asyncio = "*"
+isort = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3

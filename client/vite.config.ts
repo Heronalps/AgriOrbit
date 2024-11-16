@@ -11,4 +11,5 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  envDir: '../config', // Point to the config directory at root level
 })

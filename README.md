@@ -1,11 +1,15 @@
-# AgriOrbit
+poetry install
 
-## run instructions
+poetry shell
 
-simplechatendpoint:
-- pip install dependencies
-- run `python simplechatendpoint.py`
+# run the chatbot
 
-frontend
-- npm install
-- npm run dev
+python -m api.main
+
+# start the frontend
+
+cd client
+
+npm install
+
+npm run dev
