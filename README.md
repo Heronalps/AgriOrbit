@@ -8,7 +8,7 @@ python -m api.main
 
 # start the frontend
 
-cd openglam
+cd client
 
 npm install
 
