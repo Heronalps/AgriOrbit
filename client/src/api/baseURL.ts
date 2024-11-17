@@ -1,1 +1,1 @@
-export default 'https://api.glam2.app'
+export default 'https://98e2zjiicz.us-west-2.awsapprunner.com'

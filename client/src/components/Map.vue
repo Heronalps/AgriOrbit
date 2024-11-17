@@ -16,6 +16,7 @@ const locationStore = useLocationStore();
 const isSetLocationMode = ref(false);
 const mapInstance = ref(null);
 const targetMarker = ref(null);
+const showLocationHelp = ref(false);
 
 // Provide viewState
 const viewState = ref({
@@ -29,6 +30,12 @@ provide('viewState', viewState);
 
 function toggleSetLocationMode() {
   isSetLocationMode.value = !isSetLocationMode.value;
+  if (isSetLocationMode.value) {
+    showLocationHelp.value = true;
+    setTimeout(() => {
+      showLocationHelp.value = false;
+    }, 5000);
+  }
   console.log('Set Location Mode:', isSetLocationMode.value);
 }
 
@@ -45,6 +52,11 @@ function handleClick(event) {
       console.log('Target location set:', { longitude, latitude });
       isSetLocationMode.value = false;
       renderTargetMarker();
+      
+      // Emit an event that can be captured globally
+      window.dispatchEvent(new CustomEvent('location-selected', { 
+        detail: { longitude, latitude } 
+      }));
     } else {
       productStore.clickedPoint = {
         value: null,
@@ -128,6 +140,14 @@ watch(() => locationStore.getTargetLocation(), (newLocation) => {
         {{ isSetLocationMode ? 'Cancel' : 'Set Location' }}
       </button>
     </div>
+    
+    <!-- Location help overlay -->
+    <div v-if="showLocationHelp" class="location-help-overlay">
+      <div class="location-help-content">
+        <p><strong>Click on the map</strong> to set your farm location</p>
+      </div>
+    </div>
+    
     <DeckGL @click="handleClick" class="w-full h-full">
       <Mapbox :accessToken="mapboxAccessToken" :mapStyle="MAP_STYLES.DARK" @map-loaded="onMapLoaded"></Mapbox>
       <TileLayer v-if="productStore.getTileLayerURL()" :data="productStore.getTileLayerURL()" :minZoom="0"
@@ -156,5 +176,31 @@ watch(() => locationStore.getTargetLocation(), (newLocation) => {
 /* Ensure Mapbox controls are below our marker */
 .mapboxgl-control-container {
   z-index: 999 !important;
+}
+
+.location-help-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  animation: fadeInOut 5s forwards;
+}
+
+.location-help-content {
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 8px;
+  font-size: 18px;
+  text-align: center;
+  border: 1px solid #368535;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
 }
 </style>
