@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file in config folder
-env_path = Path(__file__).parents[1] / 'config' / '.env'
+env_path = Path(__file__).parents[2] / 'config' / '.env'
 load_dotenv(dotenv_path=env_path)
 logger.info(f"Loaded environment from {env_path}")
 
@@ -115,7 +115,7 @@ async def chat(message: Message):
 def main():
     """Run the FastAPI app."""
     logger.info("Starting API server")
-    uvicorn.run("api.main:app", host="127.0.0.1", port=8157, reload=True)
+    uvicorn.run("backend.app.main:app", host="127.0.0.1", port=8157, reload=True)
 
 if __name__ == "__main__":
     main()

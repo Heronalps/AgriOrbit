@@ -28,15 +28,18 @@ const viewState = ref({
 });
 provide('viewState', viewState);
 
-function toggleSetLocationMode() {
-  isSetLocationMode.value = !isSetLocationMode.value;
-  if (isSetLocationMode.value) {
-    showLocationHelp.value = true;
-    setTimeout(() => {
-      showLocationHelp.value = false;
-    }, 5000);
-  }
-  console.log('Set Location Mode:', isSetLocationMode.value);
+// Register event listener for location selection mode activation
+onMounted(() => {
+  window.addEventListener('activate-location-selection', activateLocationSelection);
+});
+
+function activateLocationSelection() {
+  isSetLocationMode.value = true;
+  showLocationHelp.value = true;
+  setTimeout(() => {
+    showLocationHelp.value = false;
+  }, 5000);
+  console.log('Set Location Mode Activated:', isSetLocationMode.value);
 }
 
 function handleClick(event) {
@@ -98,7 +101,7 @@ function renderTargetMarker() {
         targetMarker.value = new mapboxgl.Marker({
           // element: createCustomMarkerElement(),
           anchor: 'bottom',
-          color: "#FF2400", // Blue color
+          color: "#FF2400", // Red color
           scale: 2 // Twice the default size
         })
           .setLngLat([targetLocation.longitude, targetLocation.latitude])
@@ -134,11 +137,6 @@ watch(() => locationStore.getTargetLocation(), (newLocation) => {
       <p class="text-3xl font-bold text-center text-white">
         AgriOrbit
       </p>
-    </div>
-    <div class="absolute z-50 top-10 right-10">
-      <button @click="toggleSetLocationMode" class="bg-[#368535] hover:bg-[#215221] text-white px-4 py-2 rounded">
-        {{ isSetLocationMode ? 'Cancel' : 'Set Location' }}
-      </button>
     </div>
     
     <!-- Location help overlay -->

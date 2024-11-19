@@ -9,13 +9,9 @@
             <div class="welcome-message">
                 <p>Welcome to AgriBot! To get the most personalized assistance:</p>
                 <div class="action-options">
-                    <button @click="promptMapSelection" class="action-button">
+                    <button @click="activateLocationSelection" class="action-button">
                         <span class="icon">📍</span>
                         Select Farm Location
-                    </button>
-                    <button @click="promptDataUpload" class="action-button">
-                        <span class="icon">📊</span>
-                        Upload Farm Data
                     </button>
                 </div>
                 <p class="or-divider">—— OR ——</p>
@@ -68,6 +64,7 @@ const message = ref('');
 const farmDataMode = ref(false);
 const inputDisabled = ref(false);
 const contextType = ref('general');
+const isLocationSelectionActive = ref(false);
 
 // Suggestions based on context
 const generalSuggestions = [
@@ -106,24 +103,30 @@ onMounted(() => {
         });
     } else {
         messages.value.push({
-            text: "Hello! I'm AgriBot. To get personalized farming advice, please select your farm location on the map or upload your farm data.",
+            text: "Hello! I'm AgriBot. To get personalized farming advice, please select your farm location on the map.",
             isSent: false
         });
     }
+
+    // Listen for location selection events
+    window.addEventListener('location-selected', handleLocationSelected);
 });
 
-function promptMapSelection() {
+function activateLocationSelection() {
+    isLocationSelectionActive.value = true;
     messages.value.push({
-        text: "Please use the 'Set Location' button in the top-right corner of the map to select your farm location.",
+        text: "Please click on the map to select your farm location.",
         isSent: false
     });
+
+    // Dispatch event to notify map component that location selection is active
+    window.dispatchEvent(new CustomEvent('activate-location-selection'));
 }
 
-function promptDataUpload() {
-    messages.value.push({
-        text: "To upload farm data, please use the control panel on the right side of the screen.",
-        isSent: false
-    });
+function handleLocationSelected(event) {
+    if (isLocationSelectionActive.value) {
+        isLocationSelectionActive.value = false;
+    }
 }
 
 function startGeneralChat() {

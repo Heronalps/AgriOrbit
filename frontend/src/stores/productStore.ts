@@ -8,6 +8,7 @@ export interface selectedProductType {
   product_id?: string;
   cropmask_id?: string;
   date?: string;
+  previousProductId?: string; // Track product changes
   [key: string]: any;
 }
 
@@ -64,6 +65,14 @@ export const useProductStore = defineStore('productStore', {
     isProductSelected(state): boolean {
       return !!state.selectedProduct.product_id;
     },
+    getMostRecentDate(state): string | undefined {
+      if (!state.productEntries.results || state.productEntries.results.length === 0) {
+        return undefined;
+      }
+      // Get the last date in the array, which should be the most recent
+      const dates = this.getProductDates;
+      return dates.length > 0 ? dates[dates.length - 1] : undefined;
+    },
   },
 
   actions: {
@@ -83,11 +92,17 @@ export const useProductStore = defineStore('productStore', {
         const data = await getDatasetEntries(this.selectedProduct);
         this.productEntries = data || { results: [] };
         
-        // Set the most recent date if available and no date is currently selected
-        if (this.getProductDates.length > 0 && !this.selectedProduct.date) {
-          console.log('Setting default date to most recent:', this.getProductDates.at(-1));
-          this.selectedProduct.date = this.getProductDates.at(-1);
+        const productChanged = this.selectedProduct.previousProductId !== this.selectedProduct.product_id;
+        
+        // Always set to the most recent date when product changes or no date is selected
+        if (this.getProductDates.length > 0 && (productChanged || !this.selectedProduct.date)) {
+          const mostRecentDate = this.getMostRecentDate;
+          console.log('Setting date to most recent:', mostRecentDate);
+          this.selectedProduct.date = mostRecentDate;
         }
+        
+        // Update the previous product ID to track changes
+        this.selectedProduct.previousProductId = this.selectedProduct.product_id;
       } catch (error) {
         console.error('Error in loadProductEntries:', error);
         this.error = 'Failed to load product entries';
