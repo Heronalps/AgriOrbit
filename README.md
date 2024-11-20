@@ -4,13 +4,13 @@ poetry install
 
 poetry shell
 
-# run the chatbot
+# run the backend api
 
-python -m api.main
+python -m backend.app.main
 
 # start the frontend
 
-cd client
+cd frontend
 
 npm install
 

@@ -72,7 +72,7 @@ venv.bak/
 .vscode/
 .env
 *secrets.py
-/openglam/node_modules
+/frontend/node_modules/
 **/__pycache__/
 
 node_modules
