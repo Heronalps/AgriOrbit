@@ -25,7 +25,8 @@
         <div class="chat-body" :class="{'limited-mode': !farmDataMode}">
             <div class="message" v-for="(msg, index) in messages" :key="index"
                 :class="{ 'sent': msg.isSent, 'received': !msg.isSent }">
-                <div class="message-bubble">{{ msg.text }}</div>
+                <div class="message-bubble" v-if="msg.isSent">{{ msg.text }}</div>
+                <div class="message-bubble" v-else v-html="formatMessage(msg.text)"></div>
             </div>
         </div>
 
@@ -56,15 +57,36 @@
 import { ref, inject, onMounted, computed, watch } from 'vue';
 import { useLocationStore } from '@/stores/locationStore';
 import { useProductStore } from '@/stores/productStore';
+import { marked } from 'marked';
 
 const locationStore = useLocationStore();
 const productStore = useProductStore();
-const messages = ref<{ text: string; isSent: boolean, isLoading?: boolean }[]>([]);
+const messages = ref<{ text: string; isSent: boolean, isLoading?: boolean, isError?: boolean, model?: string }[]>([]);
 const message = ref('');
 const farmDataMode = ref(false);
 const inputDisabled = ref(false);
 const contextType = ref('general');
 const isLocationSelectionActive = ref(false);
+const lastProductId = ref(''); // Track the last product ID to prevent duplicates
+
+// Configure marked for safe HTML
+marked.setOptions({
+  breaks: true,  // Add line breaks
+  gfm: true,     // Use GitHub Flavored Markdown
+  sanitize: false // Don't sanitize HTML (Vue handles this)
+});
+
+// Function to format message text with markdown
+function formatMessage(text) {
+  if (!text) return '';
+  // Process text with marked to convert markdown to HTML
+  try {
+    return marked(text);
+  } catch (error) {
+    console.error('Error formatting message:', error);
+    return text;
+  }
+}
 
 // Suggestions based on context
 const generalSuggestions = [
@@ -110,6 +132,11 @@ onMounted(() => {
 
     // Listen for location selection events
     window.addEventListener('location-selected', handleLocationSelected);
+    
+    // Set initial product ID if there is one
+    if (productStore.selectedProduct && productStore.selectedProduct.product_id) {
+        lastProductId.value = productStore.selectedProduct.product_id;
+    }
 });
 
 function activateLocationSelection() {
@@ -163,14 +190,21 @@ watch(() => locationStore.getTargetLocation(), (newLocation) => {
     }
 }, { deep: true });
 
-// Watch for product changes
+// Watch for product changes with debouncing to prevent duplicate messages
 watch(() => productStore.selectedProduct, (newProduct) => {
-    if (newProduct && Object.keys(newProduct).length > 0) {
-        contextType.value = 'data_loaded';
-        messages.value.push({
-            text: `I see you're viewing ${newProduct.name} data. Would you like me to analyze this for your farm?`,
-            isSent: false
-        });
+    if (newProduct && Object.keys(newProduct).length > 0 && newProduct.product_id) {
+        // Only add message if this is a different product than last time
+        if (lastProductId.value !== newProduct.product_id) {
+            contextType.value = 'data_loaded';
+            const productName = newProduct.display_name || newProduct.product_id || 'selected';
+            messages.value.push({
+                text: `I see you're viewing ${productName} data. Would you like me to analyze this for your farm?`,
+                isSent: false
+            });
+            
+            // Update the last product ID
+            lastProductId.value = newProduct.product_id;
+        }
     }
 }, { deep: true });
 
@@ -178,79 +212,299 @@ async function sendToChat(text: string) {
     // Add sent message to chat
     messages.value.push({ text: text, isSent: true });
 
-    // Create context from your actual store structure
+    // Create a more structured and optimized agricultural context
+    // This helps ensure we stay within token limits by being concise but informative
     let context = "";
     
-    // Add selected product info if available
+    // Add selected product info with relevant agricultural context
     if (productStore.selectedProduct && Object.keys(productStore.selectedProduct).length > 0) {
-        context += `(Current product: ${JSON.stringify(productStore.selectedProduct)}) `;
+        const product = productStore.selectedProduct;
+        const productName = product.display_name || product.product_id || 'selected data';
+        
+        // Keep product context brief but informative
+        context += `(Dataset: ${productName}`;
+        
+        if (product.date) {
+            context += `, ${product.date}`;
+        }
+        
+        // Only include essential metadata that helps with agricultural interpretation
+        if (product.meta) {
+            const relevantKeys = ['type', 'source', 'crop_type', 'field_size'];
+            const metaData = {};
+            relevantKeys.forEach(key => {
+                if (product.meta[key]) metaData[key] = product.meta[key];
+            });
+            
+            if (Object.keys(metaData).length > 0) {
+                context += `, ${JSON.stringify(metaData)}`;
+            }
+        }
+        
+        context += ") ";
     }
     
-    // Add clicked point value if available
-    if (productStore.clickedPoint && productStore.clickedPoint.value) {
-        context += `(Value at clicked point: ${productStore.clickedPoint.value}) `;
+    // Add clicked point value with agricultural context - this is higher priority info
+    if (productStore.clickedPoint && productStore.clickedPoint.value !== null) {
+        const value = productStore.clickedPoint.value;
+        const x = productStore.clickedPoint.x;
+        const y = productStore.clickedPoint.y;
+        
+        context += `(Field measurement at [${x.toFixed(4)}, ${y.toFixed(4)}]: ${value}. `;
+        
+        // Provide focused agricultural context for measurement values
+        if (productStore.selectedProduct?.product_id) {
+            const productId = productStore.selectedProduct.product_id.toLowerCase();
+            
+            if (productId.includes('ndvi')) {
+                // Simplified NDVI explanation to reduce tokens
+                context += `NDVI value (plant health indicator): `;
+                
+                // Compact interpretation based on value ranges
+                if (value > 0.7) context += `excellent vegetation. `;
+                else if (value > 0.5) context += `good vegetation. `;
+                else if (value > 0.3) context += `moderate vegetation. `;
+                else if (value > 0.1) context += `sparse vegetation. `;
+                else context += `very sparse/bare soil. `;
+            } 
+            else if (productId.includes('ndwi')) {
+                context += `NDWI value (water content): ${value > 0.3 ? 'high' : value > 0 ? 'moderate' : 'low'} moisture. `;
+            }
+            else if (productId.includes('evi')) {
+                context += `EVI value (enhanced vegetation): ${value > 0.4 ? 'high biomass' : 'low biomass'}. `;
+            }
+            else if (productId.includes('temp')) {
+                context += `Temperature reading. `;
+            }
+            else if (productId.includes('moisture') || productId.includes('swi') || productId.includes('soil')) {
+                context += `Soil moisture: ${value > 0.6 ? 'high' : value > 0.3 ? 'moderate' : 'low'}. `;
+            }
+        }
+        
+        context += ") ";
     }
     
     // Get location information if available
     try {
         const targetLocation = locationStore.getTargetLocation();
         if (targetLocation) {
-            context += `(User's selected location: ${JSON.stringify(targetLocation)}) `;
+            const { latitude, longitude } = targetLocation;
+            // Use fewer digits to save tokens while maintaining accuracy
+            context += `(Farm location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}. `;
+            
+            // Add season context (important for agriculture)
+            const currentDate = new Date();
+            const month = currentDate.getMonth() + 1;
+            const hemisphere = latitude > 0 ? "Northern" : "Southern";
+            
+            let season = "";
+            if (hemisphere === "Northern") {
+                if (month >= 3 && month <= 5) season = "Spring";
+                else if (month >= 6 && month <= 8) season = "Summer";
+                else if (month >= 9 && month <= 11) season = "Fall";
+                else season = "Winter";
+            } else {
+                if (month >= 3 && month <= 5) season = "Fall";
+                else if (month >= 6 && month <= 8) season = "Winter";
+                else if (month >= 9 && month <= 11) season = "Spring";
+                else season = "Summer";
+            }
+            
+            context += `Current season: ${season}. `;
+            context += ") ";
         }
     } catch (error) {
         console.log("No target location available");
     }
 
-    // Combine user's query with context
-    const contextualizedText = `${text} ${context}`;
+    // Combine user's query with context, but prioritize the query
+    // This is important so the model focuses on the question first
+    const contextualizedText = context ? `${text} ${context}` : text;
 
     // Call FastAPI backend
     try {
-        messages.value.push({ text: "Thinking...", isSent: false, isLoading: true });
+        // Show loading indicator while waiting for response
+        const loadingMessage = { text: "Thinking...", isSent: false, isLoading: true };
+        messages.value.push(loadingMessage);
+        
+        // Track when the request started
+        const requestStartTime = Date.now();
 
-        const response = await fetch('http://127.0.0.1:8157/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                text: contextualizedText,
-                context_type: contextType.value
-            }),
-        });
-        
-        // Remove the loading message
-        messages.value = messages.value.filter(msg => !msg.isLoading);
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-            console.error('Server error:', response.status, errorData);
+        // For streaming responses
+        if (true) { // Always use streaming for better UX
+            // Make fetch request with streaming
+            const response = await fetch('http://127.0.0.1:8157/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    text: contextualizedText,
+                    context_type: contextType.value,
+                    use_streaming: true
+                }),
+            });
             
-            // Handle specific error cases
-            if (response.status === 500 && errorData.detail && errorData.detail.includes('OpenRouter API key is not set')) {
-                messages.value.push({ 
-                    text: "I'm currently unavailable due to a configuration issue. The server administrator needs to set up the OpenRouter API key.", 
-                    isSent: false 
+            if (!response.ok) {
+                // Remove loading message before showing error
+                messages.value = messages.value.filter(msg => !msg.isLoading);
+                await handleErrorResponse(response);
+                return;
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) {
+                // Remove loading message before showing error
+                messages.value = messages.value.filter(msg => !msg.isLoading);
+                throw new Error('Response body stream not available');
+            }
+
+            const decoder = new TextDecoder();
+            let receivedText = '';
+            let isDone = false;
+            let firstContentReceived = false;
+
+            // Create a response message but only add it once we receive content
+            const streamResponseMessage = { 
+                text: "", 
+                isSent: false,
+                model: "Loading..." // Will be updated when complete
+            };
+
+            // Process the stream
+            while (!isDone) {
+                const { value, done } = await reader.read();
+                if (done) {
+                    isDone = true;
+                    continue;
+                }
+
+                // Decode the chunk and process it
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data:')) {
+                        const eventData = line.slice(5).trim(); // Remove 'data: ' prefix
+                        
+                        if (eventData === '[DONE]') {
+                            isDone = true;
+                            break;
+                        }
+
+                        try {
+                            const parsedData = JSON.parse(eventData);
+                            if (parsedData.content) {
+                                // If this is the first content we're receiving, replace the loading message
+                                if (!firstContentReceived) {
+                                    firstContentReceived = true;
+                                    // Replace loading message with actual response
+                                    messages.value = messages.value.filter(msg => !msg.isLoading);
+                                    messages.value.push(streamResponseMessage);
+                                }
+                                
+                                // Update the message with new content
+                                streamResponseMessage.text += parsedData.content;
+                                
+                                // Auto-scroll to the bottom of the chat
+                                setTimeout(() => {
+                                    const chatBody = document.querySelector('.chat-body');
+                                    if (chatBody) {
+                                        chatBody.scrollTop = chatBody.scrollHeight;
+                                    }
+                                }, 50);
+                            }
+                        } catch (e) {
+                            console.warn('Failed to parse SSE data:', eventData, e);
+                            // Continue processing even if one chunk fails
+                        }
+                    }
+                }
+            }
+
+            // If we never received any content
+            if (!firstContentReceived) {
+                // Remove loading message
+                messages.value = messages.value.filter(msg => !msg.isLoading);
+                
+                // Add a message indicating no response was received
+                messages.value.push({
+                    text: "No response received from the model. Please try again.",
+                    isSent: false,
+                    isError: true
                 });
             } else {
-                throw new Error(`Server error (${response.status}): ${errorData.detail || 'Unknown error'}`);
+                // Add a model name if we got a complete response
+                streamResponseMessage.model = "AgriBot";
             }
-            return;
+
+        } else {
+            // For non-streaming responses (fallback)
+            const response = await fetch('http://127.0.0.1:8157/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    text: contextualizedText,
+                    context_type: contextType.value,
+                    use_streaming: false
+                }),
+            });
+            
+            // Remove the loading message
+            messages.value = messages.value.filter(msg => !msg.isLoading);
+
+            // Check for timeouts
+            const requestDuration = Date.now() - requestStartTime;
+            if (requestDuration > 60000) { // If more than 60 seconds
+                throw new Error('Request timed out. Please try a shorter message or try again later.');
+            }
+            
+            if (!response.ok) {
+                await handleErrorResponse(response);
+                return;
+            }
+
+            const data = await response.json();
+            
+            // Check if we got truncated content and add a warning if needed
+            let responseText = data.response;
+            if (!responseText.endsWith('.') && !responseText.endsWith('!') && !responseText.endsWith('?')) {
+                responseText += "... [Note: This response might be truncated due to length constraints]";
+            }
+
+            // Add received message to chat
+            messages.value.push({ 
+                text: responseText, 
+                isSent: false,
+                model: data.model // Display which model was used (useful for debugging)
+            });
         }
-
-        const data = await response.json();
-
-        // Add received message to chat
-        messages.value.push({ text: data.response, isSent: false });
+        
+        // Auto-scroll to the bottom of the chat
+        setTimeout(() => {
+            const chatBody = document.querySelector('.chat-body');
+            if (chatBody) {
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+        }, 100);
     } catch (error) {
         console.error('Error communicating with the API:', error);
         
         // Remove any loading message that might still be present
         messages.value = messages.value.filter(msg => !msg.isLoading);
         
+        // Provide a user-friendly error message
+        let errorMessage = error.message || 'Something went wrong.';
+        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+            errorMessage = "I'm having trouble connecting to the server. Please check your network connection or try again later.";
+        }
+        
         messages.value.push({ 
-            text: `Sorry, I'm having trouble connecting to the server right now. Error: ${error.message}`, 
-            isSent: false 
+            text: errorMessage, 
+            isSent: false,
+            isError: true
         });
     }
 }
@@ -391,8 +645,10 @@ async function sendToChat(text: string) {
 .message-bubble {
     padding: 10px;
     border-radius: 10px;
-    max-width: 70%;
+    max-width: 80%;  /* Increase from 70% to 80% for more space */
     word-wrap: break-word;
+    white-space: normal;
+    overflow-wrap: break-word;
 }
 
 .sent .message-bubble {
@@ -404,6 +660,65 @@ async function sendToChat(text: string) {
 .received .message-bubble {
     background: #4f4f58;
     color: white;
+    max-height: none; /* Remove any height limitation */
+    overflow-y: visible; /* Allow content to expand */
+}
+
+/* Add styling for markdown elements in bot messages */
+.received .message-bubble :deep(p) {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    white-space: normal;
+}
+
+.received .message-bubble :deep(ul), 
+.received .message-bubble :deep(ol) {
+    padding-left: 1.5em;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.received .message-bubble :deep(li) {
+    margin-bottom: 0.25em;
+}
+
+.received .message-bubble :deep(h1), 
+.received .message-bubble :deep(h2), 
+.received .message-bubble :deep(h3), 
+.received .message-bubble :deep(h4) {
+    margin-top: 0.75em;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+}
+
+.received .message-bubble :deep(code) {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-family: monospace;
+    white-space: pre-wrap;
+}
+
+.received .message-bubble :deep(pre) {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 0.5em;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.5em 0;
+    white-space: pre-wrap;
+}
+
+.received .message-bubble :deep(a) {
+    color: #8cc63f;
+    text-decoration: underline;
+}
+
+.received .message-bubble :deep(strong) {
+    font-weight: bold;
+}
+
+.received .message-bubble :deep(em) {
+    font-style: italic;
 }
 
 .suggestions {
