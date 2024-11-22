@@ -1,8 +1,17 @@
 <template>
-    <div class="chat-widget">
-        <div class="chat-header">
+    <div 
+        class="chat-widget" 
+        ref="chatWidget" 
+        :style="{
+            left: position.x + 'px',
+            top: position.y + 'px',
+            width: dimensions.width + 'px',
+            height: dimensions.height + 'px'
+        }">
+        <div class="chat-header" @mousedown="startDrag">
             <h2>Agribot</h2>
         </div>
+        <div class="resize-handle resize-handle-br" @mousedown="startResize"></div>
 
         <!-- Initial State - No Farm Selected -->
         <div v-if="!farmDataMode" class="farm-setup-container">
@@ -53,21 +62,34 @@
     </div>
 </template>
 
-<script setup lang="ts">
-import { ref, inject, onMounted, computed, watch } from 'vue';
+<script setup>
+import { ref, inject, onMounted, computed, watch, onBeforeUnmount } from 'vue';
 import { useLocationStore } from '@/stores/locationStore';
 import { useProductStore } from '@/stores/productStore';
 import { marked } from 'marked';
 
+// Store instances
 const locationStore = useLocationStore();
 const productStore = useProductStore();
-const messages = ref<{ text: string; isSent: boolean, isLoading?: boolean, isError?: boolean, model?: string }[]>([]);
+
+// Chat state management
+const messages = ref([]);
 const message = ref('');
 const farmDataMode = ref(false);
 const inputDisabled = ref(false);
 const contextType = ref('general');
 const isLocationSelectionActive = ref(false);
 const lastProductId = ref(''); // Track the last product ID to prevent duplicates
+
+// Chat widget position and dimension management
+const chatWidget = ref(null);
+const position = ref({ x: 10, y: 10 });
+const dimensions = ref({ width: 400, height: 600 });
+const isDragging = ref(false);
+const isResizing = ref(false);
+const initialMousePos = ref({ x: 0, y: 0 });
+const initialWidgetPos = ref({ x: 0, y: 0 });
+const initialWidgetDim = ref({ width: 0, height: 0 });
 
 // Configure marked for safe HTML
 marked.setOptions({
@@ -113,8 +135,81 @@ const currentSuggestions = computed(() => {
     return generalSuggestions;
 });
 
+// Dragging functionality
+function startDrag(event) {
+    event.preventDefault();
+    isDragging.value = true;
+    initialMousePos.value = { x: event.clientX, y: event.clientY };
+    initialWidgetPos.value = { x: position.value.x, y: position.value.y };
+    
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', stopDrag);
+}
+
+function onDrag(event) {
+    if (!isDragging.value) return;
+    
+    const dx = event.clientX - initialMousePos.value.x;
+    const dy = event.clientY - initialMousePos.value.y;
+    
+    position.value.x = initialWidgetPos.value.x + dx;
+    position.value.y = initialWidgetPos.value.y + dy;
+    
+    // Keep widget within viewport
+    const minX = 0;
+    const minY = 0;
+    const maxX = window.innerWidth - dimensions.value.width;
+    const maxY = window.innerHeight - dimensions.value.height;
+    
+    position.value.x = Math.max(minX, Math.min(maxX, position.value.x));
+    position.value.y = Math.max(minY, Math.min(maxY, position.value.y));
+}
+
+function stopDrag() {
+    isDragging.value = false;
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', stopDrag);
+}
+
+// Resizing functionality
+function startResize(event) {
+    event.preventDefault();
+    isResizing.value = true;
+    initialMousePos.value = { x: event.clientX, y: event.clientY };
+    initialWidgetDim.value = { width: dimensions.value.width, height: dimensions.value.height };
+    
+    document.addEventListener('mousemove', onResize);
+    document.addEventListener('mouseup', stopResize);
+}
+
+function onResize(event) {
+    if (!isResizing.value) return;
+    
+    const dx = event.clientX - initialMousePos.value.x;
+    const dy = event.clientY - initialMousePos.value.y;
+    
+    // Set minimum dimensions
+    const minWidth = 300;
+    const minHeight = 55; // Title bar height
+    
+    dimensions.value.width = Math.max(minWidth, initialWidgetDim.value.width + dx);
+    dimensions.value.height = Math.max(minHeight, initialWidgetDim.value.height + dy);
+}
+
+function stopResize() {
+    isResizing.value = false;
+    document.removeEventListener('mousemove', onResize);
+    document.removeEventListener('mouseup', stopResize);
+}
+
 // Check if farm location is already selected
 onMounted(() => {
+    // Position the chat widget in the bottom-left corner initially
+    position.value = { 
+        x: 10, 
+        y: window.innerHeight - dimensions.value.height - 35 // 35px for bottom margin
+    };
+
     const targetLocation = locationStore.getTargetLocation();
     if (targetLocation) {
         farmDataMode.value = true;
@@ -137,7 +232,29 @@ onMounted(() => {
     if (productStore.selectedProduct && productStore.selectedProduct.product_id) {
         lastProductId.value = productStore.selectedProduct.product_id;
     }
+    
+    // Adjust the initial position based on window size
+    adjustInitialPosition();
+
+    // Clean up event listeners
+    onBeforeUnmount(() => {
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('mousemove', onResize);
+        document.removeEventListener('mouseup', stopResize);
+    });
 });
+
+// Helper function to ensure the chat widget appears in view
+function adjustInitialPosition() {
+    const padding = 20;
+    const maxX = window.innerWidth - dimensions.value.width - padding;
+    const maxY = window.innerHeight - dimensions.value.height - padding;
+    
+    // Ensure initial position is within bounds
+    position.value.x = Math.min(position.value.x, maxX);
+    position.value.y = Math.min(position.value.y, maxY);
+}
 
 function activateLocationSelection() {
     isLocationSelectionActive.value = true;
@@ -172,7 +289,7 @@ async function sendMessage() {
     inputDisabled.value = false;
 }
 
-async function sendSuggestion(suggestion: string) {
+async function sendSuggestion(suggestion) {
     inputDisabled.value = true;
     await sendToChat(suggestion);
     inputDisabled.value = false;
@@ -190,7 +307,7 @@ watch(() => locationStore.getTargetLocation(), (newLocation) => {
     }
 }, { deep: true });
 
-// Watch for product changes with debouncing to prevent duplicate messages
+// Watch for product changes to prevent duplicate messages
 watch(() => productStore.selectedProduct, (newProduct) => {
     if (newProduct && Object.keys(newProduct).length > 0 && newProduct.product_id) {
         // Only add message if this is a different product than last time
@@ -208,27 +325,24 @@ watch(() => productStore.selectedProduct, (newProduct) => {
     }
 }, { deep: true });
 
-async function sendToChat(text: string) {
+async function sendToChat(text) {
     // Add sent message to chat
     messages.value.push({ text: text, isSent: true });
 
-    // Create a more structured and optimized agricultural context
-    // This helps ensure we stay within token limits by being concise but informative
+    // Create a more structured context
     let context = "";
     
-    // Add selected product info with relevant agricultural context
+    // Add selected product info
     if (productStore.selectedProduct && Object.keys(productStore.selectedProduct).length > 0) {
         const product = productStore.selectedProduct;
         const productName = product.display_name || product.product_id || 'selected data';
         
-        // Keep product context brief but informative
         context += `(Dataset: ${productName}`;
         
         if (product.date) {
             context += `, ${product.date}`;
         }
         
-        // Only include essential metadata that helps with agricultural interpretation
         if (product.meta) {
             const relevantKeys = ['type', 'source', 'crop_type', 'field_size'];
             const metaData = {};
@@ -244,7 +358,7 @@ async function sendToChat(text: string) {
         context += ") ";
     }
     
-    // Add clicked point value with agricultural context - this is higher priority info
+    // Add clicked point value with agricultural context
     if (productStore.clickedPoint && productStore.clickedPoint.value !== null) {
         const value = productStore.clickedPoint.value;
         const x = productStore.clickedPoint.x;
@@ -257,10 +371,8 @@ async function sendToChat(text: string) {
             const productId = productStore.selectedProduct.product_id.toLowerCase();
             
             if (productId.includes('ndvi')) {
-                // Simplified NDVI explanation to reduce tokens
                 context += `NDVI value (plant health indicator): `;
                 
-                // Compact interpretation based on value ranges
                 if (value > 0.7) context += `excellent vegetation. `;
                 else if (value > 0.5) context += `good vegetation. `;
                 else if (value > 0.3) context += `moderate vegetation. `;
@@ -289,7 +401,6 @@ async function sendToChat(text: string) {
         const targetLocation = locationStore.getTargetLocation();
         if (targetLocation) {
             const { latitude, longitude } = targetLocation;
-            // Use fewer digits to save tokens while maintaining accuracy
             context += `(Farm location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}. `;
             
             // Add season context (important for agriculture)
@@ -317,13 +428,12 @@ async function sendToChat(text: string) {
         console.log("No target location available");
     }
 
-    // Combine user's query with context, but prioritize the query
-    // This is important so the model focuses on the question first
+    // Combine user's query with context
     const contextualizedText = context ? `${text} ${context}` : text;
 
     // Call FastAPI backend
     try {
-        // Show loading indicator while waiting for response
+        // Show loading indicator
         const loadingMessage = { text: "Thinking...", isSent: false, isLoading: true };
         messages.value.push(loadingMessage);
         
@@ -416,7 +526,6 @@ async function sendToChat(text: string) {
                             }
                         } catch (e) {
                             console.warn('Failed to parse SSE data:', eventData, e);
-                            // Continue processing even if one chunk fails
                         }
                     }
                 }
@@ -455,12 +564,6 @@ async function sendToChat(text: string) {
             // Remove the loading message
             messages.value = messages.value.filter(msg => !msg.isLoading);
 
-            // Check for timeouts
-            const requestDuration = Date.now() - requestStartTime;
-            if (requestDuration > 60000) { // If more than 60 seconds
-                throw new Error('Request timed out. Please try a shorter message or try again later.');
-            }
-            
             if (!response.ok) {
                 await handleErrorResponse(response);
                 return;
@@ -468,17 +571,10 @@ async function sendToChat(text: string) {
 
             const data = await response.json();
             
-            // Check if we got truncated content and add a warning if needed
-            let responseText = data.response;
-            if (!responseText.endsWith('.') && !responseText.endsWith('!') && !responseText.endsWith('?')) {
-                responseText += "... [Note: This response might be truncated due to length constraints]";
-            }
-
-            // Add received message to chat
             messages.value.push({ 
-                text: responseText, 
+                text: data.response, 
                 isSent: false,
-                model: data.model // Display which model was used (useful for debugging)
+                model: data.model
             });
         }
         
@@ -495,18 +591,28 @@ async function sendToChat(text: string) {
         // Remove any loading message that might still be present
         messages.value = messages.value.filter(msg => !msg.isLoading);
         
-        // Provide a user-friendly error message
-        let errorMessage = error.message || 'Something went wrong.';
-        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-            errorMessage = "I'm having trouble connecting to the server. Please check your network connection or try again later.";
-        }
-        
         messages.value.push({ 
-            text: errorMessage, 
+            text: "I'm having trouble connecting to the server. Please check your network connection or try again later.", 
             isSent: false,
             isError: true
         });
     }
+}
+
+async function handleErrorResponse(response) {
+    let errorText = 'Error communicating with the API.';
+    try {
+        const errorData = await response.json();
+        errorText = errorData.detail || errorData.message || 'Server error';
+    } catch (e) {
+        errorText = `Error ${response.status}: ${response.statusText}`;
+    }
+    
+    messages.value.push({
+        text: errorText,
+        isSent: false,
+        isError: true
+    });
 }
 </script>
 
@@ -514,15 +620,13 @@ async function sendToChat(text: string) {
 .chat-widget {
     border: 1px solid #ccc;
     border-radius: 8px;
-    width: 30vw;
-    height: 88vh;
     display: flex;
     flex-direction: column;
     background: #231f1fc8;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    position: absolute;
-    bottom: 35px;
-    left: 10px;
+    overflow: hidden; /* Prevent content overflow */
+    position: fixed;
+    z-index: 1000;
 }
 
 .chat-header {
@@ -532,6 +636,9 @@ async function sendToChat(text: string) {
     text-align: center;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
+    position: relative;
+    cursor: move; /* Indicate draggable */
+    user-select: none; /* Prevent text selection while dragging */
 }
 
 .chat-header h2 {
@@ -541,6 +648,27 @@ async function sendToChat(text: string) {
     font-family: 'Montserrat', sans-serif;
     text-transform: uppercase;
     letter-spacing: 1px;
+}
+
+.resize-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+    z-index: 1001;
+}
+
+.resize-handle-br:after {
+    content: '';
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 12px;
+    height: 12px;
+    border-right: 2px solid rgba(255, 255, 255, 0.5);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.5);
 }
 
 .farm-setup-container {
@@ -773,5 +901,12 @@ async function sendToChat(text: string) {
 .chat-input button:disabled, .chat-input input:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chat-widget {
+        width: 90vw;
+    }
 }
 </style>
