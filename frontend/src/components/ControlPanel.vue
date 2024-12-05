@@ -2,8 +2,8 @@
 import { useAvailableDataStore } from '@/stores/availableDataStore'
 import { useProductStore } from '@/stores/productStore'
 import SelectMenu from './SelectMenu.vue'
-import Datepicker from 'vue3-date-time-picker'
-import 'vue3-date-time-picker/dist/main.css'
+import Datepicker from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
 import { watch, ref } from 'vue'
 
 const availableDataStore = useAvailableDataStore()

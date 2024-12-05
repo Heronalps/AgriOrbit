@@ -1,0 +1,32 @@
+{
+  "name": "ag-advisor-map",
+  "version": "1.0.0",
+  "description": "Agricultural advice application with interactive map",
+  "private": true,
+  "scripts": {
+    "prepare": "poetry install",
+    "backend": "poetry run python -m backend.app.main",
+    "frontend": "cd frontend && pnpm run dev",
+    "dev": "concurrently \"pnpm run backend\" \"pnpm run frontend\"",
+    "test": "pnpm run test:backend && pnpm run test:frontend",
+    "test:backend": "poetry run pytest",
+    "test:frontend": "cd frontend && pnpm run test",
+    "build": "cd frontend && pnpm run build",
+    "lint": "cd frontend && pnpm run lint",
+    "setup": "pnpm install && cd frontend && pnpm install"
+  },
+  "keywords": [
+    "agriculture",
+    "farming",
+    "map",
+    "advice",
+    "fastapi",
+    "vue"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.6.4",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

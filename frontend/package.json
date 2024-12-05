@@ -10,9 +10,10 @@
   },
   "dependencies": {
     "@danmarshall/deckgl-typings": "^4.9.8",
-    "@deck.gl/core": "8.6.1",
-    "@deck.gl/geo-layers": "^8.6.4",
-    "@deck.gl/layers": "8.6.1",
+    "@deck.gl/core": "8.9.36",
+    "@deck.gl/geo-layers": "8.9.36",
+    "@deck.gl/layers": "8.9.36",
+    "@vuepic/vue-datepicker": "^11.0.2",
     "axios": "^0.24.0",
     "mapbox-gl": "^2.5.1",
     "marked": "^15.0.11",

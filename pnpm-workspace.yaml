@@ -1,0 +1,8 @@
+packages:
+  - 'frontend'
+  - 'backend'
+onlyBuiltDependencies:
+  - '@danmarshall/deckgl-typings'
+  - esbuild
+  - vue-demi
+  - vue3-date-time-picker
