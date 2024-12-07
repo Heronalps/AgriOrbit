@@ -27,7 +27,7 @@ pnpm run setup
 3. Create a `.env` file in the `config` directory with the following:
 
 ```
-OPENAI_API_KEY=your_openai_api_key
+VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token
 OPENROUTER_API_KEY=your_openrouter_api_key
 ```
 
