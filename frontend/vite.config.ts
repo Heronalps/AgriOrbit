@@ -12,4 +12,5 @@ export default defineConfig({
     },
   },
   envDir: '../config', // Point to the config directory at root level
+  cacheDir: path.resolve(__dirname, '../node_modules/.vite'), // Set cache directory at root level
 })

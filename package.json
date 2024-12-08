@@ -6,14 +6,14 @@
   "scripts": {
     "prepare": "poetry install",
     "backend": "poetry run python -m backend.app.main",
-    "frontend": "cd frontend && pnpm run dev",
+    "frontend": "pnpm --filter ag-advisor-frontend dev",
     "dev": "concurrently \"pnpm run backend\" \"pnpm run frontend\"",
     "test": "pnpm run test:backend && pnpm run test:frontend",
     "test:backend": "poetry run pytest",
-    "test:frontend": "cd frontend && pnpm run test",
-    "build": "cd frontend && pnpm run build",
-    "lint": "cd frontend && pnpm run lint",
-    "setup": "pnpm install && cd frontend && pnpm install"
+    "test:frontend": "pnpm --filter ag-advisor-frontend test",
+    "build": "pnpm --filter ag-advisor-frontend build",
+    "lint": "pnpm --filter ag-advisor-frontend lint",
+    "setup": "pnpm install"
   },
   "keywords": [
     "agriculture",
@@ -26,7 +26,35 @@
   "author": "",
   "license": "MIT",
   "packageManager": "pnpm@10.6.4",
+  "dependencies": {
+    "@danmarshall/deckgl-typings": "^4.9.8",
+    "@deck.gl/core": "8.9.36",
+    "@deck.gl/geo-layers": "8.9.36",
+    "@deck.gl/layers": "8.9.36",
+    "@vuepic/vue-datepicker": "^11.0.2",
+    "axios": "^0.24.0",
+    "mapbox-gl": "^2.5.1",
+    "marked": "^15.0.11",
+    "pinia": "^2.0.2",
+    "vue": "^3.2.16",
+    "vue-draggable-resizable": "^3.0.0",
+    "vue-eslint-parser": "^7.1.1",
+    "vue3-date-time-picker": "^2.3.4"
+  },
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.0",
+    "@types/mapbox-gl": "^2.4.2",
+    "@typescript-eslint/eslint-plugin": "^5.3.0",
+    "@typescript-eslint/parser": "^5.3.0",
+    "@vitejs/plugin-vue": "^1.9.3",
+    "eslint": "^8.1.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-vue": "^8.0.3",
+    "prettier": "2.4.1",
+    "typescript": "^4.4.3",
+    "vite": "^2.6.4",
+    "vite-plugin-windicss": "^1.4.12",
+    "vue-tsc": "^0.3.0",
+    "windicss": "^3.2.1"
   }
 }
