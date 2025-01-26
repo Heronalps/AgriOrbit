@@ -1,5 +1,5 @@
 import { createPinia } from 'pinia'
-import 'virtual:windi.css'
+import './index.css'
 import { createApp } from 'vue'
 import App from './App.vue'
 
