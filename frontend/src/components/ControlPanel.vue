@@ -41,11 +41,11 @@ const handleDateSelection = (selection) => {
   productStore.selectedProduct.date = iso
 }
 
-const dateFormat = (date) => {
-  const day = date.getDate() + 1
-  const month = date.getMonth() + 1
-  const year = date.getFullYear()
-  return `${year}-${month}-${day}`
+const dateFormat = (date: Date): string => {
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${year}-${month}-${day}`;
 }
 </script>
 
@@ -61,8 +61,8 @@ const dateFormat = (date) => {
       <div class="flex flex-col justify-end space-y-2 items-center">
         <p class="text-xl md:text-2xl font-semibold text-white">Date</p>
         <Datepicker v-model="selectedDate" :enableTimePicker="false" :allowedDates="productStore.getProductDates"
-          :altPosition="false" @update:modelValue="handleDateSelection">
-          <!-- productStore.getProductDates  :format="dateFormat"  handleDateSelection-->
+          :format="dateFormat" 
+          @update:modelValue="handleDateSelection">
         </Datepicker>
       </div>
       <div class="flex flex-col justify-end space-y-2 items-center">
