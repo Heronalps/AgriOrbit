@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { productState, useProductStore } from './productStore'
 
 export interface mapState {
-  layers: Object<any>
+  layers: Record<string, any | null>
 }
 
 export const useMapStore = defineStore('map', {
@@ -20,7 +20,7 @@ export const useMapStore = defineStore('map', {
   actions: {
     async renderLayers() {
       const product: productState = useProductStore()
-      const tileLayer = product.renderTileLayer()
+      product.renderTileLayer() // Removed assignment to unused variable tileLayer
     },
     // async renderTileLayer() {
     //   const data = await renderTileLayer()

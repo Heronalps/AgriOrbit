@@ -10,7 +10,7 @@ if (!updateLayer) {
   console.error('updateLayer function not provided')
 }
 
-function createLayer(): any {
+function createLayer() {
   if (!updateLayer) return null
 
   return new TileLayer({
@@ -49,5 +49,13 @@ watch(
 </script>
 
 <template>
-  <!-- This component doesn't render anything directly -->
+  <div class="tile-layer-component">
+    <!-- This component doesn't render anything directly, but needs a root element for Vue -->
+  </div>
 </template>
+
+<style>
+.tile-layer-component {
+  display: none;
+}
+</style>

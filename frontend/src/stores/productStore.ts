@@ -20,7 +20,7 @@ export interface clickedPointType {
   [key: string]: any;
 }
 
-export interface selectedProductInterface extends selectedProductType {}
+export type selectedProductInterface = selectedProductType
 
 export interface productState {
   selectedProduct: selectedProductType;

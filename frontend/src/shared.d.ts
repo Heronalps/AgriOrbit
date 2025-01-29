@@ -1,4 +1,3 @@
-
 /**
  *  Describes user selected Product 
  */
@@ -26,16 +25,14 @@ type viewStateType = {
  * Interface for describing possible layers
  */
  export interface layersInterface {
-    tileLayer: any,
-    adminLayer: any,
+    tileLayer: Record<string, unknown>,
+    adminLayer: Record<string, unknown>,
   }
 
 
   export type clickedPointType = {
-    show: Boolean,
+    show: boolean,
     value: number,
     x: number,
     y: number
-
-
   }

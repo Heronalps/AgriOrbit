@@ -1,12 +1,17 @@
 <script setup lang="ts">
-type OptionsType = {
-  name: string
-  key: string
+// type OptionsType = { // Commented out unused type
+//   name: string
+//   key: string
+// }
+
+interface DataItem {
+  [key: string]: string | number | boolean | null | undefined;
 }
 
-const props = defineProps<{
+// const props = defineProps<{ // Commented out unused variable assignment
+defineProps<{
   placeholder?: string
-  data: Array<Object>
+  data: Array<DataItem>
   keyBy: string
   labelBy: string
 }>()
@@ -26,7 +31,11 @@ const props = defineProps<{
       text-sm
     "
   >
-    <option v-if="placeholder" disabled="disabled" selected="selected">
+    <option
+      v-if="placeholder"
+      disabled="disabled"
+      selected="selected"
+    >
       {{ placeholder }}
     </option>
     <option

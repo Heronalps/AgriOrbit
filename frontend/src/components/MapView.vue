@@ -6,8 +6,8 @@ import { useLocationStore } from '@/stores/locationStore';
 import { MAP_STYLES } from '@/utils/defaultSettings';
 import ControlPanel from './ControlPanel.vue';
 import DeckGL from './Map/DeckGL.vue';
-import Mapbox from './Map/Mapbox.vue';
-import Popup from './Map/Popup.vue';
+import MapboxView from './Map/MapboxView.vue';
+import MapPopup from './Map/MapPopup.vue';
 import TileLayer from './Map/TileLayer.vue';
 
 const mapboxAccessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -84,13 +84,6 @@ function onMapLoaded(map) {
   map.on('sourcedata', bringMarkerToFront);
 }
 
-function createCustomMarkerElement() {
-  const el = document.createElement('div');
-  el.className = 'custom-marker';
-  el.innerHTML = '📍';
-  return el;
-}
-
 function renderTargetMarker() {
   if (mapInstance.value) {
     const targetLocation = locationStore.getTargetLocation();
@@ -99,7 +92,6 @@ function renderTargetMarker() {
         targetMarker.value.setLngLat([targetLocation.longitude, targetLocation.latitude]);
       } else {
         targetMarker.value = new mapboxgl.Marker({
-          // element: createCustomMarkerElement(),
           anchor: 'bottom',
           color: "#FF2400", // Red color
           scale: 2 // Twice the default size
@@ -140,20 +132,34 @@ watch(() => locationStore.getTargetLocation(), (newLocation) => {
     </div>
     
     <!-- Location help overlay -->
-    <div v-if="showLocationHelp" class="location-help-overlay">
+    <div
+      v-if="showLocationHelp"
+      class="location-help-overlay"
+    >
       <div class="location-help-content">
         <p><strong>Click on the map</strong> to set your farm location</p>
       </div>
     </div>
     
-    <DeckGL @click="handleClick" class="w-full h-full">
-      <Mapbox :accessToken="mapboxAccessToken" :mapStyle="MAP_STYLES.DARK" @map-loaded="onMapLoaded"></Mapbox>
-      <TileLayer v-if="productStore.getTileLayerURL()" :data="productStore.getTileLayerURL()" :minZoom="0"
-        :maxZoom="19"></TileLayer>
+    <DeckGL
+      class="w-full h-full"
+      @click="handleClick"
+    >
+      <MapboxView
+        :access-token="mapboxAccessToken"
+        :map-style="MAP_STYLES.DARK"
+        @map-loaded="onMapLoaded"
+      />
+      <TileLayer
+        v-if="productStore.getTileLayerURL()"
+        :data="productStore.getTileLayerURL()"
+        :min-zoom="0"
+        :max-zoom="19"
+      />
     </DeckGL>
 
-    <ControlPanel class="absolute right-10 bottom-10"></ControlPanel>
-    <Popup></Popup>
+    <ControlPanel class="absolute right-10 bottom-10" />
+    <MapPopup />
   </div>
 </template>
 

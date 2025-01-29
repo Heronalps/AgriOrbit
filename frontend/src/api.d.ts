@@ -1,5 +1,3 @@
-
-
 /**
  * Describes /product/ return
  */
@@ -21,10 +19,10 @@ type productType = {
     desc: string,
     display_name: string,
     link: string, 
-    meta: Object,
+    meta: Record<string, any>,
     proct_id: string,
     source: string,
-    tags: Array,
+    tags: Array<any>,
     variable: string
   }
 
@@ -34,16 +32,16 @@ type productType = {
 /**
  * Enum desrcibing Anomoly options
  */
- enum AnomolyEnum {
-    FIVE = '5day',
-    TEN = '10day',
-    FULL = 'full'
-  }
+// enum AnomolyEnum {
+//     FIVE = '5day',
+//     TEN = '10day',
+//     FULL = 'full'
+//   }
   
 /**
  * Enum describing Anomoly type options
  */
-enum AnomolyTypeEnum {
-MEAN = 'mean',
-MEDIAN = 'median'
-}
+// enum AnomolyTypeEnum {
+// MEAN = 'mean',
+// MEDIAN = 'median'
+// }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Map from '@/components/Map.vue'
+import MapView from '@/components/MapView.vue'
 import ChatWidget from '@/components/Chat/ChatWidget.vue'
 import { useAvailableDataStore } from '@/stores/availableDataStore'
 import { onMounted } from 'vue'
@@ -16,8 +16,8 @@ onMounted(async () => {
 
 <template>
   <div class="app-container">
-    <Map></Map>
-    <ChatWidget></ChatWidget>
+    <MapView />
+    <ChatWidget />
   </div>
 </template>
 

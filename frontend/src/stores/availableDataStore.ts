@@ -1,18 +1,31 @@
-// import { useProductStore } from './productStore'
 import { getAvailableCropmasks } from "@/api/cropmask"
 import { getAvailableProducts } from '@/api/datasets'
 import { defineStore } from 'pinia'
-import { useProductStore } from "./productStore"
+
+// Define proper types for the API responses
+interface CropmaskResult {
+  results: Array<{
+    cropmask_id: string;
+    display_name: string;
+    [key: string]: unknown;
+  }>;
+}
+
+interface ProductResult {
+  results: Array<productType>;
+  [key: string]: unknown;
+}
+
 export type availableDataState = {
-  cropmasks: Array<any>,
-  products: productsType,
-  adminLayer: Array<any>
+  cropmasks: CropmaskResult;
+  products: ProductResult;
+  adminLayer: Array<Record<string, unknown>>;
 }
 
 export const useAvailableDataStore = defineStore('availableDataStore', {
   state: () => ({
-    cropmasks: [],
-    products: [],
+    cropmasks: { results: [] },
+    products: { results: [] },
     adminLayers: [],
   }) as availableDataState,
   getters: {
@@ -28,7 +41,7 @@ export const useAvailableDataStore = defineStore('availableDataStore', {
   },
   actions: {
     async loadAvailableProducts(): void {
-      const product = useProductStore()
+      // const product = useProductStore() // Commented out unused variable
       const data = await getAvailableProducts()
       this.products = data
     },

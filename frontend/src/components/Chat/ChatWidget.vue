@@ -1,69 +1,119 @@
 <template>
-    <div 
-        class="chat-widget" 
-        ref="chatWidget" 
-        :style="{
-            left: position.x + 'px',
-            top: position.y + 'px',
-            width: dimensions.width + 'px',
-            height: dimensions.height + 'px'
-        }">
-        <div class="chat-header" @mousedown="startDrag">
-            <h2>Agribot</h2>
-        </div>
-        <div class="resize-handle resize-handle-br" @mousedown="startResize"></div>
-
-        <!-- Initial State - No Farm Selected -->
-        <div v-if="!farmDataMode" class="farm-setup-container">
-            <div class="welcome-message">
-                <p>Welcome to AgriBot! To get the most personalized assistance:</p>
-                <div class="action-options">
-                    <button @click="activateLocationSelection" class="action-button">
-                        <span class="icon">📍</span>
-                        Select Farm Location
-                    </button>
-                </div>
-                <p class="or-divider">—— OR ——</p>
-                <button @click="startGeneralChat" class="general-chat-button">
-                    Continue with General Chat
-                </button>
-            </div>
-        </div>
-
-        <!-- Chat UI -->
-        <div class="chat-body" :class="{'limited-mode': !farmDataMode}">
-            <div class="message" v-for="(msg, index) in messages" :key="index"
-                :class="{ 'sent': msg.isSent, 'received': !msg.isSent }">
-                <div class="message-bubble" v-if="msg.isSent">{{ msg.text }}</div>
-                <div class="message-bubble" v-else v-html="formatMessage(msg.text)"></div>
-            </div>
-        </div>
-
-        <div class="token-usage-indicator" v-if="!farmDataMode && messages.length > 3">
-            <div class="token-warning">
-                <span class="icon">⚠️</span>
-                <span>Using limited context mode. For better insights, select a farm location.</span>
-            </div>
-        </div>
-
-        <div class="chat-footer">
-            <div class="suggestions">
-                <button v-for="(suggestion, index) in currentSuggestions" :key="index" 
-                    @click="sendSuggestion(suggestion)">
-                    {{ suggestion }}
-                </button>
-            </div>
-            <div class="chat-input">
-                <input v-model="message" @keyup.enter="sendMessage" placeholder="Type your message..." 
-                    :disabled="inputDisabled" />
-                <button @click="sendMessage" :disabled="inputDisabled">Send</button>
-            </div>
-        </div>
+  <div 
+    ref="chatWidget" 
+    class="chat-widget" 
+    :style="{
+      left: position.x + 'px',
+      top: position.y + 'px',
+      width: dimensions.width + 'px',
+      height: dimensions.height + 'px'
+    }"
+  >
+    <div
+      class="chat-header"
+      @mousedown="startDrag"
+    >
+      <h2>Agribot</h2>
     </div>
+    <div
+      class="resize-handle resize-handle-br"
+      @mousedown="startResize"
+    />
+
+    <!-- Initial State - No Farm Selected -->
+    <div
+      v-if="!farmDataMode"
+      class="farm-setup-container"
+    >
+      <div class="welcome-message">
+        <p>Welcome to AgriBot! To get the most personalized assistance:</p>
+        <div class="action-options">
+          <button
+            class="action-button"
+            @click="activateLocationSelection"
+          >
+            <span class="icon">📍</span>
+            Select Farm Location
+          </button>
+        </div>
+        <p class="or-divider">
+          —— OR ——
+        </p>
+        <button
+          class="general-chat-button"
+          @click="startGeneralChat"
+        >
+          Continue with General Chat
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat UI -->
+    <div
+      class="chat-body"
+      :class="{'limited-mode': !farmDataMode}"
+    >
+      <div
+        v-for="(msg, index) in messages"
+        :key="index"
+        class="message"
+        :class="{ 'sent': msg.isSent, 'received': !msg.isSent }"
+      >
+        <div
+          v-if="msg.isSent"
+          class="message-bubble"
+        >
+          {{ msg.text }}
+        </div>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div
+          v-else
+          class="message-bubble"
+          v-html="formatMessage(msg.text)"
+        />
+      </div>
+    </div>
+
+    <div
+      v-if="!farmDataMode && messages.length > 3"
+      class="token-usage-indicator"
+    >
+      <div class="token-warning">
+        <span class="icon">⚠️</span>
+        <span>Using limited context mode. For better insights, select a farm location.</span>
+      </div>
+    </div>
+
+    <div class="chat-footer">
+      <div class="suggestions">
+        <button
+          v-for="(suggestion, index) in currentSuggestions"
+          :key="index" 
+          @click="sendSuggestion(suggestion)"
+        >
+          {{ suggestion }}
+        </button>
+      </div>
+      <div class="chat-input">
+        <input
+          v-model="message"
+          placeholder="Type your message..."
+          :disabled="inputDisabled" 
+          @keyup.enter="sendMessage"
+        >
+        <button
+          :disabled="inputDisabled"
+          @click="sendMessage"
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, inject, onMounted, computed, watch, onBeforeUnmount } from 'vue';
+import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'; // Removed inject
 import { useLocationStore } from '@/stores/locationStore';
 import { useProductStore } from '@/stores/productStore';
 import { marked } from 'marked';
@@ -267,7 +317,7 @@ function activateLocationSelection() {
     window.dispatchEvent(new CustomEvent('activate-location-selection'));
 }
 
-function handleLocationSelected(event) {
+function handleLocationSelected() { // Removed unused parameter
     if (isLocationSelectionActive.value) {
         isLocationSelectionActive.value = false;
     }
@@ -438,10 +488,10 @@ async function sendToChat(text) {
         messages.value.push(loadingMessage);
         
         // Track when the request started
-        const requestStartTime = Date.now();
+        // const requestStartTime = Date.now(); // Commented out unused variable
 
-        // For streaming responses
-        if (true) { // Always use streaming for better UX
+        // Always use streaming for better UX - no conditional needed
+        try {
             // Make fetch request with streaming
             const response = await fetch('http://127.0.0.1:8157/chat', {
                 method: 'POST',
@@ -470,7 +520,6 @@ async function sendToChat(text) {
             }
 
             const decoder = new TextDecoder();
-            let receivedText = '';
             let isDone = false;
             let firstContentReceived = false;
 
@@ -546,36 +595,16 @@ async function sendToChat(text) {
                 // Add a model name if we got a complete response
                 streamResponseMessage.model = "AgriBot";
             }
-
-        } else {
-            // For non-streaming responses (fallback)
-            const response = await fetch('http://127.0.0.1:8157/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    text: contextualizedText,
-                    context_type: contextType.value,
-                    use_streaming: false
-                }),
-            });
-            
-            // Remove the loading message
+        } catch (error) {
+            // Remove any loading message that might still be present
             messages.value = messages.value.filter(msg => !msg.isLoading);
-
-            if (!response.ok) {
-                await handleErrorResponse(response);
-                return;
-            }
-
-            const data = await response.json();
             
             messages.value.push({ 
-                text: data.response, 
+                text: "I'm having trouble connecting to the server. Please check your network connection or try again later.", 
                 isSent: false,
-                model: data.model
+                isError: true
             });
+            console.error('Error communicating with the streaming API:', error);
         }
         
         // Auto-scroll to the bottom of the chat
@@ -586,13 +615,13 @@ async function sendToChat(text) {
             }
         }, 100);
     } catch (error) {
-        console.error('Error communicating with the API:', error);
+        console.error('Error in sendToChat:', error);
         
         // Remove any loading message that might still be present
         messages.value = messages.value.filter(msg => !msg.isLoading);
         
         messages.value.push({ 
-            text: "I'm having trouble connecting to the server. Please check your network connection or try again later.", 
+            text: "An unexpected error occurred. Please try again later.", 
             isSent: false,
             isError: true
         });

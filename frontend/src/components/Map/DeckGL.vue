@@ -5,7 +5,7 @@ import { Deck } from '@deck.gl/core'
 import { onMounted, provide, reactive, useAttrs } from 'vue'
 
 const attrs = useAttrs()
-let deck: any = null
+let deck: Deck | null = null
 const emit = defineEmits(['click'])
 const viewState = reactive({
   latitude: 36.102376,
@@ -52,11 +52,11 @@ provide('updateLayer', updateLayer)
 <template>
   <div class="relative h-full w-full">
     <div class="h-full w-full absolute top-0 left-0">
-      <slot></slot>
+      <slot />
       <canvas
         id="deck-canvas"
         class="h-full w-full absolute top-0 left-0"
-      ></canvas>
+      />
     </div>
   </div>
 </template>

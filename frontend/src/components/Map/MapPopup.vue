@@ -22,8 +22,8 @@ const value = computed(() =>
   >
     <p>{{ value }}</p>
     <div
-      @click="productStore.clickedPoint.show = false"
       class="text-right cursor-pointer text-gray-600 text-xs"
+      @click="productStore.clickedPoint.show = false"
     >
       X
     </div>
