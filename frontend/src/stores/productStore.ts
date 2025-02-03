@@ -24,7 +24,7 @@ export type selectedProductInterface = selectedProductType
 
 export interface productState {
   selectedProduct: selectedProductType;
-  productEntries: Array<any>;
+  productEntries: { results: Array<any> };
   clickedPoint: clickedPointType;
   isLoading: boolean;
   error: string | null;
@@ -32,9 +32,9 @@ export interface productState {
 
 export const useProductStore = defineStore('productStore', {
   state: () => ({
-    selectedProduct: {},
-    productEntries: [],
-    clickedPoint: { show: false, value: null },
+    selectedProduct: {} as selectedProductType,
+    productEntries: { results: [] } as any, // Ensure productEntries is an object with a results array
+    clickedPoint: { show: false, value: null } as clickedPointType,
     isLoading: false,
     error: null
   }) as productState,
@@ -46,67 +46,121 @@ export const useProductStore = defineStore('productStore', {
     getSelectedDate(state): string {
       return state.selectedProduct.date || '';
     },
-    getProductDates(state): Array<any> {
-      if (!state.productEntries.results) return [];
-
-      // Handle date format correctly
+    getProductDates(state): Array<string> { // Ensure return type is string array
+      if (!state.productEntries || !state.productEntries.results) return [];
       return state.productEntries.results.map(el => {
-        // Make sure date is in the right format for the datepicker
         if (el.date) {
-          // Handle dates in different formats
-          const date = el.date.includes('-') 
-            ? el.date.replaceAll('-', '/') 
-            : el.date;
-          return date;
+          return el.date.includes('-') ? el.date.replaceAll('-', '/') : el.date;
         }
         return '';
-      }).filter(date => date); // Filter out empty dates
+      }).filter(date => date);
     },
     isProductSelected(state): boolean {
       return !!state.selectedProduct.product_id;
     },
     getMostRecentDate(state): string | undefined {
-      if (!state.productEntries.results || state.productEntries.results.length === 0) {
-        return undefined;
-      }
-      // Get the last date in the array, which should be the most recent
-      const dates = this.getProductDates;
-      return dates.length > 0 ? dates[dates.length - 1] : undefined;
+      const dates = state.productEntries.results
+        ?.map(el => el.date)
+        .filter(Boolean)
+        .sort(); // Sort dates to find the most recent
+      return dates && dates.length > 0 ? dates[dates.length - 1].replaceAll('-', '/') : undefined;
     },
   },
 
   actions: {
-    async loadProductEntries() {
-      console.log('Loading product entries for:', this.selectedProduct);
+    async setProduct(newProductId: string) {
+      this.clickedPoint.show = false;
+
+      if (this.selectedProduct.product_id !== newProductId) {
+        console.log(`Setting product to: ${newProductId}. Storing old product ID '${this.selectedProduct.product_id}' as previous.`);
+        this.selectedProduct.previousProductId = this.selectedProduct.product_id;
+        this.selectedProduct.product_id = newProductId;
+        // Date will be cleared by loadProductEntries via the flag
+        await this.loadProductEntries(true); // Pass true for productJustChanged
+      } else {
+        console.log(`Product ${newProductId} re-selected. Reloading entries to ensure date validity.`);
+        await this.loadProductEntries(false); // Pass false or omit (as it defaults to false)
+      }
+    },
+
+    async setDate(newDateString: string | undefined) {
+      if (this.selectedProduct.date !== newDateString) {
+        console.log(`Setting date to: ${newDateString}`);
+        this.selectedProduct.date = newDateString;
+        if (this.selectedProduct.product_id) {
+          await this.loadProductEntries(false); // Pass false
+        }
+      }
+    },
+
+    async setCropmask(newCropmaskId: string | undefined) {
+      if (this.selectedProduct.cropmask_id !== newCropmaskId) {
+        this.selectedProduct.cropmask_id = newCropmaskId;
+        if (this.selectedProduct.product_id) {
+          await this.loadProductEntries(false); // Pass false
+        }
+      }
+    },
+
+    async loadProductEntries(productJustChanged: boolean = false) {
+      console.log(`Loading product entries for:`, JSON.parse(JSON.stringify(this.selectedProduct)), `productJustChanged: ${productJustChanged}`);
+
+      const currentProductId = this.selectedProduct.product_id;
+      const currentCropmaskId = this.selectedProduct.cropmask_id;
+
       this.isLoading = true;
       this.error = null;
-      
+
+      if (productJustChanged) {
+        console.log(`loadProductEntries: productJustChanged is true. Clearing selectedProduct.date.`);
+        this.selectedProduct.date = undefined;
+      }
+
       try {
-        // Check if we have a product selected
-        if (!this.selectedProduct.product_id) {
+        if (!currentProductId) {
           console.warn('No product selected, skipping data load');
-          this.productEntries = [];
+          this.productEntries = { results: [] };
+          this.selectedProduct.date = undefined;
+          this.selectedProduct.previousProductId = undefined; // Clear previous product ID as well
+          this.isLoading = false;
           return;
         }
 
-        const data = await getDatasetEntries(this.selectedProduct);
-        this.productEntries = data || { results: [] };
-        
-        const productChanged = this.selectedProduct.previousProductId !== this.selectedProduct.product_id;
-        
-        // Always set to the most recent date when product changes or no date is selected
-        if (this.getProductDates.length > 0 && (productChanged || !this.selectedProduct.date)) {
-          const mostRecentDate = this.getMostRecentDate;
-          console.log('Setting date to most recent:', mostRecentDate);
-          this.selectedProduct.date = mostRecentDate;
+        const paramsForDatasetEntries: { product_id: string, cropmask_id?: string } = { product_id: currentProductId };
+        if (currentCropmaskId) {
+          paramsForDatasetEntries.cropmask_id = currentCropmaskId;
         }
-        
-        // Update the previous product ID to track changes
-        this.selectedProduct.previousProductId = this.selectedProduct.product_id;
-      } catch (error) {
-        console.error('Error in loadProductEntries:', error);
-        this.error = 'Failed to load product entries';
-        this.productEntries = [];
+        console.log('Fetching dataset entries with params:', JSON.parse(JSON.stringify(paramsForDatasetEntries)));
+
+        const data = await getDatasetEntries(paramsForDatasetEntries);
+        this.productEntries = data || { results: [] };
+
+        const availableDates = this.getProductDates; // Use getter
+        const mostRecentDate = this.getMostRecentDate; // Use getter
+
+        if (availableDates.length > 0) {
+          if (this.selectedProduct.date === undefined || !availableDates.includes(this.selectedProduct.date)) {
+            if (this.selectedProduct.date !== undefined && !availableDates.includes(this.selectedProduct.date)) {
+              console.warn(`Previously selected date ${this.selectedProduct.date} no longer available. Setting to most recent: ${mostRecentDate}.`);
+            } else {
+              console.log(`Setting date to most recent available: ${mostRecentDate}`);
+            }
+            this.selectedProduct.date = mostRecentDate;
+          } else {
+            console.log(`Keeping existing valid date: ${this.selectedProduct.date}`);
+          }
+        } else {
+          console.warn(`No dates available for product ${currentProductId}. Clearing selectedProduct.date.`);
+          this.selectedProduct.date = undefined;
+        }
+
+        this.selectedProduct.previousProductId = currentProductId;
+
+      } catch (error: any) {
+        console.error(`Error in loadProductEntries for product ${currentProductId}:`, error);
+        this.error = error.message || 'Failed to load product entries';
+        this.productEntries = { results: [] };
+        this.selectedProduct.date = undefined; 
       } finally {
         this.isLoading = false;
       }
@@ -146,8 +200,7 @@ export const useProductStore = defineStore('productStore', {
     },
     
     getTileLayerURL() {
-      if (!this.selectedProduct || !this.selectedProduct.product_id) {
-        console.warn('Cannot generate tile URL: No product selected');
+      if (!this.selectedProduct || !this.selectedProduct.product_id || !this.selectedProduct.date) {
         return '';
       }
       return computeTileLayerURL(this.selectedProduct);

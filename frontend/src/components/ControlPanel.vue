@@ -9,54 +9,96 @@ import { watch, ref } from 'vue'
 const availableDataStore = useAvailableDataStore()
 const productStore = useProductStore()
 
-const selectedDate = ref(null)
+const selectedDate = ref<Date | null>(null) // Ensure selectedDate is typed
 
+// Watcher for date changes from the store
 watch(
-  () => productStore.getSelectedProduct,
-  (newVal, oldVal) => {
-    selectedDate.value = new Date(productStore.getSelectedDate)
-    if (newVal.date != oldVal.date || newVal.product_id != oldVal.product_id) {
-      productStore.loadProductEntries()
+  () => productStore.getSelectedProduct.date,
+  (newStoreDate) => {
+    console.log(`[ControlPanel.vue WATCHER productStore.date]: Store date changed to: ${newStoreDate}`);
+    if (newStoreDate) {
+      const newDateObj = new Date(newStoreDate); // Dates from store are YYYY/MM/DD
+      // Check if selectedDate (v-model for datepicker) is already equivalent
+      if (!selectedDate.value || selectedDate.value.getTime() !== newDateObj.getTime()) {
+        console.log(`[ControlPanel.vue WATCHER productStore.date]: Updating local selectedDate for datepicker to: ${newDateObj}`);
+        selectedDate.value = newDateObj;
+      } else {
+        console.log(`[ControlPanel.vue WATCHER productStore.date]: Local selectedDate already matches store date. No UI update needed.`);
+      }
+    } else {
+      if (selectedDate.value !== null) {
+        console.log(`[ControlPanel.vue WATCHER productStore.date]: Store date is null/undefined. Clearing local selectedDate.`);
+        selectedDate.value = null;
+      } else {
+        console.log(`[ControlPanel.vue WATCHER productStore.date]: Local selectedDate already null. No UI update needed.`);
+      }
     }
   },
-  { deep: true }
-)
+  { immediate: true } // Sync on component load/initial product selection
+);
 
-const handleProductSelection = (selection) => {
-  productStore.clickedPoint.show = false
-  productStore.selectedProduct.product_id = selection.target.value
-  productStore.loadProductEntries()
-}
+watch(
+  () => productStore.getSelectedProduct.product_id,
+  (newProductId, oldProductId) => {
+    console.log(`[ControlPanel.vue WATCHER productStore.product_id]: Product ID changed from ${oldProductId} to ${newProductId}`);
+    // The date watcher above will handle updating selectedDate when the store's date changes as a result of the product change
+  }
+);
 
-const handleCropmaskSelection = (selection) => {
-  productStore.selectedProduct.cropmask_id = selection.target.value
-}
+const handleProductSelection = async (selection) => {
+  const newProductId = selection.target.value;
+  console.log(`[ControlPanel.vue EVENT ProductSelect]: Product selected: ${newProductId}. Calling productStore.setProduct().`);
+  await productStore.setProduct(newProductId);
+  console.log(`[ControlPanel.vue EVENT ProductSelect]: productStore.setProduct() called for ${newProductId}.`);
+};
 
-const handleDateSelection = (selection) => {
-  const day = selection.getDate().toString().padStart(2, '0')
-  const month = (selection.getMonth() + 1).toString().padStart(2, '0')
-  const year = selection.getFullYear()
-  const iso = `${year}/${month}/${day}`
-  selectedDate.value = iso
-  productStore.selectedProduct.date = iso
-}
+const handleCropmaskSelection = async (selection) => {
+  const newCropmaskId = selection.target.value;
+  console.log(`[ControlPanel.vue EVENT CropmaskSelect]: Cropmask selected: ${newCropmaskId}. Calling productStore.setCropmask().`);
+  await productStore.setCropmask(newCropmaskId);
+  console.log(`[ControlPanel.vue EVENT CropmaskSelect]: productStore.setCropmask() called for ${newCropmaskId}.`);
+};
+
+// Handler for the datepicker's update event
+const handleDateSelection = async (dateFromPicker: Date | null) => {
+  console.log('[ControlPanel.vue EVENT @update-model-value]: Datepicker emitted event with value:', dateFromPicker);
+
+  if (dateFromPicker instanceof Date && !isNaN(dateFromPicker.getTime())) {
+    const day = dateFromPicker.getDate().toString().padStart(2, '0');
+    const month = (dateFromPicker.getMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
+    const year = dateFromPicker.getFullYear();
+    const isoDate = `${year}/${month}/${day}`;
+    console.log(`[ControlPanel.vue EVENT @update-model-value]: Formatted to YYYY/MM/DD: ${isoDate}. Attempting to call productStore.setDate().`);
+    await productStore.setDate(isoDate);
+    console.log(`[ControlPanel.vue EVENT @update-model-value]: productStore.setDate() called with ${isoDate}.`);
+  } else if (dateFromPicker === null) {
+    console.log('[ControlPanel.vue EVENT @update-model-value]: Datepicker emitted null (date cleared). Attempting to call productStore.setDate(undefined).');
+    await productStore.setDate(undefined);
+    console.log('[ControlPanel.vue EVENT @update-model-value]: productStore.setDate(undefined) called.');
+  } else {
+    console.warn('[ControlPanel.vue EVENT @update-model-value]: Received invalid date or unexpected value:', dateFromPicker);
+  }
+};
+
+const onDatepickerDateUpdate = (newDateVal: Date | null) => { // Allow null for clearable
+  console.log('[ControlPanel.vue EVENT @date-update]: Datepicker emitted @date-update. Value:', newDateVal);
+  // Call the main handler when @date-update fires
+  handleDateSelection(newDateVal);
+};
 
 const dateFormat = (date: Date): string => {
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
   return `${year}-${month}-${day}`;
-}
+};
 </script>
 
 <template>
   <div class="max-w-lg bg-[#231f1fc8] rounded-md shadow-dark-500 md:w-96 w-full h-auto">
-    <!-- <div class="control-panel"> -->
     <div class="flex flex-col w-full h-full p-3 md:p-7 md:space-y-3 space-y-2">
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">
-          Product
-        </p>
+        <p class="text-xl md:text-2xl font-semibold text-white">Product</p>
         <SelectMenu
           placeholder="Select Product"
           :data="availableDataStore.getProducts"
@@ -66,23 +108,23 @@ const dateFormat = (date: Date): string => {
         />
       </div>
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">
-          Date
-        </p>
+        <p class="text-xl md:text-2xl font-semibold text-white">Date</p>
         <Datepicker
           v-model="selectedDate"
           :enable-time-picker="false"
-          :allowed-dates="productStore.getProductDates"
-          :format="dateFormat" 
+          :allowed-dates="productStore.getProductDates" 
+          :format="dateFormat"
           @update-model-value="handleDateSelection"
+          @date-update="onDatepickerDateUpdate"
+          placeholder="Select Date"
+          :clearable="true"
+          :auto-apply="true"
         />
       </div>
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">
-          Cropmask
-        </p>
+        <p class="text-xl md:text-2xl font-semibold text-white">Cropmask</p>
         <SelectMenu
-          v-model="selectedDate"
+          v-model="productStore.selectedProduct.cropmask_id"
           :data="availableDataStore.getCropmasks"
           key-by="cropmask_id"
           label-by="display_name"
@@ -94,17 +136,6 @@ const dateFormat = (date: Date): string => {
   </div>
 </template>
 
-
-<!-- <style scoped>
-.control-panel {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  width: 30vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: rgba(33, 28, 28, 0.818);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  position: relative;
-}
-</style> -->
+<style scoped>
+/* ... existing styles ... */
+</style>
