@@ -1,4 +1,3 @@
-
 export const MAP_STYLES = {
     SATELLITE: 'mapbox://styles/mapbox/satellite-v9',
     DARK: 'mapbox://styles/mapbox/dark-v10'
@@ -17,7 +16,7 @@ interface mapboxSettings {
     width: string,
     style: mapStyles,
     interactive: boolean,
-    center: any,
+    center: [number, number],
     zoom: number,
     bearing: number,
     pitch: number

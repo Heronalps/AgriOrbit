@@ -98,7 +98,9 @@ const dateFormat = (date: Date): string => {
   <div class="max-w-lg bg-[#231f1fc8] rounded-md shadow-dark-500 md:w-96 w-full h-auto">
     <div class="flex flex-col w-full h-full p-3 md:p-7 md:space-y-3 space-y-2">
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">Product</p>
+        <p class="text-xl md:text-2xl font-semibold text-white">
+          Product
+        </p>
         <SelectMenu
           placeholder="Select Product"
           :data="availableDataStore.getProducts"
@@ -108,21 +110,25 @@ const dateFormat = (date: Date): string => {
         />
       </div>
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">Date</p>
+        <p class="text-xl md:text-2xl font-semibold text-white">
+          Date
+        </p>
         <Datepicker
           v-model="selectedDate"
           :enable-time-picker="false"
           :allowed-dates="productStore.getProductDates" 
           :format="dateFormat"
-          @update-model-value="handleDateSelection"
-          @date-update="onDatepickerDateUpdate"
           placeholder="Select Date"
           :clearable="true"
           :auto-apply="true"
+          @update-model-value="handleDateSelection"
+          @date-update="onDatepickerDateUpdate"
         />
       </div>
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">Cropmask</p>
+        <p class="text-xl md:text-2xl font-semibold text-white">
+          Cropmask
+        </p>
         <SelectMenu
           v-model="productStore.selectedProduct.cropmask_id"
           :data="availableDataStore.getCropmasks"

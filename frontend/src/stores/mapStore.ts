@@ -1,8 +1,12 @@
 import { defineStore } from 'pinia'
-import { productState, useProductStore } from './productStore'
+// Import the store type itself, not just the state type
+import { useProductStore, type ProductStore } from './productStore'
+
+// Define a type for layer definitions. Using Record<string, unknown> as a generic placeholder.
+type LayerDefinition = Record<string, unknown>;
 
 export interface mapState {
-  layers: Record<string, any | null>
+  layers: Record<string, LayerDefinition | null>; // Replaced 'any' with LayerDefinition
 }
 
 export const useMapStore = defineStore('map', {
@@ -10,16 +14,16 @@ export const useMapStore = defineStore('map', {
     layers: { product: null, admin: null },
   }) as mapState,
   getters: {
-    layers(state): Array<any> {
-      if (!state.layers){
-        return 
-      }
-      return Object.values(state.layers)
+    // Updated return type from Array<any> to (LayerDefinition | null)[]
+    // Removed redundant 'if (!state.layers)' check as state.layers is always initialized.
+    layers(state): (LayerDefinition | null)[] {
+      return Object.values(state.layers);
     },
   },
   actions: {
     async renderLayers() {
-      const product: productState = useProductStore()
+      // Type 'product' as the ProductStore instance
+      const product: ProductStore = useProductStore()
       product.renderTileLayer() // Removed assignment to unused variable tileLayer
     },
     // async renderTileLayer() {

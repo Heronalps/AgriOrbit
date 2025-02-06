@@ -3,13 +3,29 @@ import { getDatasetEntries } from "@/api/datasets"
 import { getValueAtPoint } from "@/api/point"
 import { computeTileLayerURL } from '@/api/tile'
 import { defineStore } from 'pinia'
+import { type ProductMeta } from "@/api.d.ts"; // Import ProductMeta
+
+// Interface for entries in the productEntries.results array
+export interface ProductListEntry {
+  date: string; // Consistently used in getters
+  // Add other known properties if available and used from productEntries.results
+  [key: string]: unknown; // For any other properties not explicitly defined
+}
 
 export interface selectedProductType {
   product_id?: string;
   cropmask_id?: string;
-  date?: string;
+  date?: string; // This is the selected date for the product_id
   previousProductId?: string; // Track product changes
-  [key: string]: any;
+
+  // Fields that might be populated from the general product definition (from api.d.ts -> productType)
+  display_name?: string;
+  desc?: string;
+  meta?: ProductMeta;
+  composite?: boolean;
+  // Add other fields from api.d.ts -> productType if they are directly stored and used here
+
+  [key: string]: unknown; // Replaced [key: string]: any;
 }
 
 export interface clickedPointType {
@@ -17,14 +33,12 @@ export interface clickedPointType {
   x?: number;
   y?: number;
   show?: boolean;
-  [key: string]: any;
+  [key: string]: unknown; // Replaced [key: string]: any;
 }
-
-export type selectedProductInterface = selectedProductType
 
 export interface productState {
   selectedProduct: selectedProductType;
-  productEntries: { results: Array<any> };
+  productEntries: { results: ProductListEntry[] }; // Uses ProductListEntry
   clickedPoint: clickedPointType;
   isLoading: boolean;
   error: string | null;
@@ -33,14 +47,14 @@ export interface productState {
 export const useProductStore = defineStore('productStore', {
   state: () => ({
     selectedProduct: {} as selectedProductType,
-    productEntries: { results: [] } as any, // Ensure productEntries is an object with a results array
+    productEntries: { results: [] } as { results: ProductListEntry[] }, // Typed assertion
     clickedPoint: { show: false, value: null } as clickedPointType,
     isLoading: false,
     error: null
   }) as productState,
 
   getters: {
-    getSelectedProduct(state): selectedProductInterface {
+    getSelectedProduct(state): selectedProductType {
       return state.selectedProduct;
     },
     getSelectedDate(state): string {
@@ -102,7 +116,7 @@ export const useProductStore = defineStore('productStore', {
       }
     },
 
-    async loadProductEntries(productJustChanged: boolean = false) {
+    async loadProductEntries(productJustChanged = false) {
       console.log(`Loading product entries for:`, JSON.parse(JSON.stringify(this.selectedProduct)), `productJustChanged: ${productJustChanged}`);
 
       const currentProductId = this.selectedProduct.product_id;
@@ -156,11 +170,17 @@ export const useProductStore = defineStore('productStore', {
 
         this.selectedProduct.previousProductId = currentProductId;
 
-      } catch (error: any) {
+      } catch (error: unknown) { // Changed from any to unknown
         console.error(`Error in loadProductEntries for product ${currentProductId}:`, error);
-        this.error = error.message || 'Failed to load product entries';
-        this.productEntries = { results: [] };
-        this.selectedProduct.date = undefined; 
+        if (error instanceof Error) {
+          this.error = error.message;
+        } else if (typeof error === 'string') {
+          this.error = error;
+        } else {
+          this.error = 'Failed to load product entries';
+        }
+        this.productEntries = { results: [] }; // Reset on error
+        this.selectedProduct.date = undefined; // Reset date on error
       } finally {
         this.isLoading = false;
       }
@@ -207,3 +227,6 @@ export const useProductStore = defineStore('productStore', {
     }
   },
 })
+
+// Export the type of the store instance
+export type ProductStore = ReturnType<typeof useProductStore>;

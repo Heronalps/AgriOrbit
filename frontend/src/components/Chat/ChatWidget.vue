@@ -117,6 +117,7 @@ import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'; // Remov
 import { useLocationStore } from '@/stores/locationStore';
 import { useProductStore } from '@/stores/productStore';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 // Store instances
 const locationStore = useLocationStore();
@@ -144,19 +145,20 @@ const initialWidgetDim = ref({ width: 0, height: 0 });
 // Configure marked for safe HTML
 marked.setOptions({
   breaks: true,  // Add line breaks
-  gfm: true,     // Use GitHub Flavored Markdown
-  sanitize: false // Don't sanitize HTML (Vue handles this)
+  gfm: true     // Use GitHub Flavored Markdown
+  // sanitize and sanitizer options removed, will sanitize explicitly
 });
 
 // Function to format message text with markdown
 function formatMessage(text) {
   if (!text) return '';
-  // Process text with marked to convert markdown to HTML
+  // Process text with marked to convert markdown to HTML, then sanitize
   try {
-    return marked(text);
+    const rawHtml = marked(text);
+    return DOMPurify.sanitize(rawHtml);
   } catch (error) {
     console.error('Error formatting message:', error);
-    return text;
+    return text; // Return plain text on error
   }
 }
 
