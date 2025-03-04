@@ -4,7 +4,7 @@ import { useProductStore } from '@/stores/productStore'
 import SelectMenu from './SelectMenu.vue'
 import Datepicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
-import { watch, ref } from 'vue'
+import { watch, ref, computed } from 'vue'
 
 const availableDataStore = useAvailableDataStore()
 const productStore = useProductStore()
@@ -92,6 +92,42 @@ const dateFormat = (date: Date): string => {
   const year = date.getFullYear();
   return `${year}-${month}-${day}`;
 };
+
+// Computed properties for Previous/Next Date buttons
+const availableDates = computed(() => productStore.getProductDates);
+const currentDateStr = computed(() => productStore.getSelectedProduct.date);
+
+const currentIndex = computed(() => {
+  if (!currentDateStr.value || availableDates.value.length === 0) {
+    return -1;
+  }
+  return availableDates.value.findIndex(d => d === currentDateStr.value);
+});
+
+const canGoPrevious = computed(() => {
+  return currentIndex.value > 0;
+});
+
+const canGoNext = computed(() => {
+  return currentIndex.value !== -1 && currentIndex.value < availableDates.value.length - 1;
+});
+
+// Methods to handle Previous/Next Date
+const goToPreviousDate = async () => {
+  if (canGoPrevious.value) {
+    const prevDate = availableDates.value[currentIndex.value - 1];
+    console.log(`[ControlPanel.vue EVENT PrevDate]: Going to previous date: ${prevDate}`);
+    await productStore.setDate(prevDate);
+  }
+};
+
+const goToNextDate = async () => {
+  if (canGoNext.value) {
+    const nextDate = availableDates.value[currentIndex.value + 1];
+    console.log(`[ControlPanel.vue EVENT NextDate]: Going to next date: ${nextDate}`);
+    await productStore.setDate(nextDate);
+  }
+};
 </script>
 
 <template>
@@ -113,17 +149,34 @@ const dateFormat = (date: Date): string => {
         <p class="text-xl md:text-2xl font-semibold text-white">
           Date
         </p>
-        <Datepicker
-          v-model="selectedDate"
-          :enable-time-picker="false"
-          :allowed-dates="productStore.getProductDates" 
-          :format="dateFormat"
-          placeholder="Select Date"
-          :clearable="true"
-          :auto-apply="true"
-          @update-model-value="handleDateSelection"
-          @date-update="onDatepickerDateUpdate"
-        />
+        <div class="flex items-center space-x-2 w-full">
+          <button
+            @click="goToPreviousDate"
+            :disabled="!canGoPrevious"
+            class="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            &lt;
+          </button>
+          <Datepicker
+            v-model="selectedDate"
+            :enable-time-picker="false"
+            :allowed-dates="productStore.getProductDates" 
+            :format="dateFormat"
+            placeholder="Select Date"
+            :clearable="true"
+            :auto-apply="true"
+            @update-model-value="handleDateSelection"
+            @date-update="onDatepickerDateUpdate"
+            class="flex-grow"
+          />
+          <button
+            @click="goToNextDate"
+            :disabled="!canGoNext"
+            class="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            &gt;
+          </button>
+        </div>
       </div>
       <div class="flex flex-col justify-end space-y-2 items-center">
         <p class="text-xl md:text-2xl font-semibold text-white">
