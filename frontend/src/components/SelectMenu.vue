@@ -8,13 +8,20 @@ interface DataItem {
   [key: string]: string | number | boolean | null | undefined;
 }
 
-// const props = defineProps<{ // Commented out unused variable assignment
 defineProps<{
-  placeholder?: string
-  data: Array<DataItem>
-  keyBy: string
-  labelBy: string
-}>()
+  placeholder?: string;
+  data: Array<DataItem>;
+  keyBy: string;
+  labelBy: string;
+  modelValue: string | number | null | undefined; // Add modelValue for v-model support
+}>();
+
+const emit = defineEmits(['update:modelValue']); // Define emit function for v-model
+
+const handleChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement;
+  emit('update:modelValue', target.value); // Emit the selected value
+};
 </script>
 <template>
   <select
@@ -30,11 +37,12 @@ defineProps<{
       md:text-base
       text-sm
     "
+    :value="modelValue"
+    @change="handleChange"
   >
     <option
       v-if="placeholder"
       disabled="disabled"
-      selected="selected"
     >
       {{ placeholder }}
     </option>

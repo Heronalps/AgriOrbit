@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAvailableDataStore } from '@/stores/availableDataStore'
 import { useProductStore } from '@/stores/productStore'
+import { useMapStore } from '@/stores/mapStore'
 import SelectMenu from './SelectMenu.vue'
 import Datepicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
@@ -8,29 +9,41 @@ import { watch, ref, computed } from 'vue'
 
 const availableDataStore = useAvailableDataStore()
 const productStore = useProductStore()
+const mapStore = useMapStore()
 
 const selectedDate = ref<Date | null>(null) // Ensure selectedDate is typed
+
+const availableBasemaps = ref([
+  { id: 'streets', name: 'Mapbox Streets' },
+  { id: 'outdoors', name: 'Mapbox Outdoors' },
+  { id: 'light', name: 'Mapbox Light' },
+  { id: 'dark', name: 'Mapbox Dark' },
+  { id: 'satellite', name: 'Mapbox Satellite' },
+  { id: 'satellite-streets', name: 'Mapbox Satellite Streets' },
+  { id: 'navigation-day', name: 'Mapbox Navigation Day' },
+  { id: 'navigation-night', name: 'Mapbox Navigation Night' },
+]);
+
+const availableProducts = ref(availableDataStore.getProducts);
+const availableCropmasks = ref(
+  availableDataStore.getCropmasks.length > 0
+    ? availableDataStore.getCropmasks
+    : [{ cropmask_id: null, display_name: 'No Cropmask Available' }]
+);
 
 // Watcher for date changes from the store
 watch(
   () => productStore.getSelectedProduct.date,
   (newStoreDate) => {
-    console.log(`[ControlPanel.vue WATCHER productStore.date]: Store date changed to: ${newStoreDate}`);
     if (newStoreDate) {
       const newDateObj = new Date(newStoreDate); // Dates from store are YYYY/MM/DD
       // Check if selectedDate (v-model for datepicker) is already equivalent
       if (!selectedDate.value || selectedDate.value.getTime() !== newDateObj.getTime()) {
-        console.log(`[ControlPanel.vue WATCHER productStore.date]: Updating local selectedDate for datepicker to: ${newDateObj}`);
         selectedDate.value = newDateObj;
-      } else {
-        console.log(`[ControlPanel.vue WATCHER productStore.date]: Local selectedDate already matches store date. No UI update needed.`);
       }
     } else {
       if (selectedDate.value !== null) {
-        console.log(`[ControlPanel.vue WATCHER productStore.date]: Store date is null/undefined. Clearing local selectedDate.`);
         selectedDate.value = null;
-      } else {
-        console.log(`[ControlPanel.vue WATCHER productStore.date]: Local selectedDate already null. No UI update needed.`);
       }
     }
   },
@@ -40,23 +53,38 @@ watch(
 watch(
   () => productStore.getSelectedProduct.product_id,
   (newProductId, oldProductId) => {
-    console.log(`[ControlPanel.vue WATCHER productStore.product_id]: Product ID changed from ${oldProductId} to ${newProductId}`);
     // The date watcher above will handle updating selectedDate when the store's date changes as a result of the product change
   }
 );
 
+// Removed log for basemap changes
+watch(
+  () => mapStore.selectedBasemap,
+  (newBasemap) => {
+    if (newBasemap) {
+      const dropdown = document.querySelector('select[data-basemap-selector]');
+      if (dropdown) {
+        dropdown.value = newBasemap;
+      }
+    }
+  },
+  { immediate: true }
+);
+
 const handleProductSelection = async (selection) => {
   const newProductId = selection.target.value;
-  console.log(`[ControlPanel.vue EVENT ProductSelect]: Product selected: ${newProductId}. Calling productStore.setProduct().`);
   await productStore.setProduct(newProductId);
-  console.log(`[ControlPanel.vue EVENT ProductSelect]: productStore.setProduct() called for ${newProductId}.`);
 };
 
 const handleCropmaskSelection = async (selection) => {
   const newCropmaskId = selection.target.value;
-  console.log(`[ControlPanel.vue EVENT CropmaskSelect]: Cropmask selected: ${newCropmaskId}. Calling productStore.setCropmask().`);
   await productStore.setCropmask(newCropmaskId);
-  console.log(`[ControlPanel.vue EVENT CropmaskSelect]: productStore.setCropmask() called for ${newCropmaskId}.`);
+};
+
+const handleBasemapSelection = (selection) => {
+  const newBasemapId = selection.target.value;
+  console.log(`[ControlPanel.vue EVENT BasemapSelect]: Basemap selected: ${newBasemapId}. Calling mapStore.setBasemap().`);
+  mapStore.setBasemap(newBasemapId);
 };
 
 // Handler for the datepicker's update event
@@ -138,10 +166,11 @@ const goToNextDate = async () => {
           Product
         </p>
         <SelectMenu
-          placeholder="Select Product"
+          v-model="productStore.selectedProduct.product_id"
           :data="availableDataStore.getProducts"
           key-by="product_id"
           label-by="display_name"
+          placeholder="Select Product"
           @change="handleProductSelection"
         />
       </div>
@@ -189,6 +218,20 @@ const goToNextDate = async () => {
           label-by="display_name"
           placeholder="Select Cropmask"
           @change="handleCropmaskSelection"
+        />
+      </div>
+      <div class="flex flex-col justify-end space-y-2 items-center">
+        <p class="text-xl md:text-2xl font-semibold text-white">
+          Basemap
+        </p>
+        <SelectMenu
+          v-model="mapStore.selectedBasemap"
+          :data="availableBasemaps"
+          key-by="id"
+          label-by="name"
+          placeholder="Select Basemap"
+          data-basemap-selector
+          @change="handleBasemapSelection"
         />
       </div>
     </div>

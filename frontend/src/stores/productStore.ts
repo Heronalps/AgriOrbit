@@ -92,7 +92,6 @@ export const useProductStore = defineStore('productStore', {
         // Date will be cleared by loadProductEntries via the flag
         await this.loadProductEntries(true); // Pass true for productJustChanged
       } else {
-        console.log(`Product ${newProductId} re-selected. Reloading entries to ensure date validity.`);
         await this.loadProductEntries(false); // Pass false or omit (as it defaults to false)
       }
     },
@@ -117,70 +116,47 @@ export const useProductStore = defineStore('productStore', {
     },
 
     async loadProductEntries(productJustChanged = false) {
-      console.log(`Loading product entries for:`, JSON.parse(JSON.stringify(this.selectedProduct)), `productJustChanged: ${productJustChanged}`);
-
       const currentProductId = this.selectedProduct.product_id;
       const currentCropmaskId = this.selectedProduct.cropmask_id;
 
       this.isLoading = true;
       this.error = null;
 
-      if (productJustChanged) {
-        console.log(`loadProductEntries: productJustChanged is true. Clearing selectedProduct.date.`);
-        this.selectedProduct.date = undefined;
-      }
-
       try {
         if (!currentProductId) {
           console.warn('No product selected, skipping data load');
           this.productEntries = { results: [] };
           this.selectedProduct.date = undefined;
-          this.selectedProduct.previousProductId = undefined; // Clear previous product ID as well
-          this.isLoading = false;
           return;
         }
 
-        const paramsForDatasetEntries: { product_id: string, cropmask_id?: string } = { product_id: currentProductId };
-        if (currentCropmaskId) {
-          paramsForDatasetEntries.cropmask_id = currentCropmaskId;
-        }
-        console.log('Fetching dataset entries with params:', JSON.parse(JSON.stringify(paramsForDatasetEntries)));
+        const paramsForDatasetEntries = { product_id: currentProductId, cropmask_id: currentCropmaskId };
 
         const data = await getDatasetEntries(paramsForDatasetEntries);
         this.productEntries = data || { results: [] };
 
-        const availableDates = this.getProductDates; // Use getter
-        const mostRecentDate = this.getMostRecentDate; // Use getter
+        const availableDates = this.getProductDates;
+        const mostRecentDate = this.getMostRecentDate;
 
         if (availableDates.length > 0) {
-          if (this.selectedProduct.date === undefined || !availableDates.includes(this.selectedProduct.date)) {
-            if (this.selectedProduct.date !== undefined && !availableDates.includes(this.selectedProduct.date)) {
-              console.warn(`Previously selected date ${this.selectedProduct.date} no longer available. Setting to most recent: ${mostRecentDate}.`);
+          if (productJustChanged) {
+            console.log(`Product just changed. Validating selected date: ${this.selectedProduct.date}`);
+            if (!this.selectedProduct.date || !availableDates.includes(this.selectedProduct.date)) {
+              console.warn(`Selected date ${this.selectedProduct.date} is invalid. Setting to most recent: ${mostRecentDate}`);
+              this.selectedProduct.date = mostRecentDate;
             } else {
-              console.log(`Setting date to most recent available: ${mostRecentDate}`);
+              console.log(`Keeping existing valid date: ${this.selectedProduct.date}`);
             }
-            this.selectedProduct.date = mostRecentDate;
-          } else {
-            console.log(`Keeping existing valid date: ${this.selectedProduct.date}`);
           }
         } else {
           console.warn(`No dates available for product ${currentProductId}. Clearing selectedProduct.date.`);
           this.selectedProduct.date = undefined;
         }
-
-        this.selectedProduct.previousProductId = currentProductId;
-
-      } catch (error: unknown) { // Changed from any to unknown
+      } catch (error) {
         console.error(`Error in loadProductEntries for product ${currentProductId}:`, error);
-        if (error instanceof Error) {
-          this.error = error.message;
-        } else if (typeof error === 'string') {
-          this.error = error;
-        } else {
-          this.error = 'Failed to load product entries';
-        }
-        this.productEntries = { results: [] }; // Reset on error
-        this.selectedProduct.date = undefined; // Reset date on error
+        this.error = error instanceof Error ? error.message : 'Failed to load product entries';
+        this.productEntries = { results: [] };
+        this.selectedProduct.date = undefined;
       } finally {
         this.isLoading = false;
       }

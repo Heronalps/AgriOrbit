@@ -6,18 +6,20 @@ import { useProductStore, type ProductStore } from './productStore'
 type LayerDefinition = Record<string, unknown>;
 
 export interface mapState {
-  layers: Record<string, LayerDefinition | null>; // Replaced 'any' with LayerDefinition
+  layersState: Record<string, LayerDefinition | null>; // Renamed from 'layers' to 'layersState'
+  selectedBasemap: string; // Add selectedBasemap to track the current basemap
 }
 
 export const useMapStore = defineStore('map', {
   state: () => ({
-    layers: { product: null, admin: null },
+    layersState: { product: null, admin: null },
+    selectedBasemap: 'dark', // Set the initial basemap to 'dark' (Mapbox Dark)
   }) as mapState,
   getters: {
-    // Updated return type from Array<any> to (LayerDefinition | null)[]
+    // Updated return type from Array<any> to (LayerDefinition | null)[]. 
     // Removed redundant 'if (!state.layers)' check as state.layers is always initialized.
     layers(state): (LayerDefinition | null)[] {
-      return Object.values(state.layers);
+      return Object.values(state.layersState); // Updated to use 'layersState'
     },
   },
   actions: {
@@ -25,6 +27,9 @@ export const useMapStore = defineStore('map', {
       // Type 'product' as the ProductStore instance
       const product: ProductStore = useProductStore()
       product.renderTileLayer() // Removed assignment to unused variable tileLayer
+    },
+    setBasemap(basemapId: string) {
+      this.selectedBasemap = basemapId;
     },
     // async renderTileLayer() {
     //   const data = await renderTileLayer()

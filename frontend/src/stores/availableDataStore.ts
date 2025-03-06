@@ -27,6 +27,9 @@ export const useAvailableDataStore = defineStore('availableDataStore', {
     cropmasks: { results: [] },
     products: { results: [] },
     adminLayers: [],
+    cropmaskCache: null, // Cache for cropmasks
+    productCache: null, // Cache for products
+    cacheTimestamp: null, // Timestamp for cache invalidation
   }) as availableDataState,
   getters: {
     getCropmasks(state) {
@@ -40,15 +43,30 @@ export const useAvailableDataStore = defineStore('availableDataStore', {
     },
   },
   actions: {
-    async loadAvailableProducts(): void {
-      // const product = useProductStore() // Commented out unused variable
-      const data = await getAvailableProducts()
-      this.products = data
+    async loadAvailableProducts(): Promise<void> {
+      if (this.productCache) {
+        this.products = this.productCache;
+        return;
+      }
+
+      const data = await getAvailableProducts();
+      this.products = data;
+      this.productCache = data;
+      this.cacheTimestamp = Date.now();
     },
-    async loadAvailableCropmasks(): void {
-      const data = await getAvailableCropmasks()
-      this.cropmasks = data
+
+    async loadAvailableCropmasks(): Promise<void> {
+      if (this.cropmaskCache) {
+        this.cropmasks = this.cropmaskCache;
+        return;
+      }
+
+      const data = await getAvailableCropmasks();
+      this.cropmasks = data;
+      this.cropmaskCache = data;
+      this.cacheTimestamp = Date.now();
     },
+
     async loadAvailableAdminLayers(): void {
       // const data = await availableAdminLayers()
       // this.adminLayers = data
