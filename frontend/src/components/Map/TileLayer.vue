@@ -19,17 +19,6 @@ function createLayer() {
         bbox: { west, south, east, north },
       } = props.tile
 
-      // Validate image and bounds
-      if (!props.data) {
-        console.error('BitmapLayer initialization failed: Missing image data. Using fallback image.')
-        props.data = '/public/fallback-tile.png' // Fallback image
-      }
-
-      if (!west || !south || !east || !north) {
-        console.error('BitmapLayer initialization failed: Invalid bounds.', { west, south, east, north })
-        return null
-      }
-
       return new BitmapLayer(props, {
         data: null,
         image: props.data,
