@@ -79,88 +79,85 @@ export const useProductStore = defineStore('productStore', {
         .sort(); // Sort dates to find the most recent
       return dates && dates.length > 0 ? dates[dates.length - 1].replaceAll('-', '/') : undefined;
     },
-    // getTileLayerURL was moved back to actions
   },
 
   actions: {
+    /**
+     * Sets the active product. This action handles:
+     * 1. Genuine product switches: Clears the date and loads entries for the new product.
+     * 2. Product re-selections or state inconsistencies: Validates and potentially corrects
+     *    the date if it appears stale due to the product ID already being set.
+     */
     async setProduct(newProductId: string) {
-      const currentProductIdInStateAtEntry = this.selectedProduct.product_id;
-      const currentDateInStateAtEntry = this.selectedProduct.date; // For logging/decision
-      const currentPreviousProductIdAtEntry = this.selectedProduct.previousProductId;
+      const currentProductId = this.selectedProduct.product_id;
+      const currentDate = this.selectedProduct.date;
+      const currentPreviousProductId = this.selectedProduct.previousProductId;
 
-      this.clickedPoint.show = false;
+      this.clickedPoint.show = false; // Hide clicked point info on product change
 
-      if (currentProductIdInStateAtEntry !== newProductId) {
-        // Genuine switch from a different product
-        console.log(`setProduct: Switching from '${currentProductIdInStateAtEntry || 'undefined'}' to '${newProductId}'.`);
+      if (currentProductId !== newProductId) {
+        // --- Genuine Product Switch ---
         this.selectedProduct = {
-          ...(this.selectedProduct), 
+          ...(this.selectedProduct), // Retain other properties like cropmask_id
           product_id: newProductId,
-          previousProductId: currentProductIdInStateAtEntry, 
-          date: undefined, // CRITICAL: Clear date
+          previousProductId: currentProductId, // Store the product we are switching from
+          date: undefined, // CRITICAL: Clear date, new product will need its own valid date
         };
-        await this.loadProductEntries(true); 
-      } else { 
-        // newProductId is the same as product_id in state at entry.
-        console.log(`setProduct: Product '${newProductId}' is already set in state. Validating/refreshing.`);
-
-        if (currentPreviousProductIdAtEntry && currentPreviousProductIdAtEntry !== newProductId) {
-          // Case 1: product_id=B (newProductId), currentPreviousProductIdAtEntry=A. 
-          // This implies a recent switch from A to B, and currentDateInStateAtEntry might be stale from A.
-          console.warn(`setProduct: Product is ${newProductId}, but previousProductId is ${currentPreviousProductIdAtEntry}. Date ${currentDateInStateAtEntry} is likely stale. Clearing date.`);
-          this.selectedProduct.date = undefined; // Synchronous clear
-          await this.loadProductEntries(true); // Reload as if product just changed for newProductId
+        await this.loadProductEntries(true); // `productJustChanged` is true
+      } else {
+        // --- Product ID in State Already Matches newProductId ---
+        if (currentPreviousProductId && currentPreviousProductId !== newProductId) {
+          this.selectedProduct.date = undefined;
+          await this.loadProductEntries(true); // Treat as a new product selection for date logic
         } else {
-          // Case 2: currentPreviousProductIdAtEntry is undefined OR currentPreviousProductIdAtEntry IS newProductId.
-          // This is the path indicated by logs for the error when switching to copernicus-swi.
-          // (P:copernicus-swi, D:date_chirps, PP:undefined) -> setProduct('copernicus-swi')
-          
-          // If previousProductId is undefined AND a date is currently set in state,
-          // this date is highly suspect if product_id was set externally before this action was called.
-          if (!currentPreviousProductIdAtEntry && this.selectedProduct.date) {
-            console.warn(`setProduct: Product is ${newProductId}, previousProductId is undefined, but a date ${this.selectedProduct.date} exists. This date might be stale from an external product_id update. Clearing date synchronously.`);
-            this.selectedProduct.date = undefined; // Synchronous clear to prevent stale URL generation
+          if (!currentPreviousProductId && this.selectedProduct.date) {
+            this.selectedProduct.date = undefined;
           }
-          // Now, this.selectedProduct.date is either undefined (if cleared above or was already) or was the existing date.
-          // loadProductEntries(false) will handle finding the most recent if date is undefined, or validating it.
-          console.log(`setProduct: Proceeding with loadProductEntries(false) for '${newProductId}'. Current date in state before call: ${this.selectedProduct.date}.`);
+          await this.loadProductEntries(false); // `productJustChanged` is false
+        }
+      }
+    },
+
+    /**
+     * Sets the selected date for the current product and reloads entries if needed.
+     */
+    async setDate(newDateString: string | undefined) {
+      if (this.selectedProduct.date !== newDateString) {
+        this.selectedProduct.date = newDateString;
+        if (this.selectedProduct.product_id) {
           await this.loadProductEntries(false);
         }
       }
     },
 
-    async setDate(newDateString: string | undefined) {
-      if (this.selectedProduct.date !== newDateString) {
-        console.log(`Setting date to: ${newDateString}`);
-        this.selectedProduct.date = newDateString;
-        if (this.selectedProduct.product_id) {
-          await this.loadProductEntries(false); // Pass false
-        }
-      }
-    },
-
+    /**
+     * Sets the selected cropmask for the current product and reloads entries.
+     */
     async setCropmask(newCropmaskId: string | undefined) {
       if (this.selectedProduct.cropmask_id !== newCropmaskId) {
         this.selectedProduct.cropmask_id = newCropmaskId;
         if (this.selectedProduct.product_id) {
-          await this.loadProductEntries(false); // Pass false
+          await this.loadProductEntries(false);
         }
       }
     },
 
+    /**
+     * Loads available data entries (e.g., dates) for the currently selected product and cropmask.
+     * It also handles setting a valid date for the product if the current one is invalid or not set.
+     * @param productJustChanged - True if this call is a direct result of the product ID changing.
+     */
     async loadProductEntries(productJustChanged = false) {
-      console.log(`Loading product entries for:`, JSON.parse(JSON.stringify(this.selectedProduct)), `productJustChanged: ${productJustChanged}`);
-
       const currentProductId = this.selectedProduct.product_id;
       const currentCropmaskId = this.selectedProduct.cropmask_id;
-      const initialDateInState = this.selectedProduct.date; // Capture the date as it was when function was called
+      const initialDateInStateOnEntry = this.selectedProduct.date;
 
       this.isLoading = true;
       this.error = null;
 
       try {
         if (!currentProductId) {
-          console.warn('No product selected, skipping data load');
+          console.warn('loadProductEntries: No product selected, skipping data load.');
           this.productEntries = { results: [] };
           this.selectedProduct.date = undefined;
           this.isLoading = false;
@@ -171,45 +168,32 @@ export const useProductStore = defineStore('productStore', {
         if (currentCropmaskId) {
           paramsForDatasetEntries.cropmask_id = currentCropmaskId;
         }
-        console.log('Fetching dataset entries with params:', JSON.parse(JSON.stringify(paramsForDatasetEntries)));
 
         const data = await getDatasetEntries(paramsForDatasetEntries);
         this.productEntries = data || { results: [] };
 
-        const availableDates = this.getProductDates; // Getter uses this.productEntries
-        const mostRecentDate = this.getMostRecentDate; // Getter
+        const availableDates = this.getProductDates;
+        const mostRecentDate = this.getMostRecentDate;
 
-        let dateToSet: string | undefined = this.selectedProduct.date; // Start with current date in state
+        let dateToSetBasedOnLogic: string | undefined = this.selectedProduct.date;
 
         if (productJustChanged) {
-          console.log(`loadProductEntries: productJustChanged is true. Clearing date.`);
-          dateToSet = undefined;
-        } else if (initialDateInState && availableDates.length > 0 && !availableDates.includes(initialDateInState)) {
-          console.warn(`loadProductEntries: Date ${initialDateInState} for product ${currentProductId} is invalid despite productJustChanged=false. Clearing date.`);
-          dateToSet = undefined; // Stale date detected, clear it
+          dateToSetBasedOnLogic = undefined;
+        } else if (initialDateInStateOnEntry && availableDates.length > 0 && !availableDates.includes(initialDateInStateOnEntry)) {
+          dateToSetBasedOnLogic = undefined;
         }
-        // If !productJustChanged and initialDateInState is valid or null, dateToSet remains initialDateInState
 
-        // Now, determine the final date based on availability
         if (availableDates.length > 0) {
-          if (dateToSet === undefined || !availableDates.includes(dateToSet)) {
-            if (dateToSet !== undefined) { // It was defined but invalid or cleared due to staleness
-              console.warn(`Previously selected date ${dateToSet} (or initial ${initialDateInState}) no longer available or was stale. Setting to most recent: ${mostRecentDate}.`);
-            } else {
-              console.log(`Setting date to most recent available: ${mostRecentDate}`);
-            }
+          if (dateToSetBasedOnLogic === undefined || !availableDates.includes(dateToSetBasedOnLogic)) {
             this.selectedProduct.date = mostRecentDate;
           } else {
-            // dateToSet is valid and was not cleared
-            console.log(`Keeping existing valid date: ${dateToSet}`);
-            this.selectedProduct.date = dateToSet; // Explicitly set, though it might be the same
+            this.selectedProduct.date = dateToSetBasedOnLogic;
           }
         } else {
-          console.warn(`No dates available for product ${currentProductId}. Clearing selectedProduct.date.`);
           this.selectedProduct.date = undefined;
         }
 
-      } catch (error: unknown) { // Changed from any to unknown
+      } catch (error: unknown) {
         console.error(`Error in loadProductEntries for product ${currentProductId}:`, error);
         if (error instanceof Error) {
           this.error = error.message;
@@ -218,21 +202,22 @@ export const useProductStore = defineStore('productStore', {
         } else {
           this.error = 'Failed to load product entries';
         }
-        this.productEntries = { results: [] }; // Reset on error
-        this.selectedProduct.date = undefined; // Reset date on error
+        this.productEntries = { results: [] };
+        this.selectedProduct.date = undefined;
       } finally {
         this.isLoading = false;
       }
     },
     
-    async loadValueAtPoint(longitude, latitude) {
-      console.log(`Loading value at point: ${longitude}, ${latitude} for product:`, this.selectedProduct);
+    /**
+     * Fetches the data value for the selected product at a given map coordinate.
+     */
+    async loadValueAtPoint(longitude: number, latitude: number) {
       this.clickedPoint.show = true;
       
       try {
         if (import.meta.env.MODE === 'development' && !import.meta.env.VITE_USE_REAL_API) {
           const randomValue = parseFloat((Math.random() * 0.6 + 0.2).toFixed(2));
-          console.log('Using mock value:', randomValue);
           this.clickedPoint = {
             value: randomValue,
             x: longitude,
@@ -256,11 +241,14 @@ export const useProductStore = defineStore('productStore', {
       }
     },
 
-    getTileLayerURL() {
-      if (!this.selectedProduct || !this.selectedProduct.product_id || !this.selectedProduct.date) {
-        return '';
+    /**
+     * Computes the TileLayer URL for the current product and date.
+     * Returns an empty string if essential parameters are missing.
+     */
+    getTileLayerURL(): string {
+      if (!this.selectedProduct.product_id || !this.selectedProduct.date) {
+        return ''; // Essential parameters missing
       }
-      // Ensure computeTileLayerURL is imported and used correctly
       return computeTileLayerURL(this.selectedProduct);
     }
   },
