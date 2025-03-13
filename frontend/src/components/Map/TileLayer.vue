@@ -1,57 +1,94 @@
 <script setup lang="ts">
-import { TileLayer } from '@deck.gl/geo-layers'
-import { BitmapLayer } from '@deck.gl/layers'
-import { inject, useAttrs, watch, onMounted } from 'vue'
+import { TileLayer } from '@deck.gl/geo-layers';
+import { BitmapLayer } from '@deck.gl/layers';
+import { inject, useAttrs, watch, onMounted, defineProps } from 'vue';
 
-const attrs = useAttrs()
-const updateLayer = inject('updateLayer')
+// Define props that are commonly passed to this TileLayer component
+// These will be used by the TileLayer constructor via attrs
+// but defining them silences the Vue warning about extraneous non-prop attributes.
+const props = defineProps({
+  data: { type: String, required: true },
+  minZoom: { type: Number, default: 0 },
+  maxZoom: { type: Number, default: 19 },
+  // Add any other frequently used props here if desired
+});
 
-if (!updateLayer) {
-  console.error('updateLayer function not provided')
+// JSDoc for type definition of the injected function
+/**
+ * @typedef {Function} UpdateLayersFunction
+ * @param {any | any[]} layers - The layer or layers to update.
+ * @returns {void}
+ */
+
+const attrs = useAttrs();
+// Inject 'updateLayers' (plural) to match the provider in DeckGL.vue
+const updateLayers = inject<((layers: any | any[]) => void) | undefined>('updateLayers');
+
+if (!updateLayers) {
+  console.error('TileLayer: updateLayers function not provided via injection. Ensure DeckGL.vue provides "updateLayers".');
 }
 
-function createLayer() {
-  if (!updateLayer) return null
+/**
+ * Creates a new Deck.gl TileLayer instance based on the current component attributes and props.
+ * @returns {TileLayer | null} A new TileLayer instance or null if updateLayers is not available.
+ */
+function createLayer(): TileLayer | null {
+  if (!updateLayers) return null;
 
+  // Construct the TileLayer props, spreading current attributes
+  // Props defined via defineProps are also available in attrs if not explicitly bound
   return new TileLayer({
-    renderSubLayers: (props) => {
+    // renderSubLayers is a function that defines how individual tiles are rendered.
+    // Here, it uses a BitmapLayer to display raster tile data.
+    renderSubLayers: (renderProps: any) => {
       const {
         bbox: { west, south, east, north },
-      } = props.tile
+      } = renderProps.tile;
 
-      return new BitmapLayer(props, {
-        data: null,
-        image: props.data,
-        bounds: [west, south, east, north],
-      })
+      return new BitmapLayer(renderProps, {
+        data: null, // Data is sourced from the parent TileLayer's image property
+        image: renderProps.data, // The image URL or texture for the tile
+        bounds: [west, south, east, north], // Geographic bounds of the tile
+      });
     },
-    ...attrs,
-  })
+    ...attrs, // Spread component attributes (e.g., data URL, minZoom, maxZoom)
+    // Explicitly pass defined props to ensure they are used if attrs doesn't pick them up as expected
+    // though ...attrs should typically include them.
+    id: (attrs.id as string) || `tile-layer-${Math.random().toString(36).substr(2, 9)}`,
+    data: props.data,
+    minZoom: props.minZoom,
+    maxZoom: props.maxZoom,
+  });
 }
 
+/**
+ * Vue lifecycle hook called when the component is mounted.
+ * Creates the initial TileLayer and adds it to the Deck.gl instance via the injected updateLayers function.
+ */
 onMounted(() => {
-  const layer = createLayer()
-  if (layer && updateLayer) {
-    updateLayer(layer)
+  const layer = createLayer();
+  if (layer && updateLayers) {
+    updateLayers([layer]); // Pass as an array if updateLayers expects an array
   }
-})
+});
 
+// Watch for changes in component attributes (e.g., data URL) and props, and update the layer accordingly.
 watch(
-  () => attrs,
+  () => [attrs, props],
   () => {
-    const layer = createLayer()
-    if (layer && updateLayer) {
-      updateLayer(layer)
+    const layer = createLayer();
+    if (layer && updateLayers) {
+      updateLayers([layer]); // Pass as an array if updateLayers expects an array
     }
   },
-  { deep: true }
-)
+  { deep: true } // Deep watch for changes within the attrs and props objects
+);
+
 </script>
 
 <template>
-  <div class="tile-layer-component">
-    <!-- This component doesn't render anything directly, but needs a root element for Vue -->
-  </div>
+  <!-- This component does not render any DOM elements itself. -->
+  <!-- Its purpose is to manage a Deck.gl layer. -->
 </template>
 
 <style>
