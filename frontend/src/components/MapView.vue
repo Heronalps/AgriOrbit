@@ -86,7 +86,8 @@ function onMapLoaded(map) {
 
 function renderTargetMarker() {
   if (mapInstance.value) {
-    const targetLocation = locationStore.getTargetLocation();
+    // Access getter as a property
+    const targetLocation = locationStore.targetLocation;
     if (targetLocation) {
       if (targetMarker.value) {
         targetMarker.value.setLngLat([targetLocation.longitude, targetLocation.latitude]);
@@ -117,7 +118,8 @@ function bringMarkerToFront() {
 }
 
 // Watch for changes in target location and update the marker
-watch(() => locationStore.getTargetLocation(), (newLocation) => {
+// Access getter as a property in the watcher source
+watch(() => locationStore.targetLocation, (newLocation) => {
   console.log('Target location updated:', newLocation);
   renderTargetMarker();
 }, { deep: true });

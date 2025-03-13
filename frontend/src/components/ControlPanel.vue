@@ -1,3 +1,5 @@
+// Component responsible for rendering the control panel, which includes
+// selections for product, date, cropmask, and basemap.
 <script setup lang="ts">
 import { useAvailableDataStore } from '@/stores/availableDataStore'
 import { useProductStore } from '@/stores/productStore'
@@ -7,12 +9,15 @@ import Datepicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { watch, ref, computed } from 'vue'
 
+// Initialize stores
 const availableDataStore = useAvailableDataStore()
 const productStore = useProductStore()
 const mapStore = useMapStore()
 
-const selectedDate = ref<Date | null>(null) // Ensure selectedDate is typed
+// Local state for the datepicker's v-model
+const selectedDate = ref<Date | null>(null)
 
+// Available basemap options for the SelectMenu
 const availableBasemaps = ref([
   { id: 'streets', name: 'Mapbox Streets' },
   { id: 'outdoors', name: 'Mapbox Outdoors' },
@@ -24,6 +29,9 @@ const availableBasemaps = ref([
   { id: 'navigation-night', name: 'Mapbox Navigation Night' },
 ]);
 
+// Reactive references to available products and cropmasks from the store
+// TODO: These don't seem to be used directly in the template, consider if they are needed here
+// or if direct store access in the template (or via computed props if transformation is needed) is sufficient.
 const availableProducts = ref(availableDataStore.getProducts);
 const availableCropmasks = ref(
   availableDataStore.getCropmasks.length > 0
@@ -31,136 +39,184 @@ const availableCropmasks = ref(
     : [{ cropmask_id: null, display_name: 'No Cropmask Available' }]
 );
 
-// Watcher for date changes from the store
+// Watcher to synchronize the local `selectedDate` (for the datepicker)
+// with the date in the `productStore`.
 watch(
   () => productStore.getSelectedProduct.date,
   (newStoreDate) => {
     if (newStoreDate) {
-      const newDateObj = new Date(newStoreDate); // Dates from store are YYYY/MM/DD
-      // Check if selectedDate (v-model for datepicker) is already equivalent
+      // Dates from store are expected in 'YYYY/MM/DD' format.
+      // The Date constructor handles this format correctly.
+      const newDateObj = new Date(newStoreDate);
+      // Update local `selectedDate` only if it's different, to avoid infinite loops
+      // or unnecessary re-renders if the datepicker itself triggered the store update.
       if (!selectedDate.value || selectedDate.value.getTime() !== newDateObj.getTime()) {
         selectedDate.value = newDateObj;
       }
     } else {
+      // If the store date is cleared, clear the local datepicker value.
       if (selectedDate.value !== null) {
         selectedDate.value = null;
       }
     }
   },
-  { immediate: true } // Sync on component load/initial product selection
+  { immediate: true } // Ensures synchronization when the component is loaded.
 );
 
+// Watcher for product ID changes.
+// Currently, this watcher doesn't perform any actions itself. The date synchronization
+// is handled by the watcher above, as `productStore.setProduct` updates the date in the store.
 watch(
   () => productStore.getSelectedProduct.product_id,
   (newProductId, oldProductId) => {
-    // The date watcher above will handle updating selectedDate when the store's date changes as a result of the product change
+    // The date watcher above will handle updating selectedDate when the store's date changes
+    // as a result of the product change.
   }
 );
 
-// Removed log for basemap changes
+// Watcher to synchronize the basemap dropdown with the `mapStore`.
+// This ensures that if the basemap is changed programmatically elsewhere,
+// the dropdown reflects the current state.
 watch(
   () => mapStore.selectedBasemap,
   (newBasemap) => {
     if (newBasemap) {
-      const dropdown = document.querySelector('select[data-basemap-selector]');
-      if (dropdown) {
+      // Attempt to find the select element and update its value.
+      // Using a data attribute `data-basemap-selector` for a more robust selection.
+      const dropdown = document.querySelector('select[data-basemap-selector]') as HTMLSelectElement | null;
+      if (dropdown && dropdown.value !== newBasemap) {
         dropdown.value = newBasemap;
       }
     }
   },
-  { immediate: true }
+  { immediate: true } // Ensures synchronization on component load.
 );
 
-const handleProductSelection = async (selection) => {
-  const newProductId = selection.target.value;
+/**
+ * Handles the selection of a new product from the product dropdown.
+ * @param {Event} selection - The event object from the select element.
+ */
+const handleProductSelection = async (selection: Event) => {
+  const target = selection.target as HTMLSelectElement;
+  const newProductId = target.value;
   await productStore.setProduct(newProductId);
 };
 
-const handleCropmaskSelection = async (selection) => {
-  const newCropmaskId = selection.target.value;
+/**
+ * Handles the selection of a new cropmask from the cropmask dropdown.
+ * @param {Event} selection - The event object from the select element.
+ */
+const handleCropmaskSelection = async (selection: Event) => {
+  const target = selection.target as HTMLSelectElement;
+  const newCropmaskId = target.value;
   await productStore.setCropmask(newCropmaskId);
 };
 
-const handleBasemapSelection = (selection) => {
-  const newBasemapId = selection.target.value;
-  console.log(`[ControlPanel.vue EVENT BasemapSelect]: Basemap selected: ${newBasemapId}. Calling mapStore.setBasemap().`);
+/**
+ * Handles the selection of a new basemap from the basemap dropdown.
+ * @param {Event} selection - The event object from the select element.
+ */
+const handleBasemapSelection = (selection: Event) => {
+  const target = selection.target as HTMLSelectElement;
+  const newBasemapId = target.value;
   mapStore.setBasemap(newBasemapId);
 };
 
-// Handler for the datepicker's update event
+/**
+ * Handles the date selection event from the Datepicker component.
+ * This is typically triggered by the `@update-model-value` event.
+ * @param {Date | null} dateFromPicker - The date value from the datepicker.
+ */
 const handleDateSelection = async (dateFromPicker: Date | null) => {
-  console.log('[ControlPanel.vue EVENT @update-model-value]: Datepicker emitted event with value:', dateFromPicker);
-
   if (dateFromPicker instanceof Date && !isNaN(dateFromPicker.getTime())) {
+    // Format the date to 'YYYY/MM/DD' string format expected by the store.
     const day = dateFromPicker.getDate().toString().padStart(2, '0');
     const month = (dateFromPicker.getMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
     const year = dateFromPicker.getFullYear();
     const isoDate = `${year}/${month}/${day}`;
-    console.log(`[ControlPanel.vue EVENT @update-model-value]: Formatted to YYYY/MM/DD: ${isoDate}. Attempting to call productStore.setDate().`);
     await productStore.setDate(isoDate);
-    console.log(`[ControlPanel.vue EVENT @update-model-value]: productStore.setDate() called with ${isoDate}.`);
   } else if (dateFromPicker === null) {
-    console.log('[ControlPanel.vue EVENT @update-model-value]: Datepicker emitted null (date cleared). Attempting to call productStore.setDate(undefined).');
-    await productStore.setDate(undefined);
-    console.log('[ControlPanel.vue EVENT @update-model-value]: productStore.setDate(undefined) called.');
+    // Handle case where the date is cleared in the datepicker.
+    await productStore.setDate(undefined); // Signal to store that date should be cleared or set to default.
   } else {
-    console.warn('[ControlPanel.vue EVENT @update-model-value]: Received invalid date or unexpected value:', dateFromPicker);
+    // Log a warning if the datepicker emits an unexpected value.
+    console.warn('[ControlPanel.vue EVENT @update-model-value]: Received invalid date or unexpected value from datepicker:', dateFromPicker);
   }
 };
 
-const onDatepickerDateUpdate = (newDateVal: Date | null) => { // Allow null for clearable
-  console.log('[ControlPanel.vue EVENT @date-update]: Datepicker emitted @date-update. Value:', newDateVal);
-  // Call the main handler when @date-update fires
+/**
+ * Handler for the `@date-update` event from the Datepicker.
+ * This event might be redundant if `@update-model-value` is already handled,
+ * but it's kept here if the Datepicker has specific behavior for this event.
+ * @param {Date | null} newDateVal - The new date value.
+ */
+const onDatepickerDateUpdate = (newDateVal: Date | null) => {
   handleDateSelection(newDateVal);
 };
 
+/**
+ * Formats a Date object into 'YYYY-MM-DD' string for display or other purposes.
+ * Note: The datepicker itself might have its own formatting props.
+ * This function is used by the :format prop of the Datepicker.
+ * @param {Date} date - The date to format.
+ * @returns {string} The formatted date string.
+ */
 const dateFormat = (date: Date): string => {
   const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
   const year = date.getFullYear();
-  return `${year}-${month}-${day}`;
+  return `${year}-${month}-${day}`; // Standard ISO format for date parts
 };
 
-// Computed properties for Previous/Next Date buttons
+// Computed properties for managing date navigation (Previous/Next buttons)
 const availableDates = computed(() => productStore.getProductDates);
 const currentDateStr = computed(() => productStore.getSelectedProduct.date);
 
+// Computes the index of the current date within the list of available dates for the selected product.
 const currentIndex = computed(() => {
-  if (!currentDateStr.value || availableDates.value.length === 0) {
-    return -1;
+  if (!currentDateStr.value || !availableDates.value || availableDates.value.length === 0) {
+    return -1; // Indicates no current date or no available dates
   }
   return availableDates.value.findIndex(d => d === currentDateStr.value);
 });
 
+// Determines if the "Previous Date" button should be enabled.
 const canGoPrevious = computed(() => {
-  return currentIndex.value > 0;
+  return currentIndex.value > 0; // Enabled if not the first date
 });
 
+// Determines if the "Next Date" button should be enabled.
 const canGoNext = computed(() => {
-  return currentIndex.value !== -1 && currentIndex.value < availableDates.value.length - 1;
+  return currentIndex.value !== -1 && currentIndex.value < availableDates.value.length - 1; // Enabled if not the last date
 });
 
-// Methods to handle Previous/Next Date
+/**
+ * Navigates to the previous available date for the current product.
+ */
 const goToPreviousDate = async () => {
   if (canGoPrevious.value) {
     const prevDate = availableDates.value[currentIndex.value - 1];
-    console.log(`[ControlPanel.vue EVENT PrevDate]: Going to previous date: ${prevDate}`);
     await productStore.setDate(prevDate);
   }
 };
 
+/**
+ * Navigates to the next available date for the current product.
+ */
 const goToNextDate = async () => {
   if (canGoNext.value) {
     const nextDate = availableDates.value[currentIndex.value + 1];
-    console.log(`[ControlPanel.vue EVENT NextDate]: Going to next date: ${nextDate}`);
     await productStore.setDate(nextDate);
   }
 };
 </script>
 
 <template>
+  <!-- Main container for the control panel -->
   <div class="max-w-lg bg-[#231f1fc8] rounded-md shadow-dark-500 md:w-96 w-full h-auto">
+    <!-- Inner container with padding and spacing for elements -->
     <div class="flex flex-col w-full h-full p-3 md:p-7 md:space-y-3 space-y-2">
+      <!-- Product Selection Section -->
       <div class="flex flex-col justify-end space-y-2 items-center">
         <p class="text-xl md:text-2xl font-semibold text-white">
           Product
@@ -174,39 +230,47 @@ const goToNextDate = async () => {
           @change="handleProductSelection"
         />
       </div>
+      <!-- Date Selection Section -->
       <div class="flex flex-col justify-end space-y-2 items-center">
         <p class="text-xl md:text-2xl font-semibold text-white">
           Date
         </p>
         <div class="flex items-center space-x-2 w-full">
+          <!-- Previous Date Button -->
           <button
             @click="goToPreviousDate"
             :disabled="!canGoPrevious"
             class="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Previous Date"
           >
             &lt;
           </button>
+          <!-- Datepicker Component -->
           <Datepicker
             v-model="selectedDate"
             :enable-time-picker="false"
             :allowed-dates="productStore.getProductDates" 
             :format="dateFormat"
             placeholder="Select Date"
-            :clearable="true"
+            :clearable="true" 
             :auto-apply="true"
             @update-model-value="handleDateSelection"
-            @date-update="onDatepickerDateUpdate"
+            @date-update="onDatepickerDateUpdate" 
             class="flex-grow"
+            aria-label="Select Date"
           />
+          <!-- Next Date Button -->
           <button
             @click="goToNextDate"
             :disabled="!canGoNext"
             class="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Next Date"
           >
             &gt;
           </button>
         </div>
       </div>
+      <!-- Cropmask Selection Section -->
       <div class="flex flex-col justify-end space-y-2 items-center">
         <p class="text-xl md:text-2xl font-semibold text-white">
           Cropmask
@@ -220,6 +284,7 @@ const goToNextDate = async () => {
           @change="handleCropmaskSelection"
         />
       </div>
+      <!-- Basemap Selection Section -->
       <div class="flex flex-col justify-end space-y-2 items-center">
         <p class="text-xl md:text-2xl font-semibold text-white">
           Basemap
@@ -239,5 +304,12 @@ const goToNextDate = async () => {
 </template>
 
 <style scoped>
-/* ... existing styles ... */
+/* Scoped styles for ControlPanel.vue */
+/* Ensure datepicker input is legible with dark theme */
+:deep(.dp__input) {
+  color: #333; /* Or a light color if your datepicker theme supports it */
+  background-color: #fff; /* Ensure good contrast */
+}
+
+/* Add any other specific styles for the control panel here */
 </style>

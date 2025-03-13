@@ -1,7 +1,7 @@
 /**
  * Describes /product/ return
  */
-interface productsType {
+export interface productsType {
     count: number,
     next: null | string,
     previous: null | string,
@@ -13,7 +13,7 @@ interface productsType {
  * Allows for known properties like type, source, crop_type, field_size,
  * and any other dynamic properties.
  */
-interface ProductMeta {
+export interface ProductMeta {
   type?: string;
   source?: string;
   crop_type?: string;
@@ -24,7 +24,7 @@ interface ProductMeta {
 /**
  * Describes /product/ product
  */
-type productType = {
+export type productType = {
     composite: boolean,
     composite_period: number,
     date_added: string,
@@ -32,10 +32,10 @@ type productType = {
     desc: string,
     display_name: string,
     link: string, 
-    meta: ProductMeta, // Replaced Record<string, any> with ProductMeta
-    proct_id: string,
+    meta: ProductMeta,
+    product_id: string, // Corrected from proct_id
     source: string,
-    tags: string[], // Replaced Array<any> with string[]
+    tags: string[],
     variable: string
   }
 
@@ -58,3 +58,5 @@ type productType = {
 // MEAN = 'mean',
 // MEDIAN = 'median'
 // }
+
+export {}; // Make this file a module

@@ -250,6 +250,25 @@ export const useProductStore = defineStore('productStore', {
         return ''; // Essential parameters missing
       }
       return computeTileLayerURL(this.selectedProduct);
+    },
+
+    /**
+     * Generates and returns the tile layer URL for the current product and date.
+     * This would typically be used by a map component to display the product data.
+     * @returns {string | null} The tile layer URL or null if data is missing.
+     */
+    renderTileLayer(): string | null {
+      if (this.selectedProduct.product_id && this.selectedProduct.date) {
+        const tileLayerUrl = computeTileLayerURL(
+          this.selectedProduct.product_id,
+          this.selectedProduct.date,
+          this.selectedProduct.cropmask_id // Pass cropmask_id if available
+        );
+        // console.log('Generated tile layer URL:', tileLayerUrl); // For debugging
+        return tileLayerUrl;
+      }
+      // console.warn('renderTileLayer: Missing product_id or date, cannot generate URL.');
+      return null;
     }
   },
 })

@@ -262,7 +262,8 @@ onMounted(() => {
         y: window.innerHeight - dimensions.value.height - 35 // 35px for bottom margin
     };
 
-    const targetLocation = locationStore.getTargetLocation();
+    // Access getter as a property
+    const targetLocation = locationStore.targetLocation;
     if (targetLocation) {
         farmDataMode.value = true;
         contextType.value = 'farm_selected';
@@ -348,7 +349,8 @@ async function sendSuggestion(suggestion) {
 }
 
 // Watch for changes in location store
-watch(() => locationStore.getTargetLocation(), (newLocation) => {
+// Access getter as a property in the watcher source
+watch(() => locationStore.targetLocation, (newLocation) => {
     if (newLocation && !farmDataMode.value) {
         farmDataMode.value = true;
         contextType.value = 'farm_selected';
@@ -450,7 +452,7 @@ async function sendToChat(text) {
     
     // Get location information if available
     try {
-        const targetLocation = locationStore.getTargetLocation();
+        const targetLocation = locationStore.targetLocation;
         if (targetLocation) {
             const { latitude, longitude } = targetLocation;
             context += `(Farm location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}. `;
