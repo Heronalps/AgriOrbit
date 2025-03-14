@@ -196,8 +196,7 @@ function bringMarkerToFront() {
 }
 
 // Watch for changes in the target location from the store and re-render the marker.
-watch(() => locationStore.targetLocation, (newLocation) => {
-  // console.log('Target location updated in store:', newLocation); // Debug log
+watch(() => locationStore.targetLocation, () => { // Removed unused newLocation parameter
   renderTargetMarker();
 }, { deep: true }); // Deep watch for changes within the location object
 

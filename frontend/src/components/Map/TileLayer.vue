@@ -87,6 +87,7 @@ watch(
 </script>
 
 <template>
+  <div /> <!-- Add an empty div as the root element -->
   <!-- This component does not render any DOM elements itself. -->
   <!-- Its purpose is to manage a Deck.gl layer. -->
 </template>

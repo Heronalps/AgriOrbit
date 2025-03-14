@@ -65,12 +65,13 @@
         >
           {{ msg.text }}
         </div>
-        <!-- eslint-disable-next-line vue/no-v-html -->
+        <!-- eslint-disable vue/no-v-html -->
         <div
           v-else
           class="message-bubble"
           v-html="formatMessage(msg.text)"
         />
+        <!-- eslint-enable vue/no-v-html -->
       </div>
     </div>
 

@@ -29,16 +29,6 @@ const availableBasemaps = ref([
   { id: 'navigation-night', name: 'Mapbox Navigation Night' },
 ]);
 
-// Reactive references to available products and cropmasks from the store
-// TODO: These don't seem to be used directly in the template, consider if they are needed here
-// or if direct store access in the template (or via computed props if transformation is needed) is sufficient.
-const availableProducts = ref(availableDataStore.getProducts);
-const availableCropmasks = ref(
-  availableDataStore.getCropmasks.length > 0
-    ? availableDataStore.getCropmasks
-    : [{ cropmask_id: null, display_name: 'No Cropmask Available' }]
-);
-
 // Watcher to synchronize the local `selectedDate` (for the datepicker)
 // with the date in the `productStore`.
 watch(
@@ -68,7 +58,7 @@ watch(
 // is handled by the watcher above, as `productStore.setProduct` updates the date in the store.
 watch(
   () => productStore.getSelectedProduct.product_id,
-  (newProductId, oldProductId) => {
+  () => {
     // The date watcher above will handle updating selectedDate when the store's date changes
     // as a result of the product change.
   }
@@ -98,8 +88,7 @@ watch(
  */
 const handleProductSelection = async (selection: Event) => {
   const target = selection.target as HTMLSelectElement;
-  const newProductId = target.value;
-  await productStore.setProduct(newProductId);
+  await productStore.setProduct(target.value);
 };
 
 /**
@@ -238,10 +227,10 @@ const goToNextDate = async () => {
         <div class="flex items-center space-x-2 w-full">
           <!-- Previous Date Button -->
           <button
-            @click="goToPreviousDate"
             :disabled="!canGoPrevious"
             class="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Previous Date"
+            @click="goToPreviousDate"
           >
             &lt;
           </button>
@@ -254,17 +243,17 @@ const goToNextDate = async () => {
             placeholder="Select Date"
             :clearable="true" 
             :auto-apply="true"
-            @update-model-value="handleDateSelection"
-            @date-update="onDatepickerDateUpdate" 
             class="flex-grow"
-            aria-label="Select Date"
+            aria-label="Select Date" 
+            @update-model-value="handleDateSelection"
+            @date-update="onDatepickerDateUpdate"
           />
           <!-- Next Date Button -->
           <button
-            @click="goToNextDate"
             :disabled="!canGoNext"
             class="px-3 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Next Date"
+            @click="goToNextDate"
           >
             &gt;
           </button>

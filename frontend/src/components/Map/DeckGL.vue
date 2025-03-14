@@ -9,7 +9,7 @@
 import { viewStateType } from '@/shared';
 import { DECKGL_SETTINGS } from '@/utils/defaultSettings';
 // Import necessary types from Deck.gl
-import { Deck, type PickingInfo } from '@deck.gl/core';
+import { Deck, type PickingInfo, type Layer } from '@deck.gl/core';
 import { onMounted, onBeforeUnmount, provide, reactive, useAttrs } from 'vue';
 
 /**
@@ -96,9 +96,9 @@ function handleViewChange(newDeckViewState: viewStateType): void {
  * Updates the layers rendered by the Deck.gl instance.
  * This function is provided to child components (e.g., TileLayer),
  * allowing them to dynamically change the data layers on the map.
- * @param {any[]} newLayers - An array of new Deck.gl layer instances to render.
+ * @param {Layer[]} newLayers - An array of new Deck.gl layer instances to render.
  */
-function updateLayers(newLayers: any[]): void {
+function updateLayers(newLayers: Layer[]): void {
   if (deckInstance) {
     deckInstance.setProps({ layers: newLayers });
   }
