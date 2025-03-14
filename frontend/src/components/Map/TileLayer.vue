@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { TileLayer } from '@deck.gl/geo-layers';
 import { BitmapLayer } from '@deck.gl/layers';
-import { inject, useAttrs, watch, onMounted, defineProps } from 'vue';
+import { inject, useAttrs, watch, onMounted } from 'vue';
 
 // Define props that are commonly passed to this TileLayer component
 // These will be used by the TileLayer constructor via attrs
