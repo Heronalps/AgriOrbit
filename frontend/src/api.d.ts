@@ -2,11 +2,11 @@
  * Describes /product/ return
  */
 export interface productsType {
-    count: number,
-    next: null | string,
-    previous: null | string,
-    results: Array<productType>
- }
+  count: number
+  next: null | string
+  previous: null | string
+  results: Array<productType>
+}
 
 /**
  * Interface for the product meta data.
@@ -14,34 +14,31 @@ export interface productsType {
  * and any other dynamic properties.
  */
 export interface ProductMeta {
-  type?: string;
-  source?: string;
-  crop_type?: string;
-  field_size?: string | number;
-  [key: string]: unknown; // Allows other properties, requires type checking on use
+  type?: string
+  source?: string
+  crop_type?: string
+  field_size?: string | number
+  [key: string]: unknown // Allows other properties, requires type checking on use
 }
 
 /**
  * Describes /product/ product
  */
 export type productType = {
-    composite: boolean,
-    composite_period: number,
-    date_added: string,
-    date_started: string,
-    desc: string,
-    display_name: string,
-    link: string, 
-    meta: ProductMeta,
-    product_id: string, // Corrected from proct_id
-    source: string,
-    tags: string[],
-    variable: string
-  }
+  composite: boolean
+  composite_period: number
+  date_added: string
+  date_started: string
+  desc: string
+  display_name: string
+  link: string
+  meta: ProductMeta
+  product_id: string // Corrected from proct_id
+  source: string
+  tags: string[]
+  variable: string
+}
 
-
-
- 
 /**
  * Enum desrcibing Anomoly options
  */
@@ -50,7 +47,7 @@ export type productType = {
 //     TEN = '10day',
 //     FULL = 'full'
 //   }
-  
+
 /**
  * Enum describing Anomoly type options
  */
@@ -59,4 +56,4 @@ export type productType = {
 // MEDIAN = 'median'
 // }
 
-export {}; // Make this file a module
+export {} // Make this file a module

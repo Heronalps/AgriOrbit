@@ -1,20 +1,20 @@
-import axios from "@/http-common";
-import { selectedProductType } from "@/shared";
+import axios from '@/http-common'
+import { selectedProductType } from '@/shared'
 
+export async function getValueAtPoint(
+  selectedProduct: selectedProductType,
+  lon: number,
+  lat: number
+) {
+  const { product_id, date, ...params } = selectedProduct
 
+  const URL = `/point/${product_id}/${date.replaceAll('/', '-')}/${lon}/${lat}/`
 
-export async function getValueAtPoint(selectedProduct: selectedProductType, lon: number, lat: number) {
-    
-    const {product_id, date, ...params} = selectedProduct
+  const response = await axios.get(URL, {
+    ...params,
+  })
 
-    const URL = `/point/${product_id}/${date.replaceAll('/', '-')}/${lon}/${lat}/`
+  const data = await response.data
 
-    const response = await axios.get(URL, {
-        ...params
-    })
-    
-    const data = await response.data
-
-    return data
-
+  return data
 }

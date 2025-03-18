@@ -84,11 +84,11 @@ watch(
   },
   { deep: true } // Deep watch for changes within the attrs and props objects
 );
-
 </script>
 
 <template>
-  <div /> <!-- Add an empty div as the root element -->
+  <div />
+  <!-- Add an empty div as the root element -->
   <!-- This component does not render any DOM elements itself. -->
   <!-- Its purpose is to manage a Deck.gl layer. -->
 </template>

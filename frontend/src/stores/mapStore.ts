@@ -1,6 +1,7 @@
-import { defineStore } from 'pinia';
+import { defineStore } from 'pinia'
 // Import the store type itself, not just the state type
-import { useProductStore, type ProductStore } from './productStore';
+import { useProductStore } from './productStore'
+import type { ProductStore } from './productStore'
 
 /**
  * @typedef {Record<string, unknown>} LayerDefinition
@@ -8,7 +9,7 @@ import { useProductStore, type ProductStore } from './productStore';
  * Using Record<string, unknown> as a generic placeholder; can be refined
  * if the specific structure of layer definitions is known.
  */
-type LayerDefinition = Record<string, unknown>;
+type LayerDefinition = Record<string, unknown>
 
 /**
  * @interface mapState
@@ -17,8 +18,8 @@ type LayerDefinition = Record<string, unknown>;
  * @property {string} selectedBasemap - Tracks the ID of the currently selected basemap.
  */
 export interface mapState {
-  layersState: Record<string, LayerDefinition | null>;
-  selectedBasemap: string;
+  layersState: Record<string, LayerDefinition | null>
+  selectedBasemap: string
 }
 
 /**
@@ -41,7 +42,7 @@ export const useMapStore = defineStore('map', {
      * @returns {(LayerDefinition | null)[]} An array of layer definitions or null.
      */
     layers(state): (LayerDefinition | null)[] {
-      return Object.values(state.layersState);
+      return Object.values(state.layersState)
     },
   },
   actions: {
@@ -53,9 +54,9 @@ export const useMapStore = defineStore('map', {
      */
     async renderLayers() {
       // Type 'productStoreInstance' for clarity, as 'product' could be ambiguous
-      const productStoreInstance: ProductStore = useProductStore();
+      const productStoreInstance: ProductStore = useProductStore()
       // Calls the action in productStore to render its specific tile layer
-      productStoreInstance.renderTileLayer();
+      productStoreInstance.renderTileLayer()
     },
 
     /**
@@ -63,7 +64,7 @@ export const useMapStore = defineStore('map', {
      * @param {string} basemapId - The identifier of the basemap to set (e.g., 'dark', 'satellite').
      */
     setBasemap(basemapId: string) {
-      this.selectedBasemap = basemapId;
+      this.selectedBasemap = basemapId
     },
   },
-});
+})

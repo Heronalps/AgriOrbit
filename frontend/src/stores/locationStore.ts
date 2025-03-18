@@ -9,8 +9,8 @@ import { defineStore } from 'pinia'
  * It can be an object with longitude and latitude, or null if no location is set.
  */
 export type TargetLocationType = {
-  longitude: number;
-  latitude: number;
+  longitude: number
+  latitude: number
 } | null
 
 /**
@@ -18,7 +18,7 @@ export type TargetLocationType = {
  */
 export interface LocationState {
   /** The current target location, or null if not set. */
-  targetLocation: TargetLocationType;
+  targetLocation: TargetLocationType
 }
 
 export const useLocationStore = defineStore('locationStore', {
@@ -33,7 +33,7 @@ export const useLocationStore = defineStore('locationStore', {
      * @returns {TargetLocationType} The target location.
      */
     getTargetLocation(state: LocationState): TargetLocationType {
-      return state.targetLocation;
+      return state.targetLocation
     },
   },
 
@@ -43,14 +43,14 @@ export const useLocationStore = defineStore('locationStore', {
      * @param {TargetLocationType} location - The location to set, or null to clear.
      */
     setTargetLocation(location: TargetLocationType) {
-      this.targetLocation = location;
+      this.targetLocation = location
     },
 
     /**
      * Clears the target geographical location, setting it to null.
      */
     clearTargetLocation() {
-      this.targetLocation = null;
+      this.targetLocation = null
     },
   },
 })

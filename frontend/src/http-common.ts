@@ -1,4 +1,4 @@
-import BASEURL from "@/api/baseURL"
+import BASEURL from '@/api/baseURL'
 import axios, { AxiosInstance } from 'axios'
 
 const instance: AxiosInstance = axios.create({

@@ -1,10 +1,8 @@
-/**
- * @file DeckGL.vue
- * @description This component serves as a Vue wrapper for the Deck.gl library.
- * It initializes and manages a Deck.gl instance, handles view state synchronization,
- * and provides a mechanism for child components to render and update Deck.gl layers.
- * It's designed to integrate with a Mapbox map, typically provided as a child component.
- */
+/** * @file DeckGL.vue * @description This component serves as a Vue wrapper for
+the Deck.gl library. * It initializes and manages a Deck.gl instance, handles
+view state synchronization, * and provides a mechanism for child components to
+render and update Deck.gl layers. * It's designed to integrate with a Mapbox
+map, typically provided as a child component. */
 <script setup lang="ts">
 import { viewStateType } from '@/shared';
 import { DECKGL_SETTINGS } from '@/utils/defaultSettings';
@@ -107,7 +105,6 @@ function updateLayers(newLayers: Layer[]): void {
 // Provide the reactive viewState and the updateLayers function to child components.
 provide('viewState', viewState);
 provide('updateLayers', updateLayers); // Renamed from 'updateLayer' for clarity
-
 </script>
 
 <template>
