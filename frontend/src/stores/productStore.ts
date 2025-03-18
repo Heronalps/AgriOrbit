@@ -90,7 +90,6 @@ export const useProductStore = defineStore('productStore', {
      */
     async setProduct(newProductId: string) {
       const currentProductId = this.selectedProduct.product_id;
-      const currentDate = this.selectedProduct.date;
       const currentPreviousProductId = this.selectedProduct.previousProductId;
 
       this.clickedPoint.show = false; // Hide clicked point info on product change
