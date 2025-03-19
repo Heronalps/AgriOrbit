@@ -1,24 +1,37 @@
-// Component responsible for rendering the control panel, which includes //
-selections for product, date, cropmask, and basemap.
+// Component responsible for rendering the control panel, which includes
+// selections for product, date, cropmask, and basemap.
 <script setup lang="ts">
-import { useAvailableDataStore } from '@/stores/availableDataStore'
-import { useProductStore } from '@/stores/productStore'
-import { useMapStore } from '@/stores/mapStore'
-import SelectMenu from './SelectMenu.vue'
-import Datepicker from '@vuepic/vue-datepicker'
-import '@vuepic/vue-datepicker/dist/main.css'
-import { watch, ref, computed } from 'vue'
+import { useAvailableDataStore } from '@/stores/availableDataStore';
+import { useProductStore, Product } from '@/stores/productStore';
+import { useMapStore } from '@/stores/mapStore';
+import SelectMenu from './SelectMenu.vue';
+import Datepicker from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
+import { watch, ref, computed, Ref } from 'vue';
 
 // Initialize stores
-const availableDataStore = useAvailableDataStore()
-const productStore = useProductStore()
-const mapStore = useMapStore()
+const availableDataStore = useAvailableDataStore();
+const productStore = useProductStore();
+const mapStore = useMapStore();
 
-// Local state for the datepicker's v-model
-const selectedDate = ref<Date | null>(null)
+/**
+ * Represents an item in the basemap selection dropdown.
+ */
+interface BasemapOption {
+  id: string;
+  name: string;
+}
 
-// Available basemap options for the SelectMenu
-const availableBasemaps = ref([
+/**
+ * Local reactive state for the datepicker's v-model.
+ * Stores the currently selected date as a Date object or null if no date is selected.
+ */
+const selectedDate: Ref<Date | null> = ref<Date | null>(null);
+
+/**
+ * Available basemap options for the SelectMenu.
+ */
+const availableBasemaps: Ref<BasemapOption[]> = ref<BasemapOption[]>([
   { id: 'streets', name: 'Mapbox Streets' },
   { id: 'outdoors', name: 'Mapbox Outdoors' },
   { id: 'light', name: 'Mapbox Light' },
@@ -27,192 +40,265 @@ const availableBasemaps = ref([
   { id: 'satellite-streets', name: 'Mapbox Satellite Streets' },
   { id: 'navigation-day', name: 'Mapbox Navigation Day' },
   { id: 'navigation-night', name: 'Mapbox Navigation Night' },
-])
+]);
 
-// Watcher to synchronize the local `selectedDate` (for the datepicker)
-// with the date in the `productStore`.
+/**
+ * Watcher to synchronize the local `selectedDate` (for the datepicker)
+ * with the date in the `productStore`.
+ * This ensures the datepicker reflects the store's state, e.g., when a product changes.
+ */
 watch(
   () => productStore.getSelectedProduct.date,
-  (newStoreDate) => {
+  (newStoreDate?: string) => {
     if (newStoreDate) {
       // Dates from store are expected in 'YYYY/MM/DD' format.
-      // The Date constructor handles this format correctly.
-      const newDateObj = new Date(newStoreDate)
-      // Update local `selectedDate` only if it's different, to avoid infinite loops
-      // or unnecessary re-renders if the datepicker itself triggered the store update.
+      const newDateObj = new Date(newStoreDate.replace(/-/g, '/')); // Ensure YYYY/MM/DD for constructor
       if (
         !selectedDate.value ||
         selectedDate.value.getTime() !== newDateObj.getTime()
       ) {
-        selectedDate.value = newDateObj
+        selectedDate.value = newDateObj;
       }
     } else {
-      // If the store date is cleared, clear the local datepicker value.
       if (selectedDate.value !== null) {
-        selectedDate.value = null
+        selectedDate.value = null;
       }
     }
   },
-  { immediate: true } // Ensures synchronization when the component is loaded.
-)
+  { immediate: true }
+);
 
-// Watcher for product ID changes.
-// Currently, this watcher doesn't perform any actions itself. The date synchronization
-// is handled by the watcher above, as `productStore.setProduct` updates the date in the store.
+/**
+ * Watcher for product ID changes from the productStore.
+ * When the selected product ID changes, this watcher currently serves as a placeholder
+ * or trigger for other reactive dependencies. The actual date synchronization
+ * is handled by the watcher on `productStore.getSelectedProduct.date`.
+ */
 watch(
   () => productStore.getSelectedProduct.product_id,
-  () => {
-    // The date watcher above will handle updating selectedDate when the store's date changes
-    // as a result of the product change.
+  (newProductId?: string) => {
+    // This watcher can be used for logic specific to product_id changes if needed.
+    // For now, date updates are handled by the dedicated date watcher.
+    // console.log('[ControlPanel.vue] Watched product ID changed to:', newProductId);
   }
-)
+);
 
-// Watcher to synchronize the basemap dropdown with the `mapStore`.
-// This ensures that if the basemap is changed programmatically elsewhere,
-// the dropdown reflects the current state.
+/**
+ * Watcher to synchronize the basemap dropdown with the `mapStore`.
+ * This ensures that if the basemap is changed programmatically elsewhere (e.g., system theme change),
+ * the dropdown in the control panel reflects the current state.
+ * Note: This watcher directly manipulates the DOM of the SelectMenu for basemaps.
+ * While v-model handles reactivity, this might be a safeguard or for specific scenarios.
+ */
 watch(
   () => mapStore.selectedBasemap,
-  (newBasemap) => {
+  (newBasemap?: string) => {
     if (newBasemap) {
-      // Attempt to find the select element and update its value.
-      // Using a data attribute `data-basemap-selector` for a more robust selection.
       const dropdown = document.querySelector(
-        'select[data-basemap-selector]'
-      ) as HTMLSelectElement | null
+        'select[data-basemap-selector="true"]' // Ensure attribute value is checked if set
+      ) as HTMLSelectElement | null;
       if (dropdown && dropdown.value !== newBasemap) {
-        dropdown.value = newBasemap
+        dropdown.value = newBasemap;
       }
     }
   },
-  { immediate: true } // Ensures synchronization on component load.
-)
+  { immediate: true }
+);
 
 /**
  * Handles the selection of a new product from the product dropdown.
- * @param {Event} selection - The event object from the select element.
+ * Updates the productStore with the newly selected product ID.
+ * @param {Event} event - The native change event from the select element.
  */
-const handleProductSelection = async (selection: Event) => {
-  const target = selection.target as HTMLSelectElement
-  await productStore.setProduct(target.value)
-}
+const handleProductSelection = async (event: Event): Promise<void> => {
+  const target = event.target as HTMLSelectElement;
+  if (target.value) {
+    await productStore.setProduct(target.value);
+  }
+};
 
 /**
  * Handles the selection of a new cropmask from the cropmask dropdown.
- * @param {Event} selection - The event object from the select element.
+ * Updates the productStore with the newly selected cropmask ID.
+ * @param {Event} event - The native change event from the select element.
  */
-const handleCropmaskSelection = async (selection: Event) => {
-  const target = selection.target as HTMLSelectElement
-  const newCropmaskId = target.value
-  await productStore.setCropmask(newCropmaskId)
-}
+const handleCropmaskSelection = async (event: Event): Promise<void> => {
+  const target = event.target as HTMLSelectElement;
+  // Assuming cropmask_id can be an empty string for "no cropmask"
+  await productStore.setCropmask(target.value);
+};
 
 /**
  * Handles the selection of a new basemap from the basemap dropdown.
- * @param {Event} selection - The event object from the select element.
+ * Updates the mapStore with the newly selected basemap ID.
+ * @param {Event} event - The native change event from the select element.
  */
-const handleBasemapSelection = (selection: Event) => {
-  const target = selection.target as HTMLSelectElement
-  const newBasemapId = target.value
-  mapStore.setBasemap(newBasemapId)
-}
+const handleBasemapSelection = (event: Event): void => {
+  const target = event.target as HTMLSelectElement;
+  if (target.value) {
+    mapStore.setBasemap(target.value);
+  }
+};
 
 /**
  * Handles the date selection event from the Datepicker component.
- * This is typically triggered by the `@update-model-value` event.
+ * This is triggered by the `@update:modelValue` event of the Datepicker.
+ * Updates the productStore with the newly selected date, formatted as 'YYYY/MM/DD'.
  * @param {Date | null} dateFromPicker - The date value from the datepicker.
  */
-const handleDateSelection = async (dateFromPicker: Date | null) => {
+const handleDateSelection = async (dateFromPicker: Date | null): Promise<void> => {
   if (dateFromPicker instanceof Date && !isNaN(dateFromPicker.getTime())) {
-    // Format the date to 'YYYY/MM/DD' string format expected by the store.
-    const day = dateFromPicker.getDate().toString().padStart(2, '0')
-    const month = (dateFromPicker.getMonth() + 1).toString().padStart(2, '0') // Month is 0-indexed
-    const year = dateFromPicker.getFullYear()
-    const isoDate = `${year}/${month}/${day}`
-    await productStore.setDate(isoDate)
+    const day = dateFromPicker.getDate().toString().padStart(2, '0');
+    const month = (dateFromPicker.getMonth() + 1).toString().padStart(2, '0');
+    const year = dateFromPicker.getFullYear();
+    const storeDateString = `${year}/${month}/${day}`; // Format for the store
+    await productStore.setDate(storeDateString);
   } else if (dateFromPicker === null) {
-    // Handle case where the date is cleared in the datepicker.
-    await productStore.setDate(undefined) // Signal to store that date should be cleared or set to default.
+    await productStore.setDate(undefined); // Clears the date in the store
   } else {
-    // Log a warning if the datepicker emits an unexpected value.
     console.warn(
-      '[ControlPanel.vue EVENT @update-model-value]: Received invalid date or unexpected value from datepicker:',
+      '[ControlPanel.vue EVENT @update:modelValue]: Received invalid date or unexpected value from datepicker:',
       dateFromPicker
-    )
+    );
   }
-}
+};
 
 /**
  * Handler for the `@date-update` event from the Datepicker.
- * This event might be redundant if `@update-model-value` is already handled,
- * but it's kept here if the Datepicker has specific behavior for this event.
- * @param {Date | null} newDateVal - The new date value.
+ * This event might be redundant if `@update:modelValue` is already comprehensively handled,
+ * but it's included to align with the original component's event handling.
+ * It calls `handleDateSelection` to process the date update.
+ * @param {Date | null} newDateVal - The new date value from the datepicker.
  */
-const onDatepickerDateUpdate = (newDateVal: Date | null) => {
-  handleDateSelection(newDateVal)
-}
+const onDatepickerDateUpdate = (newDateVal: Date | null): void => {
+  // This function might be redundant if @update:modelValue covers all cases.
+  // Kept for consistency if Datepicker has distinct behavior for @date-update.
+  handleDateSelection(newDateVal);
+};
 
 /**
- * Formats a Date object into 'YYYY-MM-DD' string for display or other purposes.
- * Note: The datepicker itself might have its own formatting props.
- * This function is used by the :format prop of the Datepicker.
+ * Formats a Date object into 'YYYY-MM-DD' string for display in the Datepicker.
+ * This function is used by the `:format` prop of the Datepicker.
  * @param {Date} date - The date to format.
- * @returns {string} The formatted date string.
+ * @returns {string} The formatted date string (e.g., "2023-01-15").
  */
 const dateFormat = (date: Date): string => {
-  const day = date.getDate().toString().padStart(2, '0')
-  const month = (date.getMonth() + 1).toString().padStart(2, '0') // Month is 0-indexed
-  const year = date.getFullYear()
-  return `${year}-${month}-${day}` // Standard ISO format for date parts
-}
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${year}-${month}-${day}`; // Standard ISO-like format for display
+};
 
-// Computed properties for managing date navigation (Previous/Next buttons)
-const availableDates = computed(() => productStore.getProductDates)
-const currentDateStr = computed(() => productStore.getSelectedProduct.date)
+/**
+ * Computed property: Retrieves the list of available dates for the currently selected product.
+ * Dates are expected to be strings in 'YYYY/MM/DD' or 'YYYY-MM-DD' format from the store.
+ * @returns {string[]} An array of available date strings.
+ */
+const availableDates = computed<string[]>(() => productStore.getProductDates || []);
 
-// Computes the index of the current date within the list of available dates for the selected product.
-const currentIndex = computed(() => {
-  if (
-    !currentDateStr.value ||
-    !availableDates.value ||
-    availableDates.value.length === 0
-  ) {
-    return -1 // Indicates no current date or no available dates
+/**
+ * Computed property: Retrieves the currently selected date string from the productStore.
+ * @returns {string | undefined} The current date string (e.g., "2023/01/15") or undefined.
+ */
+const currentDateStr = computed<string | undefined>(
+  () => productStore.getSelectedProduct.date
+);
+
+/**
+ * Computes the index of the current date within the list of available dates for the selected product.
+ * This is used for enabling/disabling Previous/Next date navigation buttons.
+ * @returns {number} The index of the current date, or -1 if not found or not applicable.
+ */
+const currentIndex = computed<number>(() => {
+  if (!currentDateStr.value || !availableDates.value || availableDates.value.length === 0) {
+    return -1;
   }
-  return availableDates.value.findIndex((d) => d === currentDateStr.value)
-})
+  // Normalize store dates (YYYY/MM/DD or YYYY-MM-DD) to YYYY/MM/DD for comparison
+  const normalizedCurrentDate = currentDateStr.value.replace(/-/g, '/');
+  return availableDates.value.findIndex(
+    (d) => d.replace(/-/g, '/') === normalizedCurrentDate
+  );
+});
 
-// Determines if the "Previous Date" button should be enabled.
-const canGoPrevious = computed(() => {
-  return currentIndex.value > 0 // Enabled if not the first date
-})
+/**
+ * Determines if the "Previous Date" button should be enabled.
+ * @returns {boolean} True if navigation to a previous date is possible, false otherwise.
+ */
+const canGoPrevious = computed<boolean>(() => {
+  return currentIndex.value > 0;
+});
 
-// Determines if the "Next Date" button should be enabled.
-const canGoNext = computed(() => {
+/**
+ * Determines if the "Next Date" button should be enabled.
+ * @returns {boolean} True if navigation to a next date is possible, false otherwise.
+ */
+const canGoNext = computed<boolean>(() => {
   return (
     currentIndex.value !== -1 &&
     currentIndex.value < availableDates.value.length - 1
-  ) // Enabled if not the last date
-})
+  );
+});
 
 /**
  * Navigates to the previous available date for the current product.
+ * Updates the date in the productStore.
  */
-const goToPreviousDate = async () => {
+const goToPreviousDate = async (): Promise<void> => {
   if (canGoPrevious.value) {
-    const prevDate = availableDates.value[currentIndex.value - 1]
-    await productStore.setDate(prevDate)
+    const prevDate = availableDates.value[currentIndex.value - 1];
+    if (prevDate) {
+      await productStore.setDate(prevDate.replace(/-/g, '/')); // Ensure store gets YYYY/MM/DD
+    }
   }
-}
+};
 
 /**
  * Navigates to the next available date for the current product.
+ * Updates the date in the productStore.
  */
-const goToNextDate = async () => {
+const goToNextDate = async (): Promise<void> => {
   if (canGoNext.value) {
-    const nextDate = availableDates.value[currentIndex.value + 1]
-    await productStore.setDate(nextDate)
+    const nextDate = availableDates.value[currentIndex.value + 1];
+    if (nextDate) {
+      await productStore.setDate(nextDate.replace(/-/g, '/')); // Ensure store gets YYYY/MM/DD
+    }
   }
-}
+};
+
+/**
+ * Computed property to get the list of products for the SelectMenu.
+ * Ensures that the data passed to SelectMenu is always an array.
+ * @returns {Product[]} An array of products.
+ */
+const productsForSelect = computed<Product[]>(() => {
+    // Assuming getProducts returns Product[] or similar, or an empty array if undefined.
+    // Replace 'Product' with the actual type if different.
+    return availableDataStore.getProducts || [];
+});
+
+/**
+ * Computed property to get the list of cropmasks for the SelectMenu.
+ * Ensures that the data passed to SelectMenu is always an array.
+ * @returns {any[]} An array of cropmasks. Replace 'any' with actual cropmask type.
+ */
+const cropmasksForSelect = computed<any[]>(() => {
+    // Assuming getCropmasks returns an array or an empty array if undefined.
+    // Replace 'any' with the actual type for cropmask items.
+    return availableDataStore.getCropmasks || [];
+});
+
+
+/**
+ * Computed property for the `allowed-dates` prop of the Datepicker.
+ * It ensures that dates are in a format the datepicker can consume (e.g., YYYY/MM/DD strings or Date objects).
+ * The productStore.getProductDates is assumed to return strings like 'YYYY/MM/DD' or 'YYYY-MM-DD'.
+ * Datepicker typically handles these string formats.
+ * @returns {string[]} An array of date strings.
+ */
+const allowedDatesForPicker = computed<string[]>(() => {
+  return (productStore.getProductDates || []).map(dateStr => dateStr.replace(/-/g, '/'));
+});
+
 </script>
 
 <template>
@@ -234,12 +320,13 @@ const goToNextDate = async () => {
       <div class="flex flex-col justify-end space-y-2 items-center">
         <p class="text-xl md:text-2xl font-semibold text-white">Product</p>
         <SelectMenu
-          v-model="productStore.selectedProduct.product_id"
-          :data="availableDataStore.getProducts"
+          :model-value="productStore.getSelectedProduct.product_id"
+          :data="productsForSelect"
           key-by="product_id"
           label-by="display_name"
           placeholder="Select Product"
-          @change="handleProductSelection"
+          @update:modelValue="productStore.setProduct($event)"
+          @change="handleProductSelection" 
         />
       </div>
       <!-- Date Selection Section -->
@@ -260,6 +347,7 @@ const goToNextDate = async () => {
             "
             aria-label="Previous Date"
             @click="goToPreviousDate"
+            type="button"
           >
             &lt;
           </button>
@@ -267,14 +355,15 @@ const goToNextDate = async () => {
           <Datepicker
             v-model="selectedDate"
             :enable-time-picker="false"
-            :allowed-dates="productStore.getProductDates"
+            :allowed-dates="allowedDatesForPicker"
             :format="dateFormat"
             placeholder="Select Date"
             :clearable="true"
             :auto-apply="true"
+            month-name-format="long"
             class="flex-grow"
             aria-label="Select Date"
-            @update-model-value="handleDateSelection"
+            @update:modelValue="handleDateSelection"
             @date-update="onDatepickerDateUpdate"
           />
           <!-- Next Date Button -->
@@ -291,6 +380,7 @@ const goToNextDate = async () => {
             "
             aria-label="Next Date"
             @click="goToNextDate"
+            type="button"
           >
             &gt;
           </button>
@@ -300,11 +390,12 @@ const goToNextDate = async () => {
       <div class="flex flex-col justify-end space-y-2 items-center">
         <p class="text-xl md:text-2xl font-semibold text-white">Cropmask</p>
         <SelectMenu
-          v-model="productStore.selectedProduct.cropmask_id"
-          :data="availableDataStore.getCropmasks"
+          :model-value="productStore.getSelectedProduct.cropmask_id"
+          :data="cropmasksForSelect"
           key-by="cropmask_id"
           label-by="display_name"
           placeholder="Select Cropmask"
+          @update:modelValue="productStore.setCropmask($event)"
           @change="handleCropmaskSelection"
         />
       </div>
@@ -312,12 +403,13 @@ const goToNextDate = async () => {
       <div class="flex flex-col justify-end space-y-2 items-center">
         <p class="text-xl md:text-2xl font-semibold text-white">Basemap</p>
         <SelectMenu
-          v-model="mapStore.selectedBasemap"
+          :model-value="mapStore.selectedBasemap"
           :data="availableBasemaps"
           key-by="id"
           label-by="name"
           placeholder="Select Basemap"
-          data-basemap-selector
+          data-basemap-selector="true" 
+          @update:modelValue="mapStore.setBasemap($event)"
           @change="handleBasemapSelection"
         />
       </div>
@@ -329,9 +421,40 @@ const goToNextDate = async () => {
 /* Scoped styles for ControlPanel.vue */
 /* Ensure datepicker input is legible with dark theme */
 :deep(.dp__input) {
-  color: #333; /* Or a light color if your datepicker theme supports it */
-  background-color: #fff; /* Ensure good contrast */
+  color: #333; /* Dark text for light background */
+  background-color: #fff; /* Light background for the input */
+  border-color: #6b7280; /* Tailwind gray-500 for border */
 }
 
-/* Add any other specific styles for the control panel here */
+:deep(.dp__input_icon) {
+  color: #6b7280; /* Tailwind gray-500 for icon */
+}
+
+:deep(.dp__clear_icon) {
+  color: #6b7280; /* Tailwind gray-500 for clear icon */
+}
+
+:deep(.dp__theme_light) {
+  /* If datepicker uses a specific theme class, you might need to target it */
+  --dp-background-color: #ffffff;
+  --dp-text-color: #212121;
+  --dp-hover-color: #f3f3f3;
+  --dp-hover-text-color: #212121;
+  --dp-hover-icon-color: #959595;
+  --dp-primary-color: #1976d2; /* Example primary color */
+  --dp-primary-text-color: #ffffff;
+  --dp-secondary-color: #c0c0c0;
+  --dp-border-color: #ccc;
+  --dp-menu-border-color: #ddd;
+  --dp-border-color-hover: #aaa;
+  --dp-disabled-color: #f6f6f6;
+  --dp-icon-color: #959595;
+  --dp-danger-color: #ff6f60;
+  --dp-highlight-color: rgba(25, 118, 210, 0.1);
+}
+
+/* Style for buttons to match general theme if needed */
+button {
+  transition: background-color 0.2s ease-in-out;
+}
 </style>
