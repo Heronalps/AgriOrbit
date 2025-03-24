@@ -12,7 +12,7 @@ import { getAvailableCropmasks as fetchCropmasksApi } from '../api/cropmask' // 
 /**
  * Interface for a single cropmask item.
  */
-interface CropmaskResultItem {
+export interface CropmaskResultItem {
   /** Unique identifier for the cropmask. */
   cropmask_id: string
   /** User-friendly display name for the cropmask. */

@@ -16,10 +16,12 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)), // ES Module way
     },
   },
-  server: { // Added server configuration
+  server: {
+    // Added server configuration
     port: 3000, // Explicitly set frontend port, though often defaults to this or 5173
     proxy: {
-      '/api': { // Proxy requests from /api
+      '/api': {
+        // Proxy requests from /api
         target: 'http://localhost:8157', // Your backend server address
         changeOrigin: true, // Recommended for virtual hosted sites
         rewrite: (path) => path.replace(/^\/api/, ''), // Rewrite /api/chat to /chat

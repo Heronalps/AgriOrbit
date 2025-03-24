@@ -9,41 +9,68 @@
       height: dimensions.height + 'px',
     }"
   >
-    <div class="chat-header" @mousedown="startDrag">
+    <div
+      class="chat-header"
+      @mousedown="startDrag"
+    >
       <h2>Agribot</h2>
     </div>
-    <div class="resize-handle resize-handle-br" @mousedown="startResize" />
+    <div
+      class="resize-handle resize-handle-br"
+      @mousedown="startResize"
+    />
 
     <!-- Initial State - No Farm Selected -->
-    <div v-if="!farmDataMode" class="farm-setup-container">
+    <div
+      v-if="!farmDataMode"
+      class="farm-setup-container"
+    >
       <div class="welcome-message">
         <p>Welcome to AgriBot! To get the most personalized assistance:</p>
         <div class="action-options">
-          <button class="action-button" @click="activateLocationSelection">
+          <button
+            class="action-button"
+            @click="activateLocationSelection"
+          >
             <span class="icon">📍</span>
             Select Farm Location
           </button>
         </div>
-        <p class="or-divider">—— OR ——</p>
-        <button class="general-chat-button" @click="startGeneralChat">
+        <p class="or-divider">
+          —— OR ——
+        </p>
+        <button
+          class="general-chat-button"
+          @click="startGeneralChat"
+        >
           Continue with General Chat
         </button>
       </div>
     </div>
 
     <!-- Chat UI -->
-    <div class="chat-body" :class="{ 'limited-mode': !farmDataMode }">
+    <div
+      class="chat-body"
+      :class="{ 'limited-mode': !farmDataMode }"
+    >
       <div
         v-for="(msg, index) in messages"
         :key="index"
         class="message"
         :class="{ sent: msg.isSent, received: !msg.isSent }"
       >
-        <div v-if="msg.isSent" class="message-bubble">
+        <div
+          v-if="msg.isSent"
+          class="message-bubble"
+        >
           {{ msg.text }}
         </div>
         <!-- eslint-disable vue/no-v-html -->
-        <div v-else class="message-bubble" v-html="formatMessage(msg.text)" />
+        <div
+          v-else
+          class="message-bubble"
+          v-html="formatMessage(msg.text)"
+        />
         <!-- eslint-enable vue/no-v-html -->
       </div>
     </div>
@@ -54,10 +81,8 @@
     >
       <div class="token-warning">
         <span class="icon">⚠️</span>
-        <span
-          >Using limited context mode. For better insights, select a farm
-          location.</span
-        >
+        <span>Using limited context mode. For better insights, select a farm
+          location.</span>
       </div>
     </div>
 
@@ -77,8 +102,13 @@
           placeholder="Type your message..."
           :disabled="inputDisabled"
           @keyup.enter="sendMessage"
-        />
-        <button :disabled="inputDisabled" @click="sendMessage">Send</button>
+        >
+        <button
+          :disabled="inputDisabled"
+          @click="sendMessage"
+        >
+          Send
+        </button>
       </div>
     </div>
   </div>

@@ -1,7 +1,7 @@
-// Component responsible for rendering the control panel, which includes
-// selections for product, date, cropmask, and basemap.
+// Component responsible for rendering the control panel, which includes //
+selections for product, date, cropmask, and basemap.
 <script setup lang="ts">
-import { useAvailableDataStore } from '@/stores/availableDataStore';
+import { useAvailableDataStore, type CropmaskResultItem } from '@/stores/availableDataStore';
 import { useProductStore, Product } from '@/stores/productStore';
 import { useMapStore } from '@/stores/mapStore';
 import SelectMenu from './SelectMenu.vue';
@@ -76,7 +76,7 @@ watch(
  */
 watch(
   () => productStore.getSelectedProduct.product_id,
-  (newProductId?: string) => {
+  () => { // Removed unused _newProductId parameter
     // This watcher can be used for logic specific to product_id changes if needed.
     // For now, date updates are handled by the dedicated date watcher.
     // console.log('[ControlPanel.vue] Watched product ID changed to:', newProductId);
@@ -279,11 +279,10 @@ const productsForSelect = computed<Product[]>(() => {
 /**
  * Computed property to get the list of cropmasks for the SelectMenu.
  * Ensures that the data passed to SelectMenu is always an array.
- * @returns {any[]} An array of cropmasks. Replace 'any' with actual cropmask type.
+ * @returns {CropmaskResultItem[]} An array of cropmasks.
  */
-const cropmasksForSelect = computed<any[]>(() => {
+const cropmasksForSelect = computed<CropmaskResultItem[]>(() => {
     // Assuming getCropmasks returns an array or an empty array if undefined.
-    // Replace 'any' with the actual type for cropmask items.
     return availableDataStore.getCropmasks || [];
 });
 
@@ -298,7 +297,6 @@ const cropmasksForSelect = computed<any[]>(() => {
 const allowedDatesForPicker = computed<string[]>(() => {
   return (productStore.getProductDates || []).map(dateStr => dateStr.replace(/-/g, '/'));
 });
-
 </script>
 
 <template>
@@ -318,20 +316,24 @@ const allowedDatesForPicker = computed<string[]>(() => {
     <div class="flex flex-col w-full h-full p-3 md:p-7 md:space-y-3 space-y-2">
       <!-- Product Selection Section -->
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">Product</p>
+        <p class="text-xl md:text-2xl font-semibold text-white">
+          Product
+        </p>
         <SelectMenu
           :model-value="productStore.getSelectedProduct.product_id"
           :data="productsForSelect"
           key-by="product_id"
           label-by="display_name"
           placeholder="Select Product"
-          @update:modelValue="productStore.setProduct($event)"
-          @change="handleProductSelection" 
+          @update:model-value="productStore.setProduct($event)"
+          @change="handleProductSelection"
         />
       </div>
       <!-- Date Selection Section -->
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">Date</p>
+        <p class="text-xl md:text-2xl font-semibold text-white">
+          Date
+        </p>
         <div class="flex items-center space-x-2 w-full">
           <!-- Previous Date Button -->
           <button
@@ -346,8 +348,8 @@ const allowedDatesForPicker = computed<string[]>(() => {
               disabled:opacity-50 disabled:cursor-not-allowed
             "
             aria-label="Previous Date"
-            @click="goToPreviousDate"
             type="button"
+            @click="goToPreviousDate"
           >
             &lt;
           </button>
@@ -363,7 +365,7 @@ const allowedDatesForPicker = computed<string[]>(() => {
             month-name-format="long"
             class="flex-grow"
             aria-label="Select Date"
-            @update:modelValue="handleDateSelection"
+            @update:model-value="handleDateSelection"
             @date-update="onDatepickerDateUpdate"
           />
           <!-- Next Date Button -->
@@ -379,8 +381,8 @@ const allowedDatesForPicker = computed<string[]>(() => {
               disabled:opacity-50 disabled:cursor-not-allowed
             "
             aria-label="Next Date"
-            @click="goToNextDate"
             type="button"
+            @click="goToNextDate"
           >
             &gt;
           </button>
@@ -388,28 +390,32 @@ const allowedDatesForPicker = computed<string[]>(() => {
       </div>
       <!-- Cropmask Selection Section -->
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">Cropmask</p>
+        <p class="text-xl md:text-2xl font-semibold text-white">
+          Cropmask
+        </p>
         <SelectMenu
           :model-value="productStore.getSelectedProduct.cropmask_id"
           :data="cropmasksForSelect"
           key-by="cropmask_id"
           label-by="display_name"
           placeholder="Select Cropmask"
-          @update:modelValue="productStore.setCropmask($event)"
+          @update:model-value="productStore.setCropmask($event)"
           @change="handleCropmaskSelection"
         />
       </div>
       <!-- Basemap Selection Section -->
       <div class="flex flex-col justify-end space-y-2 items-center">
-        <p class="text-xl md:text-2xl font-semibold text-white">Basemap</p>
+        <p class="text-xl md:text-2xl font-semibold text-white">
+          Basemap
+        </p>
         <SelectMenu
           :model-value="mapStore.selectedBasemap"
           :data="availableBasemaps"
           key-by="id"
           label-by="name"
           placeholder="Select Basemap"
-          data-basemap-selector="true" 
-          @update:modelValue="mapStore.setBasemap($event)"
+          data-basemap-selector="true"
+          @update:model-value="mapStore.setBasemap($event)"
           @change="handleBasemapSelection"
         />
       </div>

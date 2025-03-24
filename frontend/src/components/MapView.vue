@@ -259,7 +259,10 @@ watch(
     </div>
 
     <!-- Deck.gl Canvas for data layers and map interaction -->
-    <DeckGL class="w-full h-full" @click="handleClick">
+    <DeckGL
+      class="w-full h-full"
+      @click="handleClick"
+    >
       <!-- Mapbox Base Map -->
       <MapboxView
         :access-token="mapboxAccessToken"
