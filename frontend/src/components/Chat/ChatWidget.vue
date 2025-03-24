@@ -114,94 +114,170 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue' // Removed inject
-import { useLocationStore } from '@/stores/locationStore'
-import { useProductStore } from '@/stores/productStore'
+<script setup lang="ts">
+import { ref, onMounted, computed, watch, onBeforeUnmount, type Ref } from 'vue'
+import { useLocationStore, type TargetLocationType } from '@/stores/locationStore'
+import { useProductStore, type selectedProductType, type clickedPointType, type ProductListEntry } from '@/stores/productStore' // Assuming ProductListEntry might be useful if productEntries is used
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+
+// Define interfaces for component state
+interface Message {
+  text: string
+  isSent: boolean
+  model?: string // Optional: for identifying the sender model (e.g., "AgriBot")
+}
+
+interface Position {
+  x: number
+  y: number
+}
+
+interface Dimensions {
+  width: number
+  height: number
+}
+
+// Enum for more robust context type management
+enum ContextTypeEnum {
+  GENERAL = 'general',
+  FARM_SELECTED = 'farm_selected',
+  DATA_LOADED = 'data_loaded',
+}
 
 // Store instances
 const locationStore = useLocationStore()
 const productStore = useProductStore()
 
 // Chat state management
-const messages = ref([])
-const message = ref('')
-const farmDataMode = ref(false)
-const inputDisabled = ref(false)
-const contextType = ref('general')
-const isLocationSelectionActive = ref(false)
-const lastProductId = ref('') // Track the last product ID to prevent duplicates
+const messages: Ref<Message[]> = ref([])
+const message: Ref<string> = ref('')
+const farmDataMode: Ref<boolean> = ref(false)
+const inputDisabled: Ref<boolean> = ref(false)
+const contextType: Ref<ContextTypeEnum> = ref(ContextTypeEnum.GENERAL)
+const isLocationSelectionActive: Ref<boolean> = ref(false)
+const lastProductId: Ref<string> = ref('') // Track the last product ID to prevent duplicates
 
 // Chat widget position and dimension management
-const chatWidget = ref(null)
-const position = ref({ x: 10, y: 10 })
-const dimensions = ref({ width: 400, height: 600 })
-const isDragging = ref(false)
-const isResizing = ref(false)
-const initialMousePos = ref({ x: 0, y: 0 })
-const initialWidgetPos = ref({ x: 0, y: 0 })
-const initialWidgetDim = ref({ width: 0, height: 0 })
+const chatWidget: Ref<HTMLElement | null> = ref(null)
+const position: Ref<Position> = ref({ x: 10, y: 10 })
+const dimensions: Ref<Dimensions> = ref({ width: 400, height: 600 })
+const isDragging: Ref<boolean> = ref(false)
+const isResizing: Ref<boolean> = ref(false)
+const initialMousePos: Ref<Position> = ref({ x: 0, y: 0 })
+const initialWidgetPos: Ref<Position> = ref({ x: 0, y: 0 })
+const initialWidgetDim: Ref<Dimensions> = ref({ width: 0, height: 0 })
 
 // Configure marked for safe HTML
 marked.setOptions({
   breaks: true, // Add line breaks
   gfm: true, // Use GitHub Flavored Markdown
-  // sanitize and sanitizer options removed, will sanitize explicitly
 })
 
-// Function to format message text with markdown
-function formatMessage(text) {
-  if (!text) return ''
-  // Process text with marked to convert markdown to HTML, then sanitize
+/**
+ * Formats a message string using marked and DOMPurify.
+ * Ensures that the input to marked() is always a string.
+ * @param {string | any[]} textInput - The raw message text, which might be a string or an array.
+ * @returns {string} The formatted and sanitized HTML string.
+ */
+function formatMessage(textInput: string | any[]): string {
+  let textToProcess: string;
+
+  if (Array.isArray(textInput)) {
+    // console.warn('formatMessage received array input, joining to string:', textInput);
+    textToProcess = textInput.join(' ');
+  } else if (typeof textInput === 'string') {
+    textToProcess = textInput;
+  } else if (textInput === null || textInput === undefined) {
+    // Handle null or undefined gracefully by treating them as empty strings.
+    textToProcess = '';
+  } else {
+    // For other unexpected types, log an error and attempt to convert to string.
+    // console.error('formatMessage received unexpected type:', typeof textInput, 'Value:', textInput);
+    try {
+      textToProcess = String(textInput);
+    } catch (e) {
+      // console.error('formatMessage: Could not convert input to string:', e);
+      // Fallback to an error message if conversion fails.
+      return '[Error: Invalid message format]';
+    }
+  }
+
+  // If, after processing, the string is empty or only whitespace, return an empty string.
+  if (!textToProcess.trim()) {
+    return '';
+  }
+
   try {
-    const rawHtml = marked(text)
-    return DOMPurify.sanitize(rawHtml)
+    // At this point, textToProcess is guaranteed to be a string.
+    const rawHtml = marked(textToProcess);
+    return DOMPurify.sanitize(rawHtml);
   } catch (error) {
-    console.error('Error formatting message:', error)
-    return text // Return plain text on error
+    // console.error('Error in formatMessage (marked/DOMPurify):', error, 'Input text was:', textToProcess);
+    // Fallback to escaped text if markdown processing fails.
+    // This ensures that even if marked/DOMPurify fails, we still render something safe.
+    return textToProcess
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\"/g, '&quot;')
+      .replace(/\'/g, '&#039;');
   }
 }
 
 // Suggestions based on context
-const generalSuggestions = [
+const generalSuggestions: string[] = [
   'What are best practices for crop rotation?',
   'Tell me about sustainable farming',
   'How to improve soil health?',
 ]
 
-const farmSelectedSuggestions = [
+const farmSelectedSuggestions: string[] = [
   'Analyze soil conditions for this location',
   'Recommend crops for this region',
   "What's the optimal irrigation strategy here?",
 ]
 
-const dataLoadedSuggestions = [
+const dataLoadedSuggestions: string[] = [
   'Interpret this NDVI data',
   'How does my farm compare to regional averages?',
   'Identify areas needing attention',
 ]
 
-const currentSuggestions = computed(() => {
-  if (contextType.value === 'data_loaded') return dataLoadedSuggestions
-  if (contextType.value === 'farm_selected') return farmSelectedSuggestions
+/**
+ * Computed property to get current suggestions based on context type.
+ * @returns {string[]} An array of suggestion strings.
+ */
+const currentSuggestions = computed<string[]>(() => {
+  if (contextType.value === ContextTypeEnum.DATA_LOADED) return dataLoadedSuggestions
+  if (contextType.value === ContextTypeEnum.FARM_SELECTED) return farmSelectedSuggestions
   return generalSuggestions
 })
 
-// Dragging functionality
-function startDrag(event) {
+/**
+ * Initiates dragging of the chat widget.
+ * @param {MouseEvent} event - The mousedown event.
+ */
+function startDrag(event: MouseEvent): void {
   event.preventDefault()
   isDragging.value = true
   initialMousePos.value = { x: event.clientX, y: event.clientY }
-  initialWidgetPos.value = { x: position.value.x, y: position.value.y }
-
+  if (chatWidget.value) { // Ensure chatWidget is not null
+    initialWidgetPos.value = {
+      x: position.value.x,
+      y: position.value.y,
+    }
+  }
   document.addEventListener('mousemove', onDrag)
   document.addEventListener('mouseup', stopDrag)
 }
 
-function onDrag(event) {
-  if (!isDragging.value) return
+/**
+ * Handles dragging movement of the chat widget.
+ * @param {MouseEvent} event - The mousemove event.
+ */
+function onDrag(event: MouseEvent): void {
+  if (!isDragging.value || !chatWidget.value) return // Ensure chatWidget is not null
 
   const dx = event.clientX - initialMousePos.value.x
   const dy = event.clientY - initialMousePos.value.y
@@ -219,35 +295,45 @@ function onDrag(event) {
   position.value.y = Math.max(minY, Math.min(maxY, position.value.y))
 }
 
-function stopDrag() {
+/**
+ * Stops dragging of the chat widget.
+ */
+function stopDrag(): void {
   isDragging.value = false
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
 }
 
-// Resizing functionality
-function startResize(event) {
+/**
+ * Initiates resizing of the chat widget.
+ * @param {MouseEvent} event - The mousedown event.
+ */
+function startResize(event: MouseEvent): void {
   event.preventDefault()
   isResizing.value = true
   initialMousePos.value = { x: event.clientX, y: event.clientY }
-  initialWidgetDim.value = {
-    width: dimensions.value.width,
-    height: dimensions.value.height,
+  if (chatWidget.value) { // Ensure chatWidget is not null
+    initialWidgetDim.value = {
+      width: dimensions.value.width,
+      height: dimensions.value.height,
+    }
   }
-
   document.addEventListener('mousemove', onResize)
   document.addEventListener('mouseup', stopResize)
 }
 
-function onResize(event) {
-  if (!isResizing.value) return
+/**
+ * Handles resizing of the chat widget.
+ * @param {MouseEvent} event - The mousemove event.
+ */
+function onResize(event: MouseEvent): void {
+  if (!isResizing.value || !chatWidget.value) return // Ensure chatWidget is not null
 
   const dx = event.clientX - initialMousePos.value.x
   const dy = event.clientY - initialMousePos.value.y
 
-  // Set minimum dimensions
   const minWidth = 300
-  const minHeight = 55 // Title bar height
+  const minHeight = 55 // Approximate title bar height, adjust as needed
 
   dimensions.value.width = Math.max(minWidth, initialWidgetDim.value.width + dx)
   dimensions.value.height = Math.max(
@@ -256,132 +342,180 @@ function onResize(event) {
   )
 }
 
-function stopResize() {
+/**
+ * Stops resizing of the chat widget.
+ */
+function stopResize(): void {
   isResizing.value = false
   document.removeEventListener('mousemove', onResize)
   document.removeEventListener('mouseup', stopResize)
 }
 
-// Check if farm location is already selected
-onMounted(() => {
-  // Position the chat widget in the bottom-left corner initially
-  position.value = {
-    x: 10,
-    y: window.innerHeight - dimensions.value.height - 35, // 35px for bottom margin
-  }
+/**
+ * Adjusts the initial position of the chat widget to ensure it's within view.
+ */
+function adjustInitialPosition(): void {
+  if (!chatWidget.value) return // Ensure chatWidget is not null
+  const padding = 20 // Padding from window edges
 
-  // Access getter as a property
+  // Calculate max positions considering padding
+  const maxX = window.innerWidth - dimensions.value.width - padding
+  const maxY = window.innerHeight - dimensions.value.height - padding
+
+  // Ensure initial position is within bounds (and not off-screen negatively)
+  position.value.x = Math.max(padding, Math.min(position.value.x, maxX))
+  position.value.y = Math.max(padding, Math.min(position.value.y, maxY))
+}
+
+
+onMounted(() => {
+  // Set initial position (e.g., bottom-left with margin)
+  position.value = {
+    x: 10, // Default X
+    y: window.innerHeight - dimensions.value.height - 35, // Default Y (35px margin from bottom)
+  }
+  adjustInitialPosition() // Adjust if out of bounds
+
   const targetLocation = locationStore.targetLocation
   if (targetLocation) {
     farmDataMode.value = true
-    contextType.value = 'farm_selected'
+    contextType.value = ContextTypeEnum.FARM_SELECTED
     messages.value.push({
       text: "I see you've selected a farm location. How can I help you with your farm today?",
       isSent: false,
+      model: "AgriBot"
     })
   } else {
     messages.value.push({
       text: "Hello! I'm AgriBot. To get personalized farming advice, please select your farm location on the map.",
       isSent: false,
+      model: "AgriBot"
     })
   }
 
-  // Listen for location selection events
-  window.addEventListener('location-selected', handleLocationSelected)
+  // Listen for custom event when location is selected on the map
+  window.addEventListener('location-selected', handleLocationSelected as EventListener)
 
-  // Set initial product ID if there is one
+  // Set initial product ID if available
   if (productStore.selectedProduct && productStore.selectedProduct.product_id) {
     lastProductId.value = productStore.selectedProduct.product_id
   }
 
-  // Adjust the initial position based on window size
-  adjustInitialPosition()
-
-  // Clean up event listeners
-  onBeforeUnmount(() => {
-    document.removeEventListener('mousemove', onDrag)
-    document.removeEventListener('mouseup', stopDrag)
-    document.removeEventListener('mousemove', onResize)
-    document.removeEventListener('mouseup', stopResize)
-  })
+  // Adjust widget position on window resize
+  window.addEventListener('resize', adjustInitialPosition)
 })
 
-// Helper function to ensure the chat widget appears in view
-function adjustInitialPosition() {
-  const padding = 20
-  const maxX = window.innerWidth - dimensions.value.width - padding
-  const maxY = window.innerHeight - dimensions.value.height - padding
+onBeforeUnmount(() => {
+  // Clean up global event listeners
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+  window.removeEventListener('location-selected', handleLocationSelected as EventListener)
+  window.removeEventListener('resize', adjustInitialPosition)
+})
 
-  // Ensure initial position is within bounds
-  position.value.x = Math.min(position.value.x, maxX)
-  position.value.y = Math.min(position.value.y, maxY)
-}
-
-function activateLocationSelection() {
+/**
+ * Activates the location selection mode in the chat.
+ */
+function activateLocationSelection(): void {
   isLocationSelectionActive.value = true
   messages.value.push({
     text: 'Please click on the map to select your farm location.',
     isSent: false,
+    model: "AgriBot"
   })
-
-  // Dispatch event to notify map component that location selection is active
+  // Dispatch a custom event to notify other components (e.g., MapView)
   window.dispatchEvent(new CustomEvent('activate-location-selection'))
 }
 
-function handleLocationSelected() {
-  // Removed unused parameter
+/**
+ * Handles the 'location-selected' event.
+ * This function is called when a location is picked on the map.
+ */
+function handleLocationSelected(): void { // Removed unused event parameter
   if (isLocationSelectionActive.value) {
     isLocationSelectionActive.value = false
+    // Optionally, add a message confirming location selection was processed
+    // messages.value.push({ text: "Location selection mode deactivated.", isSent: false, model: "AgriBot" });
   }
 }
 
-function startGeneralChat() {
+/**
+ * Starts a general chat session (no specific farm location).
+ */
+function startGeneralChat(): void {
+  farmDataMode.value = false; // Explicitly set farmDataMode to false
+  contextType.value = ContextTypeEnum.GENERAL;
   messages.value.push({
     text: "I'll be happy to help with general farming questions. Keep in mind that selecting a specific location will allow me to provide more tailored advice.",
     isSent: false,
+    model: "AgriBot"
   })
 }
 
-async function sendMessage() {
-  if (!message.value.trim()) return
+/**
+ * Sends the user's typed message to the chat.
+ */
+async function sendMessage(): Promise<void> {
+  const currentMessageText = message.value.trim()
+  if (!currentMessageText) return
 
   inputDisabled.value = true
-  await sendToChat(message.value)
-  message.value = ''
+  await sendToChat(currentMessageText)
+  message.value = '' // Clear input field
   inputDisabled.value = false
 }
 
-async function sendSuggestion(suggestion) {
+/**
+ * Sends a predefined suggestion message to the chat.
+ * @param {string} suggestion - The suggestion text to send.
+ */
+async function sendSuggestion(suggestion: string): Promise<void> {
+  if (!suggestion) return
   inputDisabled.value = true
   await sendToChat(suggestion)
   inputDisabled.value = false
 }
 
-// Watch for changes in location store
-// Access getter as a property in the watcher source
+// Watch for changes in the targetLocation from the locationStore
 watch(
   () => locationStore.targetLocation,
-  (newLocation) => {
-    if (newLocation && !farmDataMode.value) {
-      farmDataMode.value = true
-      contextType.value = 'farm_selected'
-      messages.value.push({
-        text: `Great! I now have your farm location at latitude ${newLocation.latitude.toFixed(
-          4
-        )} and longitude ${newLocation.longitude.toFixed(
-          4
-        )}. How can I help with your farm?`,
-        isSent: false,
-      })
+  (newLocation: TargetLocationType | null) => { // Ensure newLocation can be null
+    if (newLocation) {
+      if (!farmDataMode.value) { // Only update if not already in farm mode to avoid duplicate messages
+        farmDataMode.value = true
+        contextType.value = ContextTypeEnum.FARM_SELECTED
+        messages.value.push({
+          text: `Great! I now have your farm location at latitude ${newLocation.latitude.toFixed(
+            4
+          )} and longitude ${newLocation.longitude.toFixed(
+            4
+          )}. How can I help with your farm?`,
+          isSent: false,
+          model: "AgriBot"
+        })
+      }
+    } else {
+      // Handle location being cleared
+      if (farmDataMode.value) { // Only update if was in farm mode
+        farmDataMode.value = false;
+        contextType.value = ContextTypeEnum.GENERAL;
+        messages.value.push({
+          text: "Your farm location has been cleared. We're back to general chat.",
+          isSent: false,
+          model: "AgriBot"
+        });
+      }
     }
   },
-  { deep: true }
+  { deep: true } // Use deep watch if newLocation is a complex object and mutations need to be tracked
 )
 
-// Watch for product changes to prevent duplicate messages
+// Watch for changes in the selectedProduct from the productStore
 watch(
   () => productStore.selectedProduct,
-  (newProduct) => {
+  (newProduct: selectedProductType | null) => { // Ensure newProduct can be null
     if (
       newProduct &&
       Object.keys(newProduct).length > 0 &&
@@ -389,309 +523,263 @@ watch(
     ) {
       // Only add message if this is a different product than last time
       if (lastProductId.value !== newProduct.product_id) {
-        contextType.value = 'data_loaded'
+        contextType.value = ContextTypeEnum.DATA_LOADED
         const productName =
           newProduct.display_name || newProduct.product_id || 'selected'
         messages.value.push({
           text: `I see you're viewing ${productName} data. Would you like me to analyze this for your farm?`,
           isSent: false,
+          model: "AgriBot"
         })
-
-        // Update the last product ID
-        lastProductId.value = newProduct.product_id
+        lastProductId.value = newProduct.product_id // Update the last product ID
       }
     }
   },
-  { deep: true }
+  { deep: true } // Use deep watch for complex product objects
 )
 
-async function sendToChat(text) {
-  // Add sent message to chat
-  messages.value.push({ text: text, isSent: true })
 
-  // Create a more structured context
-  let context = ''
-
-  // Add selected product info
-  if (
-    productStore.selectedProduct &&
-    Object.keys(productStore.selectedProduct).length > 0
-  ) {
-    const product = productStore.selectedProduct
-    const productName =
-      product.display_name || product.product_id || 'selected data'
-
-    context += `(Dataset: ${productName}`
-
-    if (product.date) {
-      context += `, ${product.date}`
-    }
-
-    if (product.meta) {
-      const relevantKeys = ['type', 'source', 'crop_type', 'field_size']
-      const metaData = {}
-      relevantKeys.forEach((key) => {
-        if (product.meta[key]) metaData[key] = product.meta[key]
-      })
-
-      if (Object.keys(metaData).length > 0) {
-        context += `, ${JSON.stringify(metaData)}`
-      }
-    }
-
-    context += ') '
-  }
-
-  // Add clicked point value with agricultural context
-  if (productStore.clickedPoint && productStore.clickedPoint.value !== null) {
-    const value = productStore.clickedPoint.value
-    const x = productStore.clickedPoint.x
-    const y = productStore.clickedPoint.y
-
-    context += `(Field measurement at [${x.toFixed(4)}, ${y.toFixed(
-      4
-    )}]: ${value}. `
-
-    // Provide focused agricultural context for measurement values
-    if (productStore.selectedProduct?.product_id) {
-      const productId = productStore.selectedProduct.product_id.toLowerCase()
-
-      if (productId.includes('ndvi')) {
-        context += `NDVI value (plant health indicator): `
-
-        if (value > 0.7) context += `excellent vegetation. `
-        else if (value > 0.5) context += `good vegetation. `
-        else if (value > 0.3) context += `moderate vegetation. `
-        else if (value > 0.1) context += `sparse vegetation. `
-        else context += `very sparse/bare soil. `
-      } else if (productId.includes('ndwi')) {
-        context += `NDWI value (water content): ${
-          value > 0.3 ? 'high' : value > 0 ? 'moderate' : 'low'
-        } moisture. `
-      } else if (productId.includes('evi')) {
-        context += `EVI value (enhanced vegetation): ${
-          value > 0.4 ? 'high biomass' : 'low biomass'
-        }. `
-      } else if (productId.includes('temp')) {
-        context += `Temperature reading. `
-      } else if (
-        productId.includes('moisture') ||
-        productId.includes('swi') ||
-        productId.includes('soil')
-      ) {
-        context += `Soil moisture: ${
-          value > 0.6 ? 'high' : value > 0.3 ? 'moderate' : 'low'
-        }. `
-      }
-    }
-
-    context += ') '
-  }
-
-  // Get location information if available
-  try {
-    const targetLocation = locationStore.targetLocation
-    if (targetLocation) {
-      const { latitude, longitude } = targetLocation
-      context += `(Farm location: ${latitude.toFixed(4)}, ${longitude.toFixed(
-        4
-      )}. `
-
-      // Add season context (important for agriculture)
-      const currentDate = new Date()
-      const month = currentDate.getMonth() + 1
-      const hemisphere = latitude > 0 ? 'Northern' : 'Southern'
-
-      let season = ''
-      if (hemisphere === 'Northern') {
-        if (month >= 3 && month <= 5) season = 'Spring'
-        else if (month >= 6 && month <= 8) season = 'Summer'
-        else if (month >= 9 && month <= 11) season = 'Fall'
-        else season = 'Winter'
-      } else {
-        if (month >= 3 && month <= 5) season = 'Fall'
-        else if (month >= 6 && month <= 8) season = 'Winter'
-        else if (month >= 9 && month <= 11) season = 'Spring'
-        else season = 'Summer'
-      }
-
-      context += `Current season: ${season}. `
-      context += ') '
-    }
-  } catch (error) {
-    console.log('No target location available')
-  }
-
-  // Combine user's query with context
-  const contextualizedText = context ? `${text} ${context}` : text
-
-  // Call FastAPI backend
-  try {
-    // Show loading indicator
-    const loadingMessage = {
-      text: 'Thinking...',
-      isSent: false,
-      isLoading: true,
-    }
-    messages.value.push(loadingMessage)
-
-    // Track when the request started
-    // const requestStartTime = Date.now(); // Commented out unused variable
-
-    // Always use streaming for better UX - no conditional needed
-    try {
-      // Make fetch request with streaming
-      const response = await fetch('http://127.0.0.1:8157/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: contextualizedText,
-          context_type: contextType.value,
-          use_streaming: true,
-        }),
-      })
-
-      if (!response.ok) {
-        // Remove loading message before showing error
-        messages.value = messages.value.filter((msg) => !msg.isLoading)
-        await handleErrorResponse(response)
-        return
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) {
-        // Remove loading message before showing error
-        messages.value = messages.value.filter((msg) => !msg.isLoading)
-        throw new Error('Response body stream not available')
-      }
-
-      const decoder = new TextDecoder()
-      let isDone = false
-      let firstContentReceived = false
-
-      // Create a response message but only add it once we receive content
-      const streamResponseMessage = {
-        text: '',
-        isSent: false,
-        model: 'Loading...', // Will be updated when complete
-      }
-
-      // Process the stream
-      while (!isDone) {
-        const { value, done } = await reader.read()
-        if (done) {
-          isDone = true
-          continue
-        }
-
-        // Decode the chunk and process it
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data:')) {
-            const eventData = line.slice(5).trim() // Remove 'data: ' prefix
-
-            if (eventData === '[DONE]') {
-              isDone = true
-              break
-            }
-
-            try {
-              const parsedData = JSON.parse(eventData)
-              if (parsedData.content) {
-                // If this is the first content we're receiving, replace the loading message
-                if (!firstContentReceived) {
-                  firstContentReceived = true
-                  // Replace loading message with actual response
-                  messages.value = messages.value.filter(
-                    (msg) => !msg.isLoading
-                  )
-                  messages.value.push(streamResponseMessage)
-                }
-
-                // Update the message with new content
-                streamResponseMessage.text += parsedData.content
-
-                // Auto-scroll to the bottom of the chat
-                setTimeout(() => {
-                  const chatBody = document.querySelector('.chat-body')
-                  if (chatBody) {
-                    chatBody.scrollTop = chatBody.scrollHeight
-                  }
-                }, 50)
-              }
-            } catch (e) {
-              console.warn('Failed to parse SSE data:', eventData, e)
-            }
-          }
-        }
-      }
-
-      // If we never received any content
-      if (!firstContentReceived) {
-        // Remove loading message
-        messages.value = messages.value.filter((msg) => !msg.isLoading)
-
-        // Add a message indicating no response was received
-        messages.value.push({
-          text: 'No response received from the model. Please try again.',
-          isSent: false,
-          isError: true,
-        })
-      } else {
-        // Add a model name if we got a complete response
-        streamResponseMessage.model = 'AgriBot'
-      }
-    } catch (error) {
-      // Remove any loading message that might still be present
-      messages.value = messages.value.filter((msg) => !msg.isLoading)
-
-      messages.value.push({
-        text: "I'm having trouble connecting to the server. Please check your network connection or try again later.",
-        isSent: false,
-        isError: true,
-      })
-      console.error('Error communicating with the streaming API:', error)
-    }
-
-    // Auto-scroll to the bottom of the chat
-    setTimeout(() => {
+/**
+ * Scrolls the chat body to the bottom to show the latest messages.
+ */
+function scrollToBottom(): void {
+  // Use nextTick to ensure DOM has updated before scrolling
+  import('vue').then(vue => {
+    vue.nextTick(() => {
       const chatBody = document.querySelector('.chat-body')
       if (chatBody) {
         chatBody.scrollTop = chatBody.scrollHeight
       }
-    }, 100)
-  } catch (error) {
-    console.error('Error in sendToChat:', error)
-
-    // Remove any loading message that might still be present
-    messages.value = messages.value.filter((msg) => !msg.isLoading)
-
-    messages.value.push({
-      text: 'An unexpected error occurred. Please try again later.',
-      isSent: false,
-      isError: true,
-    })
-  }
+    });
+  });
 }
 
-async function handleErrorResponse(response) {
-  let errorText = 'Error communicating with the API.'
+/**
+ * Handles error responses from the chat API.
+ * @param {Response} response - The fetch Response object.
+ */
+async function handleErrorResponse(response: Response): Promise<void> {
+  let errorText = `Error: ${response.status} ${response.statusText}`
   try {
     const errorData = await response.json()
-    errorText = errorData.detail || errorData.message || 'Server error'
+    // Attempt to get a more specific error message from the response body
+    errorText = errorData.detail || errorData.message || errorText
   } catch (e) {
-    errorText = `Error ${response.status}: ${response.statusText}`
+    // If parsing error JSON fails, use the initial errorText
+    console.warn('Could not parse error response JSON:', e)
+  }
+  messages.value.push({ text: errorText, isSent: false, model: "System" })
+}
+
+/**
+ * Sends a message text to the chat API and handles the streamed response.
+ * @param {string} text - The message text to send.
+ */
+async function sendToChat(text: string): Promise<void> {
+  messages.value.push({ text: text, isSent: true })
+  scrollToBottom()
+
+  let context = '' // Initialize context string
+
+  // Add selected product information to the context
+  if (
+    productStore.selectedProduct &&
+    Object.keys(productStore.selectedProduct).length > 0 &&
+    productStore.selectedProduct.product_id // Ensure product_id exists
+  ) {
+    const product = productStore.selectedProduct
+    const productName = product.display_name || product.product_id || 'selected data'
+    context += `(Dataset: ${productName}`
+    if (product.date) {
+      context += `, Date: ${product.date}`
+    }
+    // Add metadata if available
+    if (product.meta) {
+      const relevantMetaKeys: (keyof typeof product.meta)[] = ['type', 'source', 'crop_type', 'field_size']
+      const metaInfoParts: string[] = []
+      relevantMetaKeys.forEach((key) => {
+        if (product.meta && product.meta[key]) {
+          metaInfoParts.push(`${String(key)}: ${String(product.meta[key])}`)
+        }
+      })
+      if (metaInfoParts.length > 0) {
+        context += `, Meta: { ${metaInfoParts.join(', ')} }`
+      }
+    }
+    context += ') '
   }
 
-  messages.value.push({
-    text: errorText,
-    isSent: false,
-    isError: true,
-  })
+  // Add clicked point value with agricultural context
+  // Ensure clickedPoint and its properties are valid before using
+  if (productStore.clickedPoint &&
+      typeof productStore.clickedPoint.value === 'number' &&
+      typeof productStore.clickedPoint.x === 'number' &&
+      typeof productStore.clickedPoint.y === 'number') {
+    const point = productStore.clickedPoint as { value: number; x: number; y: number } // Safe assertion after checks
+
+    context += `(Field measurement at pixel [${point.x.toFixed(0)}, ${point.y.toFixed(0)}]: Value ${point.value.toFixed(2)}. ` // Using toFixed(0) for pixel coordinates
+
+    if (productStore.selectedProduct?.product_id) {
+      const productId = productStore.selectedProduct.product_id.toLowerCase()
+      // Provide agricultural context based on product ID and value
+      if (productId.includes('ndvi')) {
+        context += `NDVI (Normalized Difference Vegetation Index - plant health): `
+        if (point.value > 0.7) context += `Excellent vegetation. `
+        else if (point.value > 0.5) context += `Good vegetation. `
+        else if (point.value > 0.3) context += `Moderate vegetation. `
+        else if (point.value > 0.1) context += `Sparse vegetation. `
+        else context += `Very sparse vegetation or bare soil. `
+      } else if (productId.includes('ndwi')) {
+        context += `NDWI (Normalized Difference Water Index - water content): ${point.value > 0.3 ? 'High' : point.value > 0 ? 'Moderate' : 'Low'} moisture. `
+      } else if (productId.includes('evi')) {
+        context += `EVI (Enhanced Vegetation Index - biomass): ${point.value > 0.4 ? 'High biomass' : 'Low biomass'}. `
+      } else if (productId.includes('temp')) {
+        context += `Temperature reading. ` // Consider adding units if known
+      } else if (productId.includes('moisture') || productId.includes('swi') || productId.includes('soil')) {
+        context += `Soil Moisture Index: ${point.value > 0.6 ? 'High' : point.value > 0.3 ? 'Moderate' : 'Low'}. `
+      }
+    }
+    context += ') '
+  }
+
+  // Add farm location and season information to the context
+  if (locationStore.targetLocation) {
+    const { latitude, longitude } = locationStore.targetLocation
+    context += `(Farm location: Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}. `
+    const currentDate = new Date()
+    const month = currentDate.getMonth() // 0-indexed (0 for January)
+    const hemisphere = latitude > 0 ? 'Northern' : 'Southern'
+    let season = ''
+    // Determine season based on hemisphere and month
+    if (hemisphere === 'Northern') {
+      if (month >= 2 && month <= 4) season = 'Spring' // Mar-May
+      else if (month >= 5 && month <= 7) season = 'Summer' // Jun-Aug
+      else if (month >= 8 && month <= 10) season = 'Autumn' // Sep-Nov
+      else season = 'Winter' // Dec-Feb
+    } else { // Southern Hemisphere
+      if (month >= 2 && month <= 4) season = 'Autumn' // Mar-May
+      else if (month >= 5 && month <= 7) season = 'Winter' // Jun-Aug
+      else if (month >= 8 && month <= 10) season = 'Spring' // Sep-Nov
+      else season = 'Summer' // Dec-Feb
+    }
+    context += `Current season: ${season}. `
+    context += ')'
+  }
+
+  const contextualizedText = context ? `${text} ${context}`.trim() : text
+  const loadingMessage: Message = { text: 'AgriBot is thinking...', isSent: false, model: "AgriBot" }
+  messages.value.push(loadingMessage)
+  scrollToBottom()
+
+  try {
+    const response = await fetch('http://127.0.0.1:8157/chat', { // Ensure this URL is correct for your backend
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Add any other headers like Authorization if needed
+      },
+      body: JSON.stringify({
+        text: contextualizedText, // Changed 'message' to 'text'
+        context_type: contextType.value, // Uncommented and sending context_type
+        // Consider sending the full context object if the backend can process it:
+        // context: {
+        //   type: contextType.value,
+        //   location: locationStore.targetLocation,
+        //   product: productStore.selectedProduct,
+        //   clickedPoint: productStore.clickedPoint
+        // }
+      }),
+    })
+
+    // Remove loading message
+    const loadingMsgIndex = messages.value.findIndex(m => m === loadingMessage);
+    if (loadingMsgIndex > -1) {
+      messages.value.splice(loadingMsgIndex, 1);
+    }
+
+    if (!response.ok) {
+      await handleErrorResponse(response)
+      return
+    }
+
+    if (!response.body) {
+      messages.value.push({ text: "Received an empty response from the server.", isSent: false, model: "System" });
+      return;
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let streamDone = false
+    let currentStreamedText = ''
+
+    // Add a new message object for the streamed response
+    const streamResponseMessage: Message = { text: '', isSent: false, model: 'AgriBot' } // Default model
+    messages.value.push(streamResponseMessage)
+
+    while (!streamDone) {
+      const { value, done } = await reader.read()
+      streamDone = done
+      if (value) {
+        const chunk = decoder.decode(value, { stream: !done }) // stream: true until the last chunk
+        // Process server-sent events if applicable, or just append chunk
+        // This example assumes the backend sends data chunks that might be JSON or plain text.
+        // Adjust parsing based on your backend's streaming format.
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const eventData = line.substring(5).trim();
+            if (eventData === '[DONE]') { // Check for a custom end-of-stream marker
+              streamDone = true;
+              break;
+            }
+            try {
+              const parsedData = JSON.parse(eventData);
+              if (parsedData.choices && parsedData.choices[0].delta?.content) {
+                currentStreamedText += parsedData.choices[0].delta.content;
+              } else if (typeof parsedData.content === 'string') { // Handle other possible structures
+                 currentStreamedText += parsedData.content;
+              }
+              // Update model if provided in the stream
+              if (parsedData.model) {
+                streamResponseMessage.model = parsedData.model;
+              }
+            } catch (e) {
+              // If JSON.parse fails, and it's not a control message, append raw line (if meaningful)
+              // This part depends heavily on the expected stream format.
+              // For simple text streams, you might just append the line.
+              // console.warn('Non-JSON data in stream or malformed JSON:', eventData);
+               if(eventData && eventData !== '[DONE]') currentStreamedText += eventData + '\n'; // Append non-JSON as is, with newline
+            }
+          } else if (line.trim()) {
+             // Handle lines that don't start with "data: " if necessary
+             // currentStreamedText += line + '\n'; // Example: append plain text lines
+          }
+        }
+        streamResponseMessage.text = formatMessage(currentStreamedText); // Format incrementally
+        scrollToBottom();
+
+      }
+    }
+    // Final formatting pass if needed, though incremental formatting is preferred
+    streamResponseMessage.text = formatMessage(currentStreamedText);
+    scrollToBottom();
+
+  } catch (error: any) { // Catch any type of error
+    console.error('Chat API request failed:', error)
+    // Ensure loading message is removed if an error occurs early
+    const loadingMsgIndex = messages.value.findIndex(m => m.text === 'AgriBot is thinking...');
+    if (loadingMsgIndex > -1) {
+      messages.value.splice(loadingMsgIndex, 1);
+    }
+    messages.value.push({
+      text: `Sorry, I encountered an error: ${error.message || 'Unknown chat connection error'}.`,
+      isSent: false,
+      model: "System"
+    })
+  } finally {
+    inputDisabled.value = false
+    scrollToBottom() // Ensure scroll after any operation
+  }
 }
 </script>
 
