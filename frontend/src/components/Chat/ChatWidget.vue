@@ -117,7 +117,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onBeforeUnmount, type Ref } from 'vue'
 import { useLocationStore, type TargetLocationType } from '@/stores/locationStore'
-import { useProductStore, type selectedProductType, type clickedPointType, type ProductListEntry } from '@/stores/productStore' // Assuming ProductListEntry might be useful if productEntries is used
+import { useProductStore, type selectedProductType } from '@/stores/productStore' // Removed unused clickedPointType and ProductListEntry
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
@@ -177,10 +177,10 @@ marked.setOptions({
 /**
  * Formats a message string using marked and DOMPurify.
  * Ensures that the input to marked() is always a string.
- * @param {string | any[]} textInput - The raw message text, which might be a string or an array.
+ * @param {string | unknown} textInput - The raw message text, which might be a string or an array.
  * @returns {string} The formatted and sanitized HTML string.
  */
-function formatMessage(textInput: string | any[]): string {
+function formatMessage(textInput: string | unknown): string {
   let textToProcess: string;
 
   if (Array.isArray(textInput)) {
@@ -220,8 +220,8 @@ function formatMessage(textInput: string | any[]): string {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/\"/g, '&quot;')
-      .replace(/\'/g, '&#039;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 }
 
@@ -764,7 +764,7 @@ async function sendToChat(text: string): Promise<void> {
     streamResponseMessage.text = formatMessage(currentStreamedText);
     scrollToBottom();
 
-  } catch (error: any) { // Catch any type of error
+  } catch (error) { // Catch type is unknown for better safety over any
     console.error('Chat API request failed:', error)
     // Ensure loading message is removed if an error occurs early
     const loadingMsgIndex = messages.value.findIndex(m => m.text === 'AgriBot is thinking...');
@@ -772,7 +772,7 @@ async function sendToChat(text: string): Promise<void> {
       messages.value.splice(loadingMsgIndex, 1);
     }
     messages.value.push({
-      text: `Sorry, I encountered an error: ${error.message || 'Unknown chat connection error'}.`,
+      text: `Sorry, I encountered an error: ${(error as Error).message || 'Unknown chat connection error'}.`,
       isSent: false,
       model: "System"
     })
