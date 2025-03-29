@@ -1,7 +1,4 @@
 import { defineStore } from 'pinia'
-// Import the store type itself, not just the state type
-import { useProductStore } from './productStore'
-import type { ProductStore } from './productStore'
 
 /**
  * @typedef {Record<string, unknown>} LayerDefinition
@@ -47,16 +44,18 @@ export const useMapStore = defineStore('map', {
   },
   actions: {
     /**
-     * Renders layers on the map.
-     * Currently, this action triggers the rendering of the product tile layer.
-     * It can be expanded to handle other layer types (e.g., admin boundaries).
-     * @async
+     * Sets the product layer definition in the map state.
+     * @param {LayerDefinition} layerDefinition - The layer definition for the product.
      */
-    async renderLayers() {
-      // Type 'productStoreInstance' for clarity, as 'product' could be ambiguous
-      const productStoreInstance: ProductStore = useProductStore()
-      // Calls the action in productStore to render its specific tile layer
-      productStoreInstance.renderTileLayer()
+    setProductLayer(layerDefinition: LayerDefinition) {
+      this.layersState.product = { ...layerDefinition } // Use spread to ensure reactivity
+    },
+
+    /**
+     * Clears the product layer definition from the map state.
+     */
+    clearProductLayer() {
+      this.layersState.product = null
     },
 
     /**

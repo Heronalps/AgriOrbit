@@ -12,14 +12,21 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 
 const availableDataStore = useAvailableDataStore()
 
-// Fetches initial application data when the component is mounted.
+/**
+ * Fetches initial application data when the component is mounted.
+ * This includes setting the document title and loading available map products and cropmasks.
+ */
 onMounted(async () => {
-  // Sets the document title.
   document.title = 'AgriOrbit'
-  // Loads the list of available map products.
-  availableDataStore.loadAvailableProducts()
-  // Loads the list of available cropmasks.
-  availableDataStore.loadAvailableCropmasks()
+  try {
+    await Promise.all([
+      availableDataStore.loadAvailableProducts(),
+      availableDataStore.loadAvailableCropmasks(),
+    ])
+  } catch (error) {
+    console.error('Failed to load initial data:', error)
+    // Optionally, display a user-friendly error message in the UI
+  }
 })
 </script>
 

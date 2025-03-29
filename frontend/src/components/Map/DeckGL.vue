@@ -1,8 +1,6 @@
-/** * @file DeckGL.vue * @description This component serves as a Vue wrapper for
-the Deck.gl library. * It initializes and manages a Deck.gl instance, handles
-view state synchronization, * and provides a mechanism for child components to
-render and update Deck.gl layers. * It's designed to integrate with a Mapbox
-map, typically provided as a child component. */
+/** * @file DeckGL.vue * @description Vue wrapper for Deck.gl, managing its
+instance, view state, and layer rendering. * Integrates with a Mapbox map,
+typically provided as a child component. */
 <script setup lang="ts">
 import { viewStateType } from '@/shared';
 import { DECKGL_SETTINGS } from '@/utils/defaultSettings';
@@ -11,21 +9,19 @@ import { Deck, type PickingInfo, type Layer } from '@deck.gl/core';
 import { onMounted, onBeforeUnmount, provide, reactive, useAttrs } from 'vue';
 
 /**
- * `useAttrs` captures non-prop attributes passed to this component,
- * which can be spread onto the Deck.gl instance if needed.
+ * Captures non-prop attributes passed to this component.
+ * These can be spread onto the Deck.gl instance if needed.
  */
 const attrs = useAttrs();
 
 /**
  * Holds the Deck.gl instance. Initialized in `onMounted`.
- * @type {Deck | null}
  */
 let deckInstance: Deck | null = null;
 
 /**
  * Defines the events emitted by this component.
- * @emits click - Emitted when the Deck.gl canvas is clicked.
- *               The payload includes Deck.gl's `PickingInfo` object and the original MouseEvent.
+ * @emits click - Emitted when the Deck.gl canvas is clicked, providing Deck.gl's `PickingInfo` and the original MouseEvent.
  */
 const emit = defineEmits<{
   (e: 'click', payload: { info: PickingInfo; event: Event }): void;
@@ -46,7 +42,8 @@ const viewState = reactive<viewStateType>({
 
 /**
  * Vue lifecycle hook called when the component is mounted.
- * Initializes the Deck.gl instance.
+ * Initializes the Deck.gl instance with specified configurations,
+ * including initial view state, controller, and event handlers.
  */
 onMounted(() => {
   deckInstance = new Deck({
@@ -68,7 +65,7 @@ onMounted(() => {
 
 /**
  * Vue lifecycle hook called before the component is unmounted.
- * Cleans up the Deck.gl instance to prevent memory leaks.
+ * Finalizes and cleans up the Deck.gl instance to prevent memory leaks.
  */
 onBeforeUnmount(() => {
   if (deckInstance) {
@@ -93,7 +90,7 @@ function handleViewChange(newDeckViewState: viewStateType): void {
 /**
  * Updates the layers rendered by the Deck.gl instance.
  * This function is provided to child components (e.g., TileLayer),
- * allowing them to dynamically change the data layers on the map.
+ * enabling them to dynamically manage the data layers on the map.
  * @param {Layer[]} newLayers - An array of new Deck.gl layer instances to render.
  */
 function updateLayers(newLayers: Layer[]): void {
@@ -104,18 +101,18 @@ function updateLayers(newLayers: Layer[]): void {
 
 // Provide the reactive viewState and the updateLayers function to child components.
 provide('viewState', viewState);
-provide('updateLayers', updateLayers); // Renamed from 'updateLayer' for clarity
+provide('updateLayers', updateLayers); // Ensure clarity in provided function name
 </script>
 
 <template>
   <div class="deckgl-container relative h-full w-full">
-    <!-- 
-      Slot for child components. Typically, this will include:
-      1. A base map component (e.g., MapboxView) that renders beneath Deck.gl layers.
-      2. Data layer components (e.g., TileLayer) that use the 'updateLayers' provided function.
+    <!--
+      Slot for child components. Typically includes:
+      1. A base map component (e.g., MapboxView) rendering beneath Deck.gl layers.
+      2. Data layer components (e.g., TileLayer) utilizing the 'updateLayers' provided function.
     -->
     <slot />
-    <!-- Canvas element that Deck.gl will use for rendering -->
+    <!-- Canvas element for Deck.gl rendering -->
     <canvas
       id="deck-canvas"
       class="deck-canvas absolute top-0 left-0 h-full w-full"
@@ -124,22 +121,20 @@ provide('updateLayers', updateLayers); // Renamed from 'updateLayer' for clarity
 </template>
 
 <style scoped>
-/* 
- * Scoped styles for the DeckGL component.
- */
+/* Scoped styles for the DeckGL component. */
 .deckgl-container {
-  /* 
-   * By default, the container itself should not intercept mouse events.
-   * This allows underlying elements (like a Mapbox map) to be interactive.
+  /*
+   * The container itself should not intercept mouse events by default,
+   * allowing underlying elements (like a Mapbox map) to remain interactive.
    * Pointer events are enabled specifically on the canvas where Deck.gl renders.
    */
   pointer-events: none;
 }
 
 .deck-canvas {
-  /* 
-   * Enable pointer events on the Deck.gl canvas so it can handle interactions
-   * like click, pan, and zoom.
+  /*
+   * Enable pointer events on the Deck.gl canvas for interactions
+   * such as click, pan, and zoom.
    */
   pointer-events: auto;
 }
