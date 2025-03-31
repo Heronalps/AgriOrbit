@@ -4,6 +4,7 @@ import { getValueAtPoint } from '@/api/point'
 import { computeTileLayerURL } from '@/api/tile'
 import { defineStore } from 'pinia'
 import type { ProductMeta } from '@/api.d.ts'
+import { useAvailableDataStore } from './availableDataStore'
 
 // Interface for entries in the productEntries.results array
 export interface ProductListEntry {
@@ -98,32 +99,65 @@ export const useProductStore = defineStore('productStore', {
      */
     async setProduct(newProductId: string) {
       const currentProductId = this.selectedProduct.product_id
-      const currentPreviousProductId = this.selectedProduct.previousProductId
-
       this.clickedPoint.show = false // Hide clicked point info on product change
 
       if (currentProductId !== newProductId) {
         // --- Genuine Product Switch ---
+        const availableDataStore = useAvailableDataStore()
+        const fullProductDetails = availableDataStore.getProducts.find(
+          (p) => p.product_id === newProductId
+        )
+
         this.selectedProduct = {
           ...this.selectedProduct, // Retain other properties like cropmask_id
           product_id: newProductId,
           previousProductId: currentProductId, // Store the product we are switching from
           date: undefined, // CRITICAL: Clear date, new product will need its own valid date
+          // Populate from fullProductDetails
+          display_name: fullProductDetails?.display_name,
+          desc: fullProductDetails?.desc,
+          meta: fullProductDetails?.meta,
+          composite: fullProductDetails?.composite,
         }
         await this.loadProductEntries(true) // `productJustChanged` is true
       } else {
         // --- Product ID in State Already Matches newProductId ---
+        // Ensure product details are loaded if they were somehow missing
+        if (
+          !this.selectedProduct.display_name ||
+          !this.selectedProduct.desc ||
+          !this.selectedProduct.meta
+        ) {
+          const availableDataStore = useAvailableDataStore()
+          const fullProductDetails = availableDataStore.getProducts.find(
+            (p) => p.product_id === newProductId
+          )
+          if (fullProductDetails) {
+            this.selectedProduct.display_name = fullProductDetails.display_name
+            this.selectedProduct.desc = fullProductDetails.desc
+            this.selectedProduct.meta = fullProductDetails.meta
+            this.selectedProduct.composite = fullProductDetails.composite
+          }
+        }
+
+        const currentPreviousProductId = this.selectedProduct.previousProductId
         if (
           currentPreviousProductId &&
           currentPreviousProductId !== newProductId
         ) {
+          // Switched away and then quickly back to this product
           this.selectedProduct.date = undefined
           await this.loadProductEntries(true) // Treat as a new product selection for date logic
         } else {
-          if (!currentPreviousProductId && this.selectedProduct.date) {
-            this.selectedProduct.date = undefined
+          // Product re-selected or refreshed.
+          // loadProductEntries will handle date validation/setting.
+          // If date is undefined, loadProductEntries(true) will pick a default.
+          // Otherwise, loadProductEntries(false) will try to use/validate existing date.
+          if (!this.selectedProduct.date) {
+            await this.loadProductEntries(true)
+          } else {
+            await this.loadProductEntries(false)
           }
-          await this.loadProductEntries(false) // `productJustChanged` is false
         }
       }
     },

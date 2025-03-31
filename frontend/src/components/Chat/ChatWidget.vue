@@ -611,35 +611,64 @@ async function sendToChat(text: string): Promise<void> {
 
   // Add clicked point value with agricultural context
   // Ensure clickedPoint and its properties are valid before using
-  if (productStore.clickedPoint &&
-      typeof productStore.clickedPoint.value === 'number' &&
-      typeof productStore.clickedPoint.x === 'number' &&
-      typeof productStore.clickedPoint.y === 'number') {
-    const point = productStore.clickedPoint as { value: number; x: number; y: number } // Safe assertion after checks
+  if (
+    productStore.clickedPoint && productStore.clickedPoint.show // Check if popup is active and meant to be shown
+  ) {
+    const point = productStore.clickedPoint; // Contains value, x, y, show
+    const product = productStore.selectedProduct; // Contains product_id, display_name, desc, meta, etc.
 
-    context += `(Field measurement at pixel [${point.x.toFixed(0)}, ${point.y.toFixed(0)}]: Value ${point.value.toFixed(2)}. ` // Using toFixed(0) for pixel coordinates
+    let pointContext = "(Selected map data analysis: ";
 
-    if (productStore.selectedProduct?.product_id) {
-      const productId = productStore.selectedProduct.product_id.toLowerCase()
-      // Provide agricultural context based on product ID and value
-      if (productId.includes('ndvi')) {
-        context += `NDVI (Normalized Difference Vegetation Index - plant health): `
-        if (point.value > 0.7) context += `Excellent vegetation. `
-        else if (point.value > 0.5) context += `Good vegetation. `
-        else if (point.value > 0.3) context += `Moderate vegetation. `
-        else if (point.value > 0.1) context += `Sparse vegetation. `
-        else context += `Very sparse vegetation or bare soil. `
-      } else if (productId.includes('ndwi')) {
-        context += `NDWI (Normalized Difference Water Index - water content): ${point.value > 0.3 ? 'High' : point.value > 0 ? 'Moderate' : 'Low'} moisture. `
-      } else if (productId.includes('evi')) {
-        context += `EVI (Enhanced Vegetation Index - biomass): ${point.value > 0.4 ? 'High biomass' : 'Low biomass'}. `
-      } else if (productId.includes('temp')) {
-        context += `Temperature reading. ` // Consider adding units if known
-      } else if (productId.includes('moisture') || productId.includes('swi') || productId.includes('soil')) {
-        context += `Soil Moisture Index: ${point.value > 0.6 ? 'High' : point.value > 0.3 ? 'Moderate' : 'Low'}. `
-      }
+    const productName = product?.display_name || product?.product_id || "Unknown Product";
+    pointContext += `Product: ${productName}. `;
+
+    if (product?.desc) {
+      pointContext += `Details: ${product.desc}. `;
     }
-    context += ') '
+
+    // Check if a valid numerical value exists for the point
+    if (typeof point.value === 'number' && !isNaN(point.value)) {
+      pointContext += `Value at selected point: ${point.value.toFixed(2)}. `;
+
+      let interpretation = '';
+      // Attempt interpretation using product_id, display_name, and desc
+      const pId = (product?.product_id || '').toLowerCase();
+      const pNameLower = (product?.display_name || '').toLowerCase();
+      const pDescLower = (product?.desc || '').toLowerCase();
+
+      if (pId.includes('ndvi') || pNameLower.includes('ndvi') || pDescLower.includes('ndvi') || pNameLower.includes('normalized difference vegetation index')) {
+        interpretation = `This NDVI value suggests: `;
+        if (point.value > 0.7) interpretation += `Excellent vegetation health. `;
+        else if (point.value > 0.5) interpretation += `Good vegetation health. `;
+        else if (point.value > 0.3) interpretation += `Moderate vegetation health. `;
+        else if (point.value > 0.1) interpretation += `Sparse vegetation. `;
+        else interpretation += `Very sparse vegetation or bare soil. `;
+      } else if (pId.includes('ndwi') || pNameLower.includes('ndwi') || pDescLower.includes('ndwi') || pNameLower.includes('normalized difference water index')) {
+        interpretation = `This NDWI value suggests: ${point.value > 0.3 ? 'High' : point.value > 0 ? 'Moderate' : 'Low'} moisture content. `;
+      } else if (pId.includes('evi') || pNameLower.includes('evi') || pDescLower.includes('evi') || pNameLower.includes('enhanced vegetation index')) {
+        interpretation = `This EVI value suggests: ${point.value > 0.4 ? 'High biomass' : 'Low biomass'}. `;
+      } else if (pId.includes('temp') || pNameLower.includes('temperature') || pDescLower.includes('temperature')) {
+        interpretation = `The temperature is ${point.value.toFixed(2)} (units may vary based on source). `;
+      } else if (
+          pId.includes('moisture') || pId.includes('swi') || pId.includes('soil') ||
+          pNameLower.includes('moisture') || pNameLower.includes('swi') || pNameLower.includes('soil') || pNameLower.includes('soil water index') ||
+          pDescLower.includes('moisture') || pDescLower.includes('swi') || pDescLower.includes('soil')
+      ) {
+        interpretation = `This soil moisture value suggests: ${point.value > 0.6 ? 'High' : point.value > 0.3 ? 'Moderate' : 'Low'} moisture. `;
+      } else if (pNameLower.includes('chirps') || pDescLower.includes('precipitation') || pNameLower.includes('precipitation')) {
+          interpretation = `Precipitation amount: ${point.value.toFixed(2)} (units, e.g., mm, depend on the dataset). `;
+      } else {
+        // Generic statement if no specific interpretation found but value exists
+        interpretation = `The value for this data layer is ${point.value.toFixed(2)}. `;
+      }
+      pointContext += interpretation;
+    } else {
+      // Handle cases where point.value is not a number (e.g., "No Data", null, undefined)
+      pointContext += "No specific data value available at the selected point. ";
+    }
+
+    pointContext += ") "; // Close the parenthesis for "Selected map data analysis"
+    context += pointContext;
   }
 
   // Add farm location and season information to the context
