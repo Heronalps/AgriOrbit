@@ -6,7 +6,7 @@ import { viewStateType } from '@/shared';
 import { DECKGL_SETTINGS } from '@/utils/defaultSettings';
 // Import necessary types from Deck.gl
 import { Deck, type PickingInfo, type Layer } from '@deck.gl/core';
-import { onMounted, onBeforeUnmount, provide, reactive, useAttrs } from 'vue';
+import { onMounted, onBeforeUnmount, provide, reactive, useAttrs, watch } from 'vue';
 
 /**
  * Captures non-prop attributes passed to this component.
@@ -26,6 +26,14 @@ let deckInstance: Deck | null = null;
 const emit = defineEmits<{
   (e: 'click', payload: { info: PickingInfo; event: Event }): void;
 }>();
+
+// Define component props to accept isSelectingLocation for cursor management
+const props = defineProps({
+  isSelectingLocation: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 /**
  * Reactive state for the Deck.gl view (camera position, zoom, etc.).
@@ -57,6 +65,13 @@ onMounted(() => {
     onClick: (info: PickingInfo, event: Event) => {
       // Emit a custom 'click' event with Deck.gl picking info and the original event
       emit('click', { info, event });
+    },
+    // Add getCursor callback to change cursor style based on isSelectingLocation prop
+    getCursor: ({ isDragging }: { isDragging: boolean }) => {
+      if (props.isSelectingLocation) {
+        return 'crosshair'; // Use crosshair when selecting location
+      }
+      return isDragging ? 'grabbing' : 'grab'; // Default grab/grabbing cursors
     },
     ...DECKGL_SETTINGS, // Spread default Deck.gl settings
     ...attrs, // Spread any additional attributes passed to this component
@@ -102,6 +117,24 @@ function updateLayers(newLayers: Layer[]): void {
 // Provide the reactive viewState and the updateLayers function to child components.
 provide('viewState', viewState);
 provide('updateLayers', updateLayers); // Ensure clarity in provided function name
+
+// Watch for changes in the isSelectingLocation prop to update the cursor dynamically
+watch(
+  () => props.isSelectingLocation,
+  (newValue) => {
+    if (deckInstance) {
+      // Update the getCursor prop when isSelectingLocation changes
+      deckInstance.setProps({
+        getCursor: ({ isDragging }: { isDragging: boolean }) => {
+          if (newValue) { // Use newValue from the watcher argument
+            return 'crosshair';
+          }
+          return isDragging ? 'grabbing' : 'grab';
+        },
+      });
+    }
+  }
+);
 </script>
 
 <template>

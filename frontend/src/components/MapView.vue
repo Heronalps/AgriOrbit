@@ -113,29 +113,80 @@ function handleClick(event: {
   // console.log('Click detected:', event); // Debug log for click event
 
   const { info } = event
-  if (
-    info &&
-    info.coordinate &&
-    Array.isArray(info.coordinate) &&
-    info.coordinate.length >= 2
-  ) {
-    const [longitude, latitude] = info.coordinate
-    // console.log('Valid click at:', { longitude, latitude }); // Debug log for coordinates
-
+  // Ensure that info, info.x, and info.y are valid before proceeding.
+  if (info && typeof info.x === 'number' && typeof info.y === 'number') {
     if (isSetLocationMode.value) {
-      locationStore.setTargetLocation({ longitude, latitude })
-      // console.log('Target location set:', { longitude, latitude }); // Debug log for target set
-      isSetLocationMode.value = false
-      renderTargetMarker()
+      // Check if the mapInstance is available to perform unprojection.
+      if (mapInstance.value) {
+        const LngLat = mapInstance.value.unproject([info.x, info.y])
+        const longitude = LngLat.lng
+        const latitude = LngLat.lat
+        // console.log('Valid click unprojected by Mapbox:', { longitude, latitude }); // Debug log
 
-      // Dispatch a global event to notify other components (e.g., ChatWidget) that location has been selected
-      window.dispatchEvent(
-        new CustomEvent('location-selected', {
-          detail: { longitude, latitude },
-        })
-      )
+        locationStore.setTargetLocation({ longitude, latitude })
+        // console.log('Target location set:', { longitude, latitude }); // Debug log
+        isSetLocationMode.value = false
+        renderTargetMarker()
+
+        // Dispatch a global event to notify other components that location has been selected.
+        window.dispatchEvent(
+          new CustomEvent('location-selected', {
+            detail: { longitude, latitude },
+          })
+        )
+      } else {
+        // Log a warning if mapInstance is not available for unprojection.
+        // As a fallback, use Deck.gl's coordinates, though this is what we aim to improve.
+        console.warn(
+          'MapView: mapInstance not available for unprojecting click. Falling back to Deck.gl coordinates.'
+        )
+        if (
+          info.coordinate &&
+          Array.isArray(info.coordinate) &&
+          info.coordinate.length >= 2
+        ) {
+          const [longitude, latitude] = info.coordinate
+          locationStore.setTargetLocation({ longitude, latitude })
+          isSetLocationMode.value = false
+          renderTargetMarker()
+          window.dispatchEvent(
+            new CustomEvent('location-selected', {
+              detail: { longitude, latitude },
+            })
+          )
+        } else {
+          console.warn(
+            'MapView: Click event does not contain valid coordinate data from Deck.gl for fallback.'
+          )
+        }
+      }
     } else {
-      // If not in set location mode, treat click as a request for point data
+      // If not in set location mode, treat click as a request for point data.
+      // We still need to get geographic coordinates for this action.
+      let longitude: number, latitude: number
+      if (mapInstance.value) {
+        // Prefer Mapbox unprojection for accuracy here as well.
+        const LngLat = mapInstance.value.unproject([info.x, info.y])
+        longitude = LngLat.lng
+        latitude = LngLat.lat
+      } else if (
+        info.coordinate &&
+        Array.isArray(info.coordinate) &&
+        info.coordinate.length >= 2
+      ) {
+        // Fallback to Deck.gl coordinates if map instance isn't available.
+        console.warn(
+          'MapView: mapInstance not available for point data click. Falling back to Deck.gl coordinates.'
+        )
+        ;[longitude, latitude] = info.coordinate
+      } else {
+        // If no valid coordinates can be obtained, log a warning and exit.
+        console.warn(
+          'MapView: Click event does not contain valid coordinate data for point data fetching.'
+        )
+        return
+      }
+
       productStore.clickedPoint = {
         value: null, // Value will be fetched by loadValueAtPoint
         x: info.x, // Screen x-coordinate for popup positioning
@@ -146,8 +197,9 @@ function handleClick(event: {
       // console.log('Clicked point updated in store, awaiting value:', productStore.clickedPoint); // Debug log
     }
   } else {
+    // Log a warning if the click event doesn't have valid screen coordinates.
     console.warn(
-      'MapView: Click event does not contain valid coordinate data.',
+      'MapView: Click event does not contain valid screen coordinate data (x, y).',
       info
     )
   }
@@ -176,17 +228,26 @@ function renderTargetMarker() {
   if (mapInstance.value) {
     const targetLocation = locationStore.targetLocation // Access getter as a property
     if (targetLocation) {
+      // Define marker options, including the new offset
+      const markerOptions: mapboxgl.MarkerOptions = {
+        anchor: 'bottom', // Anchor point of the marker
+        color: '#FF2400', // Bright red color for visibility
+        scale: 1.5, // Slightly larger than default for emphasis
+        offset: [0, 5], // Offset in pixels: [x, y]. Positive y moves marker down.
+      }
+
       if (targetMarker.value) {
         targetMarker.value.setLngLat([
           targetLocation.longitude,
           targetLocation.latitude,
         ])
+        // For Mapbox GL JS, if you need to update options like offset on an existing marker,
+        // you typically have to remove and re-add the marker, or manipulate its element directly.
+        // Setting LngLat updates position, but not other visual properties post-creation directly via a method.
+        // However, since our offset is static, it will be applied correctly when the marker is first created.
+        // If the marker were to change its offset dynamically, a remove/re-add strategy would be needed.
       } else {
-        targetMarker.value = new mapboxgl.Marker({
-          anchor: 'bottom', // Anchor point of the marker
-          color: '#FF2400', // Bright red color for visibility
-          scale: 1.5, // Slightly larger than default for emphasis
-        })
+        targetMarker.value = new mapboxgl.Marker(markerOptions)
           .setLngLat([targetLocation.longitude, targetLocation.latitude])
           .addTo(mapInstance.value)
       }
@@ -261,6 +322,7 @@ watch(
     <!-- Deck.gl Canvas for data layers and map interaction -->
     <DeckGL
       class="w-full h-full"
+      :is-selecting-location="isSetLocationMode"
       @click="handleClick"
     >
       <!-- Mapbox Base Map -->
