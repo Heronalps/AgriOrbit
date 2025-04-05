@@ -1,6 +1,6 @@
 <template>
   <div
-    ref="chatWidget"
+    ref="chatWidgetRef"
     class="chat-widget"
     :style="{
       left: position.x + 'px',
@@ -98,7 +98,7 @@
       </div>
       <div class="chat-input">
         <input
-          v-model="message"
+          v-model="messageInput"
           placeholder="Type your message..."
           :disabled="inputDisabled"
           @keyup.enter="sendMessage"
@@ -115,704 +115,145 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, onBeforeUnmount, type Ref } from 'vue'
-import { useLocationStore, type TargetLocationType } from '@/stores/locationStore'
-import { useProductStore, type selectedProductType } from '@/stores/productStore' // Removed unused clickedPointType and ProductListEntry
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
-
-// Define interfaces for component state
-interface Message {
-  text: string
-  isSent: boolean
-  model?: string // Optional: for identifying the sender model (e.g., "AgriBot")
-}
-
-interface Position {
-  x: number
-  y: number
-}
-
-interface Dimensions {
-  width: number
-  height: number
-}
-
-// Enum for more robust context type management
-enum ContextTypeEnum {
-  GENERAL = 'general',
-  FARM_SELECTED = 'farm_selected',
-  DATA_LOADED = 'data_loaded',
-}
+import { ref, onMounted, onBeforeUnmount, watch, type Ref } from 'vue';
+import { useLocationStore } from '@/stores/locationStore';
+import { useProductStore } from '@/stores/productStore';
+import { useDraggableResizable } from '@/composables/useDraggableResizable';
+import { useChatService, ContextTypeEnum, type Message } from '@/composables/useChatService';
 
 // Store instances
-const locationStore = useLocationStore()
-const productStore = useProductStore()
+const locationStore = useLocationStore();
+const productStore = useProductStore();
 
-// Chat state management
-const messages: Ref<Message[]> = ref([])
-const message: Ref<string> = ref('')
-const farmDataMode: Ref<boolean> = ref(false)
-const inputDisabled: Ref<boolean> = ref(false)
-const contextType: Ref<ContextTypeEnum> = ref(ContextTypeEnum.GENERAL)
-const isLocationSelectionActive: Ref<boolean> = ref(false)
-const lastProductId: Ref<string> = ref('') // Track the last product ID to prevent duplicates
+// Chat widget DOM element reference
+const chatWidgetRef = ref<HTMLElement | null>(null);
 
-// Chat widget position and dimension management
-const chatWidget: Ref<HTMLElement | null> = ref(null)
-const position: Ref<Position> = ref({ x: 10, y: 10 })
-const dimensions: Ref<Dimensions> = ref({ width: 400, height: 600 })
-const isDragging: Ref<boolean> = ref(false)
-const isResizing: Ref<boolean> = ref(false)
-const initialMousePos: Ref<Position> = ref({ x: 0, y: 0 })
-const initialWidgetPos: Ref<Position> = ref({ x: 0, y: 0 })
-const initialWidgetDim: Ref<Dimensions> = ref({ width: 0, height: 0 })
+// Draggable and Resizable Composable
+const { position, dimensions, startDrag, startResize, adjustInitialPosition } = useDraggableResizable(
+  chatWidgetRef,
+  { x: 10, y: 10 }, // Initial position, will be adjusted by adjustInitialPosition
+  { width: 400, height: 600 } // Initial dimensions
+);
 
-// Configure marked for safe HTML
-marked.setOptions({
-  breaks: true, // Add line breaks
-  gfm: true, // Use GitHub Flavored Markdown
-})
+// Chat Service Composable State
+const farmDataMode = ref(false);
+const contextType = ref<ContextTypeEnum>(ContextTypeEnum.GENERAL);
+const messages = ref<Message[]>([]);
+const lastProductId = ref(''); // Track the last product ID to prevent duplicates
 
-/**
- * Formats a message string using marked and DOMPurify.
- * Ensures that the input to marked() is always a string.
- * @param {string | unknown} textInput - The raw message text, which might be a string or an array.
- * @returns {string} The formatted and sanitized HTML string.
- */
-function formatMessage(textInput: string | unknown): string {
-  let textToProcess: string;
+// Chat Service Composable
+const {
+  messageInput, // Renamed from 'message' in the composable
+  inputDisabled,
+  // messages, // messages is now managed locally and passed to useChatService
+  currentSuggestions,
+  formatMessage,
+  sendMessage,
+  sendSuggestion,
+  scrollToBottom, // Exposing for direct use if needed
+} = useChatService(farmDataMode, contextType, messages, lastProductId);
 
-  if (Array.isArray(textInput)) {
-    // console.warn('formatMessage received array input, joining to string:', textInput);
-    textToProcess = textInput.join(' ');
-  } else if (typeof textInput === 'string') {
-    textToProcess = textInput;
-  } else if (textInput === null || textInput === undefined) {
-    // Handle null or undefined gracefully by treating them as empty strings.
-    textToProcess = '';
-  } else {
-    // For other unexpected types, log an error and attempt to convert to string.
-    // console.error('formatMessage received unexpected type:', typeof textInput, 'Value:', textInput);
-    try {
-      textToProcess = String(textInput);
-    } catch (e) {
-      // console.error('formatMessage: Could not convert input to string:', e);
-      // Fallback to an error message if conversion fails.
-      return '[Error: Invalid message format]';
-    }
-  }
-
-  // If, after processing, the string is empty or only whitespace, return an empty string.
-  if (!textToProcess.trim()) {
-    return '';
-  }
-
-  try {
-    // At this point, textToProcess is guaranteed to be a string.
-    const rawHtml = marked(textToProcess);
-    return DOMPurify.sanitize(rawHtml);
-  } catch (error) {
-    // console.error('Error in formatMessage (marked/DOMPurify):', error, 'Input text was:', textToProcess);
-    // Fallback to escaped text if markdown processing fails.
-    // This ensures that even if marked/DOMPurify fails, we still render something safe.
-    return textToProcess
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-}
-
-// Suggestions based on context
-const generalSuggestions: string[] = [
-  'What are best practices for crop rotation?',
-  'Tell me about sustainable farming',
-  'How to improve soil health?',
-]
-
-const farmSelectedSuggestions: string[] = [
-  'Analyze soil conditions for this location',
-  'Recommend crops for this region',
-  "What's the optimal irrigation strategy here?",
-]
-
-const dataLoadedSuggestions: string[] = [
-  'Interpret this NDVI data',
-  'How does my farm compare to regional averages?',
-  'Identify areas needing attention',
-]
-
-/**
- * Computed property to get current suggestions based on context type.
- * @returns {string[]} An array of suggestion strings.
- */
-const currentSuggestions = computed<string[]>(() => {
-  if (contextType.value === ContextTypeEnum.DATA_LOADED) return dataLoadedSuggestions
-  if (contextType.value === ContextTypeEnum.FARM_SELECTED) return farmSelectedSuggestions
-  return generalSuggestions
-})
-
-/**
- * Initiates dragging of the chat widget.
- * @param {MouseEvent} event - The mousedown event.
- */
-function startDrag(event: MouseEvent): void {
-  event.preventDefault()
-  isDragging.value = true
-  initialMousePos.value = { x: event.clientX, y: event.clientY }
-  if (chatWidget.value) { // Ensure chatWidget is not null
-    initialWidgetPos.value = {
-      x: position.value.x,
-      y: position.value.y,
-    }
-  }
-  document.addEventListener('mousemove', onDrag)
-  document.addEventListener('mouseup', stopDrag)
-}
-
-/**
- * Handles dragging movement of the chat widget.
- * @param {MouseEvent} event - The mousemove event.
- */
-function onDrag(event: MouseEvent): void {
-  if (!isDragging.value || !chatWidget.value) return // Ensure chatWidget is not null
-
-  const dx = event.clientX - initialMousePos.value.x
-  const dy = event.clientY - initialMousePos.value.y
-
-  position.value.x = initialWidgetPos.value.x + dx
-  position.value.y = initialWidgetPos.value.y + dy
-
-  // Keep widget within viewport
-  const minX = 0
-  const minY = 0
-  const maxX = window.innerWidth - dimensions.value.width
-  const maxY = window.innerHeight - dimensions.value.height
-
-  position.value.x = Math.max(minX, Math.min(maxX, position.value.x))
-  position.value.y = Math.max(minY, Math.min(maxY, position.value.y))
-}
-
-/**
- * Stops dragging of the chat widget.
- */
-function stopDrag(): void {
-  isDragging.value = false
-  document.removeEventListener('mousemove', onDrag)
-  document.removeEventListener('mouseup', stopDrag)
-}
-
-/**
- * Initiates resizing of the chat widget.
- * @param {MouseEvent} event - The mousedown event.
- */
-function startResize(event: MouseEvent): void {
-  event.preventDefault()
-  isResizing.value = true
-  initialMousePos.value = { x: event.clientX, y: event.clientY }
-  if (chatWidget.value) { // Ensure chatWidget is not null
-    initialWidgetDim.value = {
-      width: dimensions.value.width,
-      height: dimensions.value.height,
-    }
-  }
-  document.addEventListener('mousemove', onResize)
-  document.addEventListener('mouseup', stopResize)
-}
-
-/**
- * Handles resizing of the chat widget.
- * @param {MouseEvent} event - The mousemove event.
- */
-function onResize(event: MouseEvent): void {
-  if (!isResizing.value || !chatWidget.value) return // Ensure chatWidget is not null
-
-  const dx = event.clientX - initialMousePos.value.x
-  const dy = event.clientY - initialMousePos.value.y
-
-  const minWidth = 300
-  const minHeight = 55 // Approximate title bar height, adjust as needed
-
-  dimensions.value.width = Math.max(minWidth, initialWidgetDim.value.width + dx)
-  dimensions.value.height = Math.max(
-    minHeight,
-    initialWidgetDim.value.height + dy
-  )
-}
-
-/**
- * Stops resizing of the chat widget.
- */
-function stopResize(): void {
-  isResizing.value = false
-  document.removeEventListener('mousemove', onResize)
-  document.removeEventListener('mouseup', stopResize)
-}
-
-/**
- * Adjusts the initial position of the chat widget to ensure it's within view.
- */
-function adjustInitialPosition(): void {
-  if (!chatWidget.value) return // Ensure chatWidget is not null
-  const padding = 20 // Padding from window edges
-
-  // Calculate max positions considering padding
-  const maxX = window.innerWidth - dimensions.value.width - padding
-  const maxY = window.innerHeight - dimensions.value.height - padding
-
-  // Ensure initial position is within bounds (and not off-screen negatively)
-  position.value.x = Math.max(padding, Math.min(position.value.x, maxX))
-  position.value.y = Math.max(padding, Math.min(position.value.y, maxY))
-}
-
+// Component-specific state
+const isLocationSelectionActive = ref(false);
 
 onMounted(() => {
-  // Set initial position (e.g., bottom-left with margin)
-  position.value = {
-    x: 10, // Default X
-    y: window.innerHeight - dimensions.value.height - 35, // Default Y (35px margin from bottom)
-  }
-  adjustInitialPosition() // Adjust if out of bounds
+  // Initial position adjustment is handled by useDraggableResizable
+  // adjustInitialPosition(); // No longer needed here, called within useDraggableResizable
 
-  const targetLocation = locationStore.targetLocation
+  const targetLocation = locationStore.targetLocation;
   if (targetLocation) {
-    farmDataMode.value = true
-    contextType.value = ContextTypeEnum.FARM_SELECTED
+    farmDataMode.value = true;
+    contextType.value = ContextTypeEnum.FARM_SELECTED;
     messages.value.push({
       text: "I see you've selected a farm location. How can I help you with your farm today?",
       isSent: false,
       model: "AgriBot"
-    })
+    });
   } else {
     messages.value.push({
       text: "Hello! I'm AgriBot. To get personalized farming advice, please select your farm location on the map.",
       isSent: false,
       model: "AgriBot"
-    })
+    });
   }
 
-  // Listen for custom event when location is selected on the map
-  window.addEventListener('location-selected', handleLocationSelected as EventListener)
+  window.addEventListener('location-selected', handleLocationSelected as EventListener);
 
-  // Set initial product ID if available
   if (productStore.selectedProduct && productStore.selectedProduct.product_id) {
-    lastProductId.value = productStore.selectedProduct.product_id
+    lastProductId.value = productStore.selectedProduct.product_id;
   }
 
-  // Adjust widget position on window resize
-  window.addEventListener('resize', adjustInitialPosition)
-})
+  // Window resize handling for position is now in useDraggableResizable
+  // window.addEventListener('resize', adjustInitialPosition); // No longer needed here
+});
 
 onBeforeUnmount(() => {
-  // Clean up global event listeners
-  document.removeEventListener('mousemove', onDrag)
-  document.removeEventListener('mouseup', stopDrag)
-  document.removeEventListener('mousemove', onResize)
-  document.removeEventListener('mouseup', stopResize)
-  window.removeEventListener('location-selected', handleLocationSelected as EventListener)
-  window.removeEventListener('resize', adjustInitialPosition)
-})
+  window.removeEventListener('location-selected', handleLocationSelected as EventListener);
+  // Event listeners for drag/resize are cleaned up by useDraggableResizable
+  // window.removeEventListener('resize', adjustInitialPosition); // No longer needed here
+});
 
-/**
- * Activates the location selection mode in the chat.
- */
 function activateLocationSelection(): void {
-  isLocationSelectionActive.value = true
+  isLocationSelectionActive.value = true;
   messages.value.push({
     text: 'Please click on the map to select your farm location.',
     isSent: false,
     model: "AgriBot"
-  })
-  // Dispatch a custom event to notify other components (e.g., MapView)
-  window.dispatchEvent(new CustomEvent('activate-location-selection'))
+  });
+  window.dispatchEvent(new CustomEvent('activate-location-selection'));
 }
 
-/**
- * Handles the 'location-selected' event.
- * This function is called when a location is picked on the map.
- */
-function handleLocationSelected(): void { // Removed unused event parameter
+function handleLocationSelected(): void {
   if (isLocationSelectionActive.value) {
-    isLocationSelectionActive.value = false
+    isLocationSelectionActive.value = false;
     // Optionally, add a message confirming location selection was processed
     // messages.value.push({ text: "Location selection mode deactivated.", isSent: false, model: "AgriBot" });
   }
 }
 
-/**
- * Starts a general chat session (no specific farm location).
- */
 function startGeneralChat(): void {
-  farmDataMode.value = false; // Explicitly set farmDataMode to false
+  farmDataMode.value = false;
   contextType.value = ContextTypeEnum.GENERAL;
   messages.value.push({
     text: "I'll be happy to help with general farming questions. Keep in mind that selecting a specific location will allow me to provide more tailored advice.",
     isSent: false,
     model: "AgriBot"
-  })
-}
-
-/**
- * Sends the user's typed message to the chat.
- */
-async function sendMessage(): Promise<void> {
-  const currentMessageText = message.value.trim()
-  if (!currentMessageText) return
-
-  inputDisabled.value = true
-  await sendToChat(currentMessageText)
-  message.value = '' // Clear input field
-  inputDisabled.value = false
-}
-
-/**
- * Sends a predefined suggestion message to the chat.
- * @param {string} suggestion - The suggestion text to send.
- */
-async function sendSuggestion(suggestion: string): Promise<void> {
-  if (!suggestion) return
-  inputDisabled.value = true
-  await sendToChat(suggestion)
-  inputDisabled.value = false
-}
-
-// Watch for changes in the targetLocation from the locationStore
-watch(
-  () => locationStore.targetLocation,
-  (newLocation: TargetLocationType | null) => { // Ensure newLocation can be null
-    if (newLocation) {
-      if (!farmDataMode.value) { // Only update if not already in farm mode to avoid duplicate messages
-        farmDataMode.value = true
-        contextType.value = ContextTypeEnum.FARM_SELECTED
-        messages.value.push({
-          text: `Great! I now have your farm location at latitude ${newLocation.latitude.toFixed(
-            4
-          )} and longitude ${newLocation.longitude.toFixed(
-            4
-          )}. How can I help with your farm?`,
-          isSent: false,
-          model: "AgriBot"
-        })
-      }
-    } else {
-      // Handle location being cleared
-      if (farmDataMode.value) { // Only update if was in farm mode
-        farmDataMode.value = false;
-        contextType.value = ContextTypeEnum.GENERAL;
-        messages.value.push({
-          text: "Your farm location has been cleared. We're back to general chat.",
-          isSent: false,
-          model: "AgriBot"
-        });
-      }
-    }
-  },
-  { deep: true } // Use deep watch if newLocation is a complex object and mutations need to be tracked
-)
-
-// Watch for changes in the selectedProduct from the productStore
-watch(
-  () => productStore.selectedProduct,
-  (newProduct: selectedProductType | null) => { // Ensure newProduct can be null
-    if (
-      newProduct &&
-      Object.keys(newProduct).length > 0 &&
-      newProduct.product_id
-    ) {
-      // Only add message if this is a different product than last time
-      if (lastProductId.value !== newProduct.product_id) {
-        contextType.value = ContextTypeEnum.DATA_LOADED
-        const productName =
-          newProduct.display_name || newProduct.product_id || 'selected'
-        messages.value.push({
-          text: `I see you're viewing ${productName} data. Would you like me to analyze this for your farm?`,
-          isSent: false,
-          model: "AgriBot"
-        })
-        lastProductId.value = newProduct.product_id // Update the last product ID
-      }
-    }
-  },
-  { deep: true } // Use deep watch for complex product objects
-)
-
-
-/**
- * Scrolls the chat body to the bottom to show the latest messages.
- */
-function scrollToBottom(): void {
-  // Use nextTick to ensure DOM has updated before scrolling
-  import('vue').then(vue => {
-    vue.nextTick(() => {
-      const chatBody = document.querySelector('.chat-body')
-      if (chatBody) {
-        chatBody.scrollTop = chatBody.scrollHeight
-      }
-    });
   });
+  scrollToBottom(); // Ensure chat scrolls after this interaction
 }
 
-/**
- * Handles error responses from the chat API.
- * @param {Response} response - The fetch Response object.
- */
-async function handleErrorResponse(response: Response): Promise<void> {
-  let errorText = `Error: ${response.status} ${response.statusText}`
-  try {
-    const errorData = await response.json()
-    // Attempt to get a more specific error message from the response body
-    errorText = errorData.detail || errorData.message || errorText
-  } catch (e) {
-    // If parsing error JSON fails, use the initial errorText
-    console.warn('Could not parse error response JSON:', e)
-  }
-  messages.value.push({ text: errorText, isSent: false, model: "System" })
-}
+// Watch for the clicked point value to be loaded to proactively inform the user
+watch(
+  () => productStore.clickedPoint,
+  (newClickedPoint, oldClickedPoint) => {
+    // Check if the value has been newly loaded, is a number, and is meant to be shown
+    if (
+      newClickedPoint &&
+      newClickedPoint.show &&
+      typeof newClickedPoint.value === 'number' &&
+      // Ensure this triggers when the point data transitions from not-loaded/not-shown to loaded/shown
+      // This condition relies on MapView.vue resetting show to false and value to null before loading a new point.
+      (oldClickedPoint?.show === false || typeof oldClickedPoint?.value !== 'number') &&
+      !isLocationSelectionActive.value // Only trigger if not in the initial farm location selection mode
+    ) {
+      const locationMessage = `For your selected farm location, the value at your selected point is ${newClickedPoint.value.toFixed(2)}. What would you like to do with this information?`;
+      
+      messages.value.push({ text: locationMessage, isSent: false, model: 'AgriBot' });
+      scrollToBottom(); // Ensure chat scrolls to the new message
 
-/**
- * Sends a message text to the chat API and handles the streamed response.
- * @param {string} text - The message text to send.
- */
-async function sendToChat(text: string): Promise<void> {
-  messages.value.push({ text: text, isSent: true })
-  scrollToBottom()
-
-  let context = '' // Initialize context string
-
-  // Add selected product information to the context
-  if (
-    productStore.selectedProduct &&
-    Object.keys(productStore.selectedProduct).length > 0 &&
-    productStore.selectedProduct.product_id // Ensure product_id exists
-  ) {
-    const product = productStore.selectedProduct
-    const productName = product.display_name || product.product_id || 'selected data'
-    context += `(Dataset: ${productName}`
-    if (product.date) {
-      context += `, Date: ${product.date}`
-    }
-    // Add metadata if available
-    if (product.meta) {
-      const relevantMetaKeys: (keyof typeof product.meta)[] = ['type', 'source', 'crop_type', 'field_size']
-      const metaInfoParts: string[] = []
-      relevantMetaKeys.forEach((key) => {
-        if (product.meta && product.meta[key]) {
-          metaInfoParts.push(`${String(key)}: ${String(product.meta[key])}`)
-        }
-      })
-      if (metaInfoParts.length > 0) {
-        context += `, Meta: { ${metaInfoParts.join(', ')} }`
+      // Ensure context type is updated if needed
+      if (contextType.value !== ContextTypeEnum.DATA_LOADED) {
+         contextType.value = ContextTypeEnum.DATA_LOADED;
       }
     }
-    context += ') '
-  }
+  },
+  { deep: true } // Watch deeply as clickedPoint is an object
+);
 
-  // Add clicked point value with agricultural context
-  // Ensure clickedPoint and its properties are valid before using
-  if (
-    productStore.clickedPoint && productStore.clickedPoint.show // Check if popup is active and meant to be shown
-  ) {
-    const point = productStore.clickedPoint; // Contains value, x, y, show
-    const product = productStore.selectedProduct; // Contains product_id, display_name, desc, meta, etc.
-
-    let pointContext = "(Selected map data analysis: ";
-
-    const productName = product?.display_name || product?.product_id || "Unknown Product";
-    pointContext += `Product: ${productName}. `;
-
-    if (product?.desc) {
-      pointContext += `Details: ${product.desc}. `;
-    }
-
-    // Check if a valid numerical value exists for the point
-    if (typeof point.value === 'number' && !isNaN(point.value)) {
-      pointContext += `Value at selected point: ${point.value.toFixed(2)}. `;
-
-      let interpretation = '';
-      // Attempt interpretation using product_id, display_name, and desc
-      const pId = (product?.product_id || '').toLowerCase();
-      const pNameLower = (product?.display_name || '').toLowerCase();
-      const pDescLower = (product?.desc || '').toLowerCase();
-
-      if (pId.includes('ndvi') || pNameLower.includes('ndvi') || pDescLower.includes('ndvi') || pNameLower.includes('normalized difference vegetation index')) {
-        interpretation = `This NDVI value suggests: `;
-        if (point.value > 0.7) interpretation += `Excellent vegetation health. `;
-        else if (point.value > 0.5) interpretation += `Good vegetation health. `;
-        else if (point.value > 0.3) interpretation += `Moderate vegetation health. `;
-        else if (point.value > 0.1) interpretation += `Sparse vegetation. `;
-        else interpretation += `Very sparse vegetation or bare soil. `;
-      } else if (pId.includes('ndwi') || pNameLower.includes('ndwi') || pDescLower.includes('ndwi') || pNameLower.includes('normalized difference water index')) {
-        interpretation = `This NDWI value suggests: ${point.value > 0.3 ? 'High' : point.value > 0 ? 'Moderate' : 'Low'} moisture content. `;
-      } else if (pId.includes('evi') || pNameLower.includes('evi') || pDescLower.includes('evi') || pNameLower.includes('enhanced vegetation index')) {
-        interpretation = `This EVI value suggests: ${point.value > 0.4 ? 'High biomass' : 'Low biomass'}. `;
-      } else if (pId.includes('temp') || pNameLower.includes('temperature') || pDescLower.includes('temperature')) {
-        interpretation = `The temperature is ${point.value.toFixed(2)} (units may vary based on source). `;
-      } else if (
-          pId.includes('moisture') || pId.includes('swi') || pId.includes('soil') ||
-          pNameLower.includes('moisture') || pNameLower.includes('swi') || pNameLower.includes('soil') || pNameLower.includes('soil water index') ||
-          pDescLower.includes('moisture') || pDescLower.includes('swi') || pDescLower.includes('soil')
-      ) {
-        interpretation = `This soil moisture value suggests: ${point.value > 0.6 ? 'High' : point.value > 0.3 ? 'Moderate' : 'Low'} moisture. `;
-      } else if (pNameLower.includes('chirps') || pDescLower.includes('precipitation') || pNameLower.includes('precipitation')) {
-          interpretation = `Precipitation amount: ${point.value.toFixed(2)} (units, e.g., mm, depend on the dataset). `;
-      } else {
-        // Generic statement if no specific interpretation found but value exists
-        interpretation = `The value for this data layer is ${point.value.toFixed(2)}. `;
-      }
-      pointContext += interpretation;
-    } else {
-      // Handle cases where point.value is not a number (e.g., "No Data", null, undefined)
-      pointContext += "No specific data value available at the selected point. ";
-    }
-
-    pointContext += ") "; // Close the parenthesis for "Selected map data analysis"
-    context += pointContext;
-  }
-
-  // Add farm location and season information to the context
-  if (locationStore.targetLocation) {
-    const { latitude, longitude } = locationStore.targetLocation
-    context += `(Farm location: Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}. `
-    const currentDate = new Date()
-    const month = currentDate.getMonth() // 0-indexed (0 for January)
-    const hemisphere = latitude > 0 ? 'Northern' : 'Southern'
-    let season = ''
-    // Determine season based on hemisphere and month
-    if (hemisphere === 'Northern') {
-      if (month >= 2 && month <= 4) season = 'Spring' // Mar-May
-      else if (month >= 5 && month <= 7) season = 'Summer' // Jun-Aug
-      else if (month >= 8 && month <= 10) season = 'Autumn' // Sep-Nov
-      else season = 'Winter' // Dec-Feb
-    } else { // Southern Hemisphere
-      if (month >= 2 && month <= 4) season = 'Autumn' // Mar-May
-      else if (month >= 5 && month <= 7) season = 'Winter' // Jun-Aug
-      else if (month >= 8 && month <= 10) season = 'Spring' // Sep-Nov
-      else season = 'Summer' // Dec-Feb
-    }
-    context += `Current season: ${season}. `
-    context += ')'
-  }
-
-  const contextualizedText = context ? `${text} ${context}`.trim() : text
-  const loadingMessage: Message = { text: 'AgriBot is thinking...', isSent: false, model: "AgriBot" }
-  messages.value.push(loadingMessage)
-  scrollToBottom()
-
-  try {
-    const response = await fetch('http://127.0.0.1:8157/chat', { // Ensure this URL is correct for your backend
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Add any other headers like Authorization if needed
-      },
-      body: JSON.stringify({
-        text: contextualizedText, // Changed 'message' to 'text'
-        context_type: contextType.value, // Uncommented and sending context_type
-        // Consider sending the full context object if the backend can process it:
-        // context: {
-        //   type: contextType.value,
-        //   location: locationStore.targetLocation,
-        //   product: productStore.selectedProduct,
-        //   clickedPoint: productStore.clickedPoint
-        // }
-      }),
-    })
-
-    // Remove loading message
-    const loadingMsgIndex = messages.value.findIndex(m => m === loadingMessage);
-    if (loadingMsgIndex > -1) {
-      messages.value.splice(loadingMsgIndex, 1);
-    }
-
-    if (!response.ok) {
-      await handleErrorResponse(response)
-      return
-    }
-
-    if (!response.body) {
-      messages.value.push({ text: "Received an empty response from the server.", isSent: false, model: "System" });
-      return;
-    }
-
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let streamDone = false
-    let currentStreamedText = ''
-
-    // Add a new message object for the streamed response
-    const streamResponseMessage: Message = { text: '', isSent: false, model: 'AgriBot' } // Default model
-    messages.value.push(streamResponseMessage)
-
-    while (!streamDone) {
-      const { value, done } = await reader.read()
-      streamDone = done
-      if (value) {
-        const chunk = decoder.decode(value, { stream: !done }) // stream: true until the last chunk
-        // Process server-sent events if applicable, or just append chunk
-        // This example assumes the backend sends data chunks that might be JSON or plain text.
-        // Adjust parsing based on your backend's streaming format.
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const eventData = line.substring(5).trim();
-            if (eventData === '[DONE]') { // Check for a custom end-of-stream marker
-              streamDone = true;
-              break;
-            }
-            try {
-              const parsedData = JSON.parse(eventData);
-              if (parsedData.choices && parsedData.choices[0].delta?.content) {
-                currentStreamedText += parsedData.choices[0].delta.content;
-              } else if (typeof parsedData.content === 'string') { // Handle other possible structures
-                 currentStreamedText += parsedData.content;
-              }
-              // Update model if provided in the stream
-              if (parsedData.model) {
-                streamResponseMessage.model = parsedData.model;
-              }
-            } catch (e) {
-              // If JSON.parse fails, and it's not a control message, append raw line (if meaningful)
-              // This part depends heavily on the expected stream format.
-              // For simple text streams, you might just append the line.
-              // console.warn('Non-JSON data in stream or malformed JSON:', eventData);
-               if(eventData && eventData !== '[DONE]') currentStreamedText += eventData + '\n'; // Append non-JSON as is, with newline
-            }
-          } else if (line.trim()) {
-             // Handle lines that don't start with "data: " if necessary
-             // currentStreamedText += line + '\n'; // Example: append plain text lines
-          }
-        }
-        streamResponseMessage.text = formatMessage(currentStreamedText); // Format incrementally
-        scrollToBottom();
-
-      }
-    }
-    // Final formatting pass if needed, though incremental formatting is preferred
-    streamResponseMessage.text = formatMessage(currentStreamedText);
-    scrollToBottom();
-
-  } catch (error) { // Catch type is unknown for better safety over any
-    console.error('Chat API request failed:', error)
-    // Ensure loading message is removed if an error occurs early
-    const loadingMsgIndex = messages.value.findIndex(m => m.text === 'AgriBot is thinking...');
-    if (loadingMsgIndex > -1) {
-      messages.value.splice(loadingMsgIndex, 1);
-    }
-    messages.value.push({
-      text: `Sorry, I encountered an error: ${(error as Error).message || 'Unknown chat connection error'}.`,
-      isSent: false,
-      model: "System"
-    })
-  } finally {
-    inputDisabled.value = false
-    scrollToBottom() // Ensure scroll after any operation
-  }
-}
 </script>
 
 <style scoped>
+/* ... existing styles ... */
 .chat-widget {
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -1006,104 +447,100 @@ async function sendToChat(text: string): Promise<void> {
   margin-bottom: 0.25em;
 }
 
-.received .message-bubble :deep(h1),
-.received .message-bubble :deep(h2),
-.received .message-bubble :deep(h3),
-.received .message-bubble :deep(h4) {
-  margin-top: 0.75em;
-  margin-bottom: 0.5em;
+.received .message-bubble :deep(strong),
+.received .message-bubble :deep(b) {
   font-weight: bold;
+}
+
+.received .message-bubble :deep(em),
+.received .message-bubble :deep(i) {
+  font-style: italic;
 }
 
 .received .message-bubble :deep(code) {
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 0.1em 0.3em;
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.2em 0.4em;
   border-radius: 3px;
-  font-family: monospace;
-  white-space: pre-wrap;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 .received .message-bubble :deep(pre) {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.1);
   padding: 0.5em;
   border-radius: 4px;
   overflow-x: auto;
-  margin: 0.5em 0;
-  white-space: pre-wrap;
+  white-space: pre-wrap; /* Ensure pre content wraps */
+  word-wrap: break-word;
+}
+
+.received .message-bubble :deep(pre code) {
+  padding: 0;
+  background-color: transparent;
+  white-space: pre-wrap; /* Ensure code inside pre wraps */
 }
 
 .received .message-bubble :deep(a) {
-  color: #8cc63f;
+  color: #8ab4f8; /* A more visible link color on dark background */
   text-decoration: underline;
 }
 
-.received .message-bubble :deep(strong) {
-  font-weight: bold;
-}
-
-.received .message-bubble :deep(em) {
-  font-style: italic;
+.received .message-bubble :deep(a:hover) {
+  color: #aecbfa;
 }
 
 .suggestions {
   display: flex;
-  overflow-x: auto;
-  padding: 10px;
-  border-bottom: 1px solid #ccc;
+  flex-wrap: wrap; /* Allow suggestions to wrap */
+  padding: 5px;
+  gap: 5px; /* Add gap between suggestion buttons */
 }
 
 .suggestions button {
-  flex: 0 0 auto;
-  margin-right: 10px;
-  padding: 5px 10px;
-  background: #4fbd4d6e;
+  padding: 8px 12px;
+  border: 1px solid #4f4f58;
+  background: rgba(79, 79, 88, 0.6);
   color: white;
-  border: 1px solid #ccc;
-  border-radius: 15px;
-  white-space: nowrap;
+  border-radius: 15px; /* More rounded buttons */
   cursor: pointer;
+  font-size: 0.85em;
+  transition: background-color 0.2s;
 }
 
 .suggestions button:hover {
-  background: #4fbd4dcd;
+  background-color: #368535;
 }
 
 .chat-input {
   display: flex;
   padding: 10px;
+  border-top: 1px solid #4f4f58; /* Match darker theme */
 }
 
 .chat-input input {
   flex: 1;
   padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid #4f4f58;
+  border-radius: 5px;
+  margin-right: 10px;
+  background-color: #333; /* Darker input background */
+  color: white;
+}
+
+.chat-input input::placeholder {
+  color: #aaa; /* Lighter placeholder text */
 }
 
 .chat-input button {
-  padding: 10px;
-  margin-left: 10px;
-  border: none;
+  padding: 10px 15px;
   background: #368535;
   color: white;
-  border-radius: 4px;
+  border: none;
+  border-radius: 5px;
   cursor: pointer;
 }
 
-.chat-input button:hover {
-  background: #215221;
-}
-
-.chat-input button:disabled,
-.chat-input input:disabled {
-  opacity: 0.7;
+.chat-input button:disabled {
+  background: #555;
   cursor: not-allowed;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .chat-widget {
-    width: 90vw;
-  }
 }
 </style>
