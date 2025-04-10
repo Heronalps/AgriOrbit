@@ -1,10 +1,10 @@
 // productStore.ts
 import { getDatasetEntries } from '@/api/datasets'
-import { getValueAtPoint } from '@/api/point'
 import { computeTileLayerURL } from '@/api/tile'
 import { defineStore } from 'pinia'
 import type { ProductMeta } from '@/api.d.ts'
 import { useAvailableDataStore } from './availableDataStore'
+import { queryValueByGeometry, type ApiGeomType } from '../api/query'
 
 // Interface for entries in the productEntries.results array
 export interface ProductListEntry {
@@ -34,6 +34,10 @@ export interface clickedPointType {
   x?: number
   y?: number
   show?: boolean
+  longitude?: number
+  latitude?: number
+  isLoading?: boolean
+  errorMessage?: string | null
   [key: string]: unknown // Replaced [key: string]: any;
 }
 
@@ -43,6 +47,7 @@ export interface productState {
   clickedPoint: clickedPointType
   isLoading: boolean
   error: string | null
+  currentMapSelectionCoordinates: { longitude: number, latitude: number } | null // New state for pinned point
 }
 
 export const useProductStore = defineStore('productStore', {
@@ -53,6 +58,7 @@ export const useProductStore = defineStore('productStore', {
       clickedPoint: { show: false, value: null } as clickedPointType,
       isLoading: false,
       error: null,
+      currentMapSelectionCoordinates: null, // Initialize new state
     } as productState),
 
   getters: {
@@ -269,41 +275,136 @@ export const useProductStore = defineStore('productStore', {
     },
 
     /**
-     * Fetches the data value for the selected product at a given map coordinate.
+     * Sets the current map selection coordinates, used for the "pinned" point.
+     * The reactive loader will pick up this change to fetch data.
      */
-    async loadValueAtPoint(longitude: number, latitude: number) {
-      this.clickedPoint.show = true
+    setCurrentMapSelectionCoordinates(longitude: number, latitude: number) {
+      this.currentMapSelectionCoordinates = { longitude, latitude };
+      console.log('[productStore] currentMapSelectionCoordinates updated:', JSON.parse(JSON.stringify(this.currentMapSelectionCoordinates)));
+    },
 
-      try {
-        if (
-          import.meta.env.MODE === 'development' &&
-          !import.meta.env.VITE_USE_REAL_API
-        ) {
-          const randomValue = parseFloat((Math.random() * 0.6 + 0.2).toFixed(2))
-          this.clickedPoint = {
-            value: randomValue,
-            x: longitude,
-            y: latitude,
-            show: true,
-          }
-          return
-        }
-
-        const data = await getValueAtPoint(
-          this.selectedProduct,
-          longitude,
-          latitude
-        )
+    /**
+     * Fetches the data value for the selected product at a given map coordinate using a polygon.
+     */
+    async loadDataForClickedPointViaPolygon(longitude: number, latitude: number) {
+      console.log(`[productStore] loadDataForClickedPointViaPolygon called for Lon: ${longitude}, Lat: ${latitude}. Current product: ${this.selectedProduct.product_id}, Date: ${this.selectedProduct.date}`);
+      if (!this.selectedProduct.product_id) {
+        console.warn('[productStore] loadDataForClickedPointViaPolygon: No product selected.');
         this.clickedPoint = {
           ...this.clickedPoint,
-          value: data?.value,
-          x: longitude,
-          y: latitude,
-          show: true,
+          value: null,
+          show: true, // Show popup to display the message
+          isLoading: false,
+          errorMessage: 'Please select a product layer to get data for a point.',
+          longitude,
+          latitude,
+        };
+        console.log('[productStore] clickedPoint updated (no product):', JSON.parse(JSON.stringify(this.clickedPoint)));
+        return;
+      }
+
+      this.clickedPoint = {
+        ...this.clickedPoint, // Preserve x, y screen coords if already set
+        value: null,
+        show: false, // Initially false, will be true when data arrives or error occurs
+        isLoading: true,
+        errorMessage: null,
+        longitude,
+        latitude,
+      };
+      // console.log('[productStore] clickedPoint set for loading:', JSON.parse(JSON.stringify(this.clickedPoint))); // Optional: log initial set for loading
+
+      try {
+        const { product_id, date, cropmask_id, ...otherProductParams } = this.selectedProduct;
+        const polygon: ApiGeomType = {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [longitude - 0.0001, latitude - 0.0001],
+                [longitude + 0.0001, latitude - 0.0001],
+                [longitude + 0.0001, latitude + 0.0001],
+                [longitude - 0.0001, latitude + 0.0001],
+                [longitude - 0.0001, latitude - 0.0001],
+              ],
+            ],
+          },
+        };
+
+        const response = await queryValueByGeometry(
+          {
+            product_id,
+            date,
+            cropmask_id: cropmask_id || 'no-mask', // Ensure cropmask_id defaults to 'no-mask' if undefined
+            ...otherProductParams, // Include any other relevant parameters from selectedProduct
+          },
+          polygon
+        );
+
+        let extractedValue: number | null = null;
+        let friendlyMessage: string | null = null;
+
+        if (typeof response === 'number') {
+          extractedValue = response;
+        } else if (response && typeof response === 'object') {
+          if (typeof response.mean === 'number') {
+            extractedValue = response.mean;
+          } else if (typeof response.value === 'number') {
+            extractedValue = response.value;
+          } else if (response.features && response.features[0]?.properties) {
+            const props = response.features[0].properties;
+            if (typeof props.mean === 'number') extractedValue = props.mean;
+            else if (typeof props.value === 'number') extractedValue = props.value;
+            else {
+              const numericProps = Object.values(props).filter(v => typeof v === 'number');
+              if (numericProps.length === 1) extractedValue = numericProps[0] as number;
+              else if (numericProps.length > 1) friendlyMessage = 'Multiple numeric properties found; unable to determine primary value.';
+              else friendlyMessage = 'No numeric value found in feature properties.';
+            }
+          } else {
+            friendlyMessage = 'Response format not recognized or no value found.';
+          }
+        } else {
+          friendlyMessage = 'Received unexpected data type from API.';
         }
-      } catch (error) {
-        console.error('Error loading point value:', error)
-        this.clickedPoint.value = null
+
+        if (extractedValue !== null) {
+          this.clickedPoint = {
+            ...this.clickedPoint,
+            value: extractedValue,
+            show: true,
+            isLoading: false,
+            errorMessage: null,
+          };
+          console.log('[productStore] clickedPoint updated (success):', JSON.parse(JSON.stringify(this.clickedPoint)));
+        } else {
+          this.clickedPoint = {
+            ...this.clickedPoint,
+            value: null,
+            show: true,
+            isLoading: false,
+            errorMessage: friendlyMessage || 'Failed to extract a valid number from the response.',
+          };
+          console.log('[productStore] clickedPoint updated (error/no value):', JSON.parse(JSON.stringify(this.clickedPoint)));
+        }
+      } catch (error: any) {
+        console.error('Error loading value at point:', error);
+        let errorMessage = 'Failed to load data for the point.';
+        if (error.response && error.response.data && error.response.data.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        this.clickedPoint = {
+          ...this.clickedPoint,
+          value: null,
+          show: true, // Important to show the popup with the error
+          isLoading: false,
+          errorMessage: errorMessage,
+        };
+        console.log('[productStore] clickedPoint updated (exception):', JSON.parse(JSON.stringify(this.clickedPoint)));
       }
     },
 
@@ -330,10 +431,8 @@ export const useProductStore = defineStore('productStore', {
           this.selectedProduct.date,
           this.selectedProduct.cropmask_id // Pass cropmask_id if available
         )
-        // console.log('Generated tile layer URL:', tileLayerUrl); // For debugging
         return tileLayerUrl
       }
-      // console.warn('renderTileLayer: Missing product_id or date, cannot generate URL.');
       return null
     },
   },

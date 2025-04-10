@@ -1,6 +1,5 @@
-
 import { ref, computed, watch, type Ref } from 'vue';
-import { marked } from 'marked';
+import { marked, type MarkedOptions } from 'marked';
 import DOMPurify from 'dompurify';
 import { useLocationStore, type TargetLocationType } from '@/stores/locationStore';
 import { useProductStore, type selectedProductType } from '@/stores/productStore';
@@ -20,10 +19,11 @@ export enum ContextTypeEnum {
 }
 
 // Configure marked for safe HTML
-marked.setOptions({
-  breaks: true, // Add line breaks
+const markedOptions: MarkedOptions = {
+  breaks: true, // Convert GFM line breaks to <br>
   gfm: true, // Use GitHub Flavored Markdown
-});
+};
+marked.setOptions(markedOptions);
 
 export function useChatService(
   farmDataMode: Ref<boolean>, 
@@ -33,16 +33,17 @@ export function useChatService(
 ) {
   const locationStore = useLocationStore();
   const productStore = useProductStore();
-  const messageInput = ref(''); // Renamed from 'message' to avoid conflict if ChatWidget also has one
+  const messageInput = ref(''); 
   const inputDisabled = ref(false);
 
   /**
    * Formats a message string using marked and DOMPurify.
    * Ensures that the input to marked() is always a string.
-   * @param {string | unknown} textInput - The raw message text, which might be a string or an array.
-   * @returns {string} The formatted and sanitized HTML string.
+   * @param {string | unknown} textInput - The raw message text.
+   * @param {boolean} isUserInput - Flag to determine if the input is from the user.
+   * @returns {Promise<string>} The formatted and sanitized HTML string.
    */
-  function formatMessage(textInput: string | unknown): string {
+  async function formatMessage(textInput: string | unknown, isUserInput: boolean = false): Promise<string> {
     let textToProcess: string;
 
     if (Array.isArray(textInput)) {
@@ -59,14 +60,28 @@ export function useChatService(
       }
     }
 
+    if (isUserInput) {
+      const escapedText = textToProcess
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+      return DOMPurify.sanitize(escapedText, { USE_PROFILES: { html: false }, ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+    }
+
+    // Ensure newlines are just \n for marked processing for bot messages
+    textToProcess = textToProcess.replace(/\r\n/g, '\n');
+
     if (!textToProcess.trim()) {
       return '';
     }
 
     try {
-      const rawHtml = marked(textToProcess);
-      return DOMPurify.sanitize(rawHtml);
+      const rawHtml = await Promise.resolve(marked(textToProcess));
+      return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
     } catch (error) {
+      console.error('Error during message formatting:', error);
       return textToProcess
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -117,8 +132,9 @@ export function useChatService(
   /**
    * Handles error responses from the chat API.
    * @param {Response} response - The fetch Response object.
+   * @param {Message} messageToUpdate - The message object to update with the error text.
    */
-  async function handleErrorResponse(response: Response): Promise<void> {
+  async function handleErrorResponse(response: Response, messageToUpdate?: Message): Promise<void> {
     let errorText = `Error: ${response.status} ${response.statusText}`;
     try {
       const errorData = await response.json();
@@ -126,7 +142,14 @@ export function useChatService(
     } catch (e) {
       console.warn('Could not parse error response JSON:', e);
     }
-    messages.value.push({ text: errorText, isSent: false, model: "System" });
+    const formattedError = await formatMessage(errorText, false);
+    if (messageToUpdate) {
+      messageToUpdate.text = formattedError;
+      messageToUpdate.model = "System";
+    } else {
+      messages.value.push({ text: formattedError, isSent: false, model: "System" });
+    }
+    scrollToBottom();
   }
 
   /**
@@ -134,86 +157,46 @@ export function useChatService(
    * @param {string} text - The message text to send.
    */
   async function sendToChat(text: string): Promise<void> {
-    messages.value.push({ text: text, isSent: true });
+    messages.value.push({ text: await formatMessage(text, true), isSent: true });
     scrollToBottom();
 
     let context = '';
+    const { selectedProduct, clickedPoint } = productStore;
 
-    if (
-      productStore.selectedProduct &&
-      Object.keys(productStore.selectedProduct).length > 0 &&
-      productStore.selectedProduct.product_id
-    ) {
-      const product = productStore.selectedProduct;
-      const productName = product.display_name || product.product_id || 'selected data';
+    if (selectedProduct && selectedProduct.product_id) {
+      const productName = selectedProduct.display_name || selectedProduct.product_id || 'selected data layer';
       context += `(Dataset: ${productName}`;
-      if (product.date) {
-        context += `, Date: ${product.date}`;
+      if (selectedProduct.date) {
+        context += `, Date: ${selectedProduct.date}`;
       }
-      if (product.meta) {
-        const relevantMetaKeys: (keyof typeof product.meta)[] = ['type', 'source', 'crop_type', 'field_size'];
-        const metaInfoParts: string[] = [];
-        relevantMetaKeys.forEach((key) => {
-          if (product.meta && product.meta[key]) {
-            metaInfoParts.push(`${String(key)}: ${String(product.meta[key])}`);
-          }
-        });
-        if (metaInfoParts.length > 0) {
-          context += `, Meta: { ${metaInfoParts.join(', ')} }`;
+      if (selectedProduct.meta) {
+        const metaParts: string[] = [];
+        if (selectedProduct.meta.type) metaParts.push(`Type: ${selectedProduct.meta.type}`);
+        if (selectedProduct.meta.source) metaParts.push(`Source: ${selectedProduct.meta.source}`);
+        if (metaParts.length > 0) {
+          context += `, Meta: { ${metaParts.join(', ')} }`;
         }
       }
       context += ') ';
     }
 
-    if (
-      productStore.clickedPoint && productStore.clickedPoint.show
-    ) {
-      const point = productStore.clickedPoint;
-      const product = productStore.selectedProduct;
-      let pointContext = "(Selected map data analysis: ";
-      const productName = product?.display_name || product?.product_id || "Unknown Product";
-      pointContext += `Product: ${productName}. `;
-      if (product?.desc) {
-        pointContext += `Details: ${product.desc}. `;
-      }
-      if (typeof point.value === 'number' && !isNaN(point.value)) {
-        pointContext += `Value at selected point: ${point.value.toFixed(2)}. `;
-        let interpretation = '';
-        const pId = (product?.product_id || '').toLowerCase();
-        const pNameLower = (product?.display_name || '').toLowerCase();
-        const pDescLower = (product?.desc || '').toLowerCase();
-        if (pId.includes('ndvi') || pNameLower.includes('ndvi') || pDescLower.includes('ndvi') || pNameLower.includes('normalized difference vegetation index')) {
-          interpretation = `This NDVI value suggests: `;
-          if (point.value > 0.7) interpretation += `Excellent vegetation health. `;
-          else if (point.value > 0.5) interpretation += `Good vegetation health. `;
-          else if (point.value > 0.3) interpretation += `Moderate vegetation health. `;
-          else if (point.value > 0.1) interpretation += `Sparse vegetation. `;
-          else interpretation += `Very sparse vegetation or bare soil. `;
-        } else if (pId.includes('ndwi') || pNameLower.includes('ndwi') || pDescLower.includes('ndwi') || pNameLower.includes('normalized difference water index')) {
-          interpretation = `This NDWI value suggests: ${point.value > 0.3 ? 'High' : point.value > 0 ? 'Moderate' : 'Low'} moisture content. `;
-        } else if (pId.includes('evi') || pNameLower.includes('evi') || pDescLower.includes('evi') || pNameLower.includes('enhanced vegetation index')) {
-          interpretation = `This EVI value suggests: ${point.value > 0.4 ? 'High biomass' : 'Low biomass'}. `;
-        } else if (pId.includes('temp') || pNameLower.includes('temperature') || pDescLower.includes('temperature')) {
-          interpretation = `The temperature is ${point.value.toFixed(2)} (units may vary based on source). `;
-        } else if (
-            pId.includes('moisture') || pId.includes('swi') || pId.includes('soil') ||
-            pNameLower.includes('moisture') || pNameLower.includes('swi') || pNameLower.includes('soil') || pNameLower.includes('soil water index') ||
-            pDescLower.includes('moisture') || pDescLower.includes('swi') || pDescLower.includes('soil')
-        ) {
-          interpretation = `This soil moisture value suggests: ${point.value > 0.6 ? 'High' : point.value > 0.3 ? 'Moderate' : 'Low'} moisture. `;
-        } else if (pNameLower.includes('chirps') || pDescLower.includes('precipitation') || pNameLower.includes('precipitation')) {
-            interpretation = `Precipitation amount: ${point.value.toFixed(2)} (units, e.g., mm, depend on the dataset). `;
-        } else {
-          interpretation = `The value for this data layer is ${point.value.toFixed(2)}. `;
+    if (clickedPoint && clickedPoint.show) {
+      if (typeof clickedPoint.value === 'number' && !isNaN(clickedPoint.value)) {
+        const productNameForPoint = selectedProduct?.display_name || selectedProduct?.product_id || "the current data layer";
+        let pointContext = `(Selected map data: Value ${clickedPoint.value.toFixed(2)} for ${productNameForPoint}`;
+        if (selectedProduct?.date) {
+          pointContext += ` on ${selectedProduct.date}`;
         }
-        pointContext += interpretation;
-      } else {
-        pointContext += "No specific data value available at the selected point. ";
+        if (clickedPoint.longitude !== undefined && clickedPoint.latitude !== undefined) {
+          pointContext += ` at Lon: ${clickedPoint.longitude.toFixed(4)}, Lat: ${clickedPoint.latitude.toFixed(4)}`;
+        }
+        pointContext += ".) ";
+        context += pointContext;
+      } else if (clickedPoint.errorMessage) {
+        context += `(Note: Issue fetching data for clicked point: ${clickedPoint.errorMessage}) `;
       }
-      pointContext += ") ";
-      context += pointContext;
     }
-
+    
     if (locationStore.targetLocation) {
       const { latitude, longitude } = locationStore.targetLocation;
       context += `(Farm location: Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}. `;
@@ -232,13 +215,17 @@ export function useChatService(
         else if (month >= 8 && month <= 10) season = 'Spring';
         else season = 'Summer';
       }
-      context += `Current season: ${season}. `;
+      context += `Current season: ${season}. Current Date: ${currentDate.toISOString().split('T')[0]}.`;
       context += ')';
     }
 
     const contextualizedText = context ? `${text} ${context}`.trim() : text;
-    const loadingMessage: Message = { text: 'AgriBot is thinking...', isSent: false, model: "AgriBot" };
-    messages.value.push(loadingMessage);
+
+    // Create and add the message object that will be updated
+    const thinkingMessageText = 'AgriBot is thinking...';
+    const formattedThinkingMessage = await formatMessage(thinkingMessageText, false);
+    const botResponseInProgressMessage: Message = { text: formattedThinkingMessage, isSent: false, model: "AgriBot" };
+    messages.value.push(botResponseInProgressMessage);
     scrollToBottom();
 
     try {
@@ -253,18 +240,15 @@ export function useChatService(
         }),
       });
 
-      const loadingMsgIndex = messages.value.findIndex(m => m === loadingMessage);
-      if (loadingMsgIndex > -1) {
-        messages.value.splice(loadingMsgIndex, 1);
-      }
-
       if (!response.ok) {
-        await handleErrorResponse(response);
+        await handleErrorResponse(response, botResponseInProgressMessage); // Pass message to update
         return;
       }
 
       if (!response.body) {
-        messages.value.push({ text: "Received an empty response from the server.", isSent: false, model: "System" });
+        botResponseInProgressMessage.text = await formatMessage("Received an empty response from the server.", false);
+        botResponseInProgressMessage.model = "System";
+        scrollToBottom();
         return;
       }
 
@@ -272,8 +256,9 @@ export function useChatService(
       const decoder = new TextDecoder();
       let streamDone = false;
       let currentStreamedText = '';
-      const streamResponseMessage: Message = { text: '', isSent: false, model: 'AgriBot' };
-      messages.value.push(streamResponseMessage);
+      
+      // Update botResponseInProgressMessage directly with streamed content
+      botResponseInProgressMessage.text = ''; // Clear "Thinking..." text before streaming starts
 
       while (!streamDone) {
         const { value, done } = await reader.read();
@@ -293,36 +278,31 @@ export function useChatService(
                 if (parsedData.choices && parsedData.choices[0].delta?.content) {
                   currentStreamedText += parsedData.choices[0].delta.content;
                 } else if (typeof parsedData.content === 'string') {
-                   currentStreamedText += parsedData.content;
+                  currentStreamedText += parsedData.content;
                 }
                 if (parsedData.model) {
-                  streamResponseMessage.model = parsedData.model;
+                  botResponseInProgressMessage.model = parsedData.model;
                 }
               } catch (e) {
-                 if(eventData && eventData !== '[DONE]') currentStreamedText += eventData + '\n';
+                if (eventData && eventData !== '[DONE]') {
+                  currentStreamedText += eventData + (eventData.endsWith('\n') ? '' : '\n');
+                }
               }
-            } else if (line.trim()) {
-              // currentStreamedText += line + '\n'; 
             }
           }
-          streamResponseMessage.text = formatMessage(currentStreamedText);
+          botResponseInProgressMessage.text = await formatMessage(currentStreamedText, false);
           scrollToBottom();
         }
       }
-      streamResponseMessage.text = formatMessage(currentStreamedText);
+      // Ensure final text is set
+      botResponseInProgressMessage.text = await formatMessage(currentStreamedText, false);
       scrollToBottom();
 
     } catch (error) {
       console.error('Chat API request failed:', error);
-      const loadingMsgIndex = messages.value.findIndex(m => m.text === 'AgriBot is thinking...');
-      if (loadingMsgIndex > -1) {
-        messages.value.splice(loadingMsgIndex, 1);
-      }
-      messages.value.push({
-        text: `Sorry, I encountered an error: ${(error as Error).message || 'Unknown chat connection error'}.`,
-        isSent: false,
-        model: "System"
-      });
+      const errorMessageText = `Sorry, I encountered an error: ${(error as Error).message || 'Unknown chat connection error'}.`;
+      botResponseInProgressMessage.text = await formatMessage(errorMessageText, false);
+      botResponseInProgressMessage.model = "System";
     } finally {
       inputDisabled.value = false;
       scrollToBottom();
@@ -337,8 +317,8 @@ export function useChatService(
     if (!currentMessageText) return;
 
     inputDisabled.value = true;
-    await sendToChat(currentMessageText);
-    messageInput.value = ''; // Clear input field
+    await sendToChat(currentMessageText); // sendToChat will add the user message
+    messageInput.value = ''; 
     inputDisabled.value = false;
   }
 
@@ -348,62 +328,90 @@ export function useChatService(
    */
   async function sendSuggestion(suggestion: string): Promise<void> {
     if (!suggestion) return;
+
     inputDisabled.value = true;
-    await sendToChat(suggestion);
+    await sendToChat(suggestion); // sendToChat will add the user message
     inputDisabled.value = false;
   }
   
-  // Watchers related to chat context and messages, moved from ChatWidget
   watch(
     () => locationStore.targetLocation,
-    (newLocation: TargetLocationType | null) => {
+    async (newLocation: TargetLocationType | null) => {
       if (newLocation) {
-        if (!farmDataMode.value) {
-          farmDataMode.value = true;
-          contextType.value = ContextTypeEnum.FARM_SELECTED;
-          messages.value.push({
-            text: `Great! I now have your farm location at latitude ${newLocation.latitude.toFixed(
-              4
-            )} and longitude ${newLocation.longitude.toFixed(
-              4
-            )}. How can I help with your farm?`,
-            isSent: false,
-            model: "AgriBot"
-          });
+        farmDataMode.value = true;
+        contextType.value = ContextTypeEnum.FARM_SELECTED;
+        
+        let messageText = `Great! I now have your farm location at latitude ${newLocation.latitude.toFixed(
+          4
+        )} and longitude ${newLocation.longitude.toFixed(4)}.`;
+
+        const { selectedProduct } = productStore;
+
+        if (selectedProduct && selectedProduct.product_id) {
+          const productName = selectedProduct.display_name || selectedProduct.product_id;
+          messageText += ` You currently have the "${productName}" layer selected. Click on the map if you'd like to get specific data for this point on the layer.`;
+        } else {
+          messageText += " Please select a product layer and then click on the map to get data for this location.";
         }
+        
+        messages.value.push({
+          text: await formatMessage(messageText, false), 
+          isSent: false,
+          model: "AgriBot"
+        });
+
       } else {
         if (farmDataMode.value) {
           farmDataMode.value = false;
           contextType.value = ContextTypeEnum.GENERAL;
           messages.value.push({
-            text: "Your farm location has been cleared. We're back to general chat.",
+            text: await formatMessage("Your farm location has been cleared. We're back to general chat.", false),
             isSent: false,
             model: "AgriBot"
           });
         }
       }
+      scrollToBottom();
     },
     { deep: true }
   );
 
   watch(
     () => productStore.selectedProduct,
-    (newProduct: selectedProductType | null) => {
-      if (
-        newProduct &&
-        Object.keys(newProduct).length > 0 &&
-        newProduct.product_id
-      ) {
-        if (lastProductId.value !== newProduct.product_id) {
+    async (newProduct: selectedProductType | null, oldProduct: selectedProductType | null) => {
+      if (newProduct && newProduct.product_id) {
+        if (!oldProduct || newProduct.product_id !== oldProduct.product_id || lastProductId.value !== newProduct.product_id) {
           contextType.value = ContextTypeEnum.DATA_LOADED;
-          const productName =
-            newProduct.display_name || newProduct.product_id || 'selected';
+          const productName = newProduct.display_name || newProduct.product_id || 'selected data';
+          let messageText = `Now viewing data for: ${productName}.`;
+          
+          if (newProduct.desc) {
+            const normalizedDesc = newProduct.desc.replace(/\r\n/g, '\n');
+            messageText += ` Description: ${normalizedDesc}.`; 
+          }
+          if (newProduct.date) {
+            messageText += ` Date: ${newProduct.date}.`;
+          }
+          if (newProduct.meta) {
+            const metaArray: string[] = [];
+            for (const [key, value] of Object.entries(newProduct.meta)) {
+              if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                metaArray.push(`${key}: ${value}`);
+              }
+            }
+            if (metaArray.length > 0) {
+              messageText += ` Meta: { ${metaArray.join(', ')} }.`;
+            }
+          }
+          messageText += " How can I help you analyze this?"
+
           messages.value.push({
-            text: `I see you're viewing ${productName} data. Would you like me to analyze this for your farm?`,
+            text: await formatMessage(messageText, false),
             isSent: false,
             model: "AgriBot"
           });
           lastProductId.value = newProduct.product_id;
+          scrollToBottom();
         }
       }
     },
@@ -418,6 +426,6 @@ export function useChatService(
     formatMessage,
     sendMessage,
     sendSuggestion,
-    scrollToBottom, // Exposing for potential direct use if needed
+    scrollToBottom,
   };
 }

@@ -17,12 +17,24 @@ const absX = computed<string>(() => `${productStore.clickedPoint.x}px`)
 const absY = computed<string>(() => `${productStore.clickedPoint.y}px`)
 
 /**
- * Computed property for the value to be displayed in the popup.
- * Formats the number to two decimal places or shows 'No Data' if the value is NaN.
+ * Computed property for the content to be displayed in the popup.
+ * Handles loading state, error messages, numeric values, and fallback text.
  */
-const value = computed<string>(() => {
-  const pointValue = productStore.clickedPoint.value
-  return isNaN(pointValue) ? 'No Data' : pointValue.toFixed(2)
+const displayContent = computed<string>(() => {
+  const point = productStore.clickedPoint
+
+  if (!point) return 'No data'; // Guard against point being null/undefined initially
+
+  if (point.isLoading) {
+    return 'Loading...'
+  }
+  if (point.errorMessage) {
+    return point.errorMessage
+  }
+  if (typeof point.value === 'number' && !isNaN(point.value)) {
+    return point.value.toFixed(2)
+  }
+  return 'Point selected' // Fallback if no other specific content
 })
 
 /**
@@ -35,9 +47,7 @@ function hidePopup(): void {
 
 <template>
   <div
-    v-if="
-      productStore.clickedPoint.show && !isNaN(productStore.clickedPoint.value)
-    "
+    v-if="productStore.clickedPoint && productStore.clickedPoint.show"
     class="
       absolute
       font-bold
@@ -52,7 +62,7 @@ function hidePopup(): void {
     "
     :style="{ left: absX, top: absY, zIndex: 1001 }"
   >
-    <p>{{ value }}</p>
+    <p>{{ displayContent }}</p>
     <button
       type="button"
       aria-label="Close popup"

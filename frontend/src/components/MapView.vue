@@ -105,104 +105,98 @@ function activateLocationSelection() {
  * Handles click events on the map.
  * If in "set location" mode, it sets the target farm location.
  * Otherwise, it fetches data for the clicked point from the product store.
+ * If a farm location is already set, it also updates the `currentMapSelectionCoordinates`.
  * @param {object} event - The click event object from Deck.gl, containing coordinate info.
  */
 function handleClick(event: {
   info: { coordinate: [number, number]; x: number; y: number }
 }) {
-  // console.log('Click detected:', event); // Debug log for click event
-
   const { info } = event
-  // Ensure that info, info.x, and info.y are valid before proceeding.
-  if (info && typeof info.x === 'number' && typeof info.y === 'number') {
-    if (isSetLocationMode.value) {
-      // Check if the mapInstance is available to perform unprojection.
-      if (mapInstance.value) {
-        const LngLat = mapInstance.value.unproject([info.x, info.y])
-        const longitude = LngLat.lng
-        const latitude = LngLat.lat
-        // console.log('Valid click unprojected by Mapbox:', { longitude, latitude }); // Debug log
-
-        locationStore.setTargetLocation({ longitude, latitude })
-        // console.log('Target location set:', { longitude, latitude }); // Debug log
-        isSetLocationMode.value = false
-        renderTargetMarker()
-
-        // Dispatch a global event to notify other components that location has been selected.
-        window.dispatchEvent(
-          new CustomEvent('location-selected', {
-            detail: { longitude, latitude },
-          })
-        )
-      } else {
-        // Log a warning if mapInstance is not available for unprojection.
-        // As a fallback, use Deck.gl's coordinates, though this is what we aim to improve.
-        console.warn(
-          'MapView: mapInstance not available for unprojecting click. Falling back to Deck.gl coordinates.'
-        )
-        if (
-          info.coordinate &&
-          Array.isArray(info.coordinate) &&
-          info.coordinate.length >= 2
-        ) {
-          const [longitude, latitude] = info.coordinate
-          locationStore.setTargetLocation({ longitude, latitude })
-          isSetLocationMode.value = false
-          renderTargetMarker()
-          window.dispatchEvent(
-            new CustomEvent('location-selected', {
-              detail: { longitude, latitude },
-            })
-          )
-        } else {
-          console.warn(
-            'MapView: Click event does not contain valid coordinate data from Deck.gl for fallback.'
-          )
-        }
-      }
-    } else {
-      // If not in set location mode, treat click as a request for point data.
-      // We still need to get geographic coordinates for this action.
-      let longitude: number, latitude: number
-      if (mapInstance.value) {
-        // Prefer Mapbox unprojection for accuracy here as well.
-        const LngLat = mapInstance.value.unproject([info.x, info.y])
-        longitude = LngLat.lng
-        latitude = LngLat.lat
-      } else if (
-        info.coordinate &&
-        Array.isArray(info.coordinate) &&
-        info.coordinate.length >= 2
-      ) {
-        // Fallback to Deck.gl coordinates if map instance isn't available.
-        console.warn(
-          'MapView: mapInstance not available for point data click. Falling back to Deck.gl coordinates.'
-        )
-        ;[longitude, latitude] = info.coordinate
-      } else {
-        // If no valid coordinates can be obtained, log a warning and exit.
-        console.warn(
-          'MapView: Click event does not contain valid coordinate data for point data fetching.'
-        )
-        return
-      }
-
-      productStore.clickedPoint = {
-        value: null, // Value will be fetched by loadValueAtPoint
-        x: info.x, // Screen x-coordinate for popup positioning
-        y: info.y, // Screen y-coordinate for popup positioning
-        show: false, // Popup will be shown once data is loaded
-      }
-      productStore.loadValueAtPoint(longitude, latitude)
-      // console.log('Clicked point updated in store, awaiting value:', productStore.clickedPoint); // Debug log
-    }
-  } else {
-    // Log a warning if the click event doesn't have valid screen coordinates.
+  if (!info || typeof info.x !== 'number' || typeof info.y !== 'number') {
     console.warn(
-      'MapView: Click event does not contain valid screen coordinate data (x, y).',
-      info
+      'MapView: Click event does not have valid screen coordinates.'
     )
+    return
   }
+
+  let longitude: number, latitude: number
+  if (mapInstance.value) {
+    const LngLat = mapInstance.value.unproject([info.x, info.y])
+    longitude = LngLat.lng
+    latitude = LngLat.lat
+  } else if (info.coordinate && Array.isArray(info.coordinate) && info.coordinate.length >= 2) {
+    console.warn(
+      'MapView: mapInstance not available for unprojecting click. Falling back to Deck.gl coordinates.'
+    )
+    ;[longitude, latitude] = info.coordinate
+  } else {
+    console.warn(
+      'MapView: Click event does not contain valid coordinate data for any action.'
+    )
+    return
+  }
+
+  // Scenario 1: Explicitly in "set location mode" (e.g., triggered from chat)
+  if (isSetLocationMode.value) {
+    locationStore.setTargetLocation({ longitude, latitude })
+    // Also set this as the current map selection for immediate data loading if a product is selected
+    productStore.setCurrentMapSelectionCoordinates(longitude, latitude);
+    isSetLocationMode.value = false // Exit explicit set location mode
+    renderTargetMarker()
+    window.dispatchEvent(new CustomEvent('location-selected', { detail: { longitude, latitude } }))
+    // Data loading for this point will be handled by the reactive watcher for currentMapSelectionCoordinates
+    // and the explicit call for the popup below.
+  } else if (!locationStore.targetLocation) {
+    // Scenario 2: Not in explicit "set location mode", AND no farm location is set yet.
+    // This click sets the farm location AND the current map selection.
+    locationStore.setTargetLocation({ longitude, latitude })
+    productStore.setCurrentMapSelectionCoordinates(longitude, latitude);
+    renderTargetMarker()
+    window.dispatchEvent(new CustomEvent('location-selected', { detail: { longitude, latitude } }))
+    // Data loading for this point will be handled by the reactive watcher and explicit call below.
+  } else {
+    // Scenario 3: Farm location is already set. This click updates the current map selection for data fetching.
+    productStore.setCurrentMapSelectionCoordinates(longitude, latitude);
+    // Data loading for this point will be handled by the reactive watcher and explicit call below.
+  }
+  
+  // Common logic for all click scenarios (after location handling):
+  // Update `clickedPoint` for the popup and explicitly trigger its data load.
+  // The `useReactiveMapDataManager` will handle data loading for the `currentMapSelectionCoordinates` (the "pinned" point)
+  // if the product/date is also set.
+
+  if (!productStore.isProductSelected) {
+    console.warn(
+      'MapView: No product selected. Skipping data load for clicked point popup.'
+    )
+    productStore.clickedPoint = {
+      value: null,
+      x: info.x,
+      y: info.y,
+      show: true, 
+      longitude,
+      latitude,
+      isLoading: false,
+      errorMessage: 'Please select a product layer to get data for a point.',
+    }
+    return
+  }
+
+  // Update clickedPoint for immediate popup display. This is for the *specific* click.
+  productStore.clickedPoint = {
+    value: null, 
+    x: info.x, 
+    y: info.y, 
+    show: false, // Will be set to true by loadDataForClickedPointViaPolygon upon completion/error
+    longitude, 
+    latitude,
+    isLoading: true, 
+    errorMessage: null,
+  }
+  // Explicitly load data for the *clicked point* for the popup.
+  // This ensures the popup always reflects the most recent click, 
+  // even if `currentMapSelectionCoordinates` (pinned point) is the same.
+  productStore.loadDataForClickedPointViaPolygon(longitude, latitude);
 }
 
 /**
@@ -329,7 +323,7 @@ watch(
       <MapboxView
         :access-token="mapboxAccessToken"
         :map-style="MAP_STYLES.DARK"
-        @map-loaded="onMapLoaded"
+        @map-loaded="(map) => onMapLoaded(map as mapboxgl.Map)" 
       />
       <!-- Tile Layer for Product Data -->
       <TileLayer

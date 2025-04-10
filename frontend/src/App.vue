@@ -9,8 +9,12 @@ import ChatWidget from '@/components/Chat/ChatWidget.vue'
 import { useAvailableDataStore } from '@/stores/availableDataStore'
 import { onMounted } from 'vue'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { useReactiveMapDataManager } from './composables/useReactiveMapDataManager'; // Relative path
 
 const availableDataStore = useAvailableDataStore()
+
+// Initialize the reactive map data manager
+useReactiveMapDataManager();
 
 /**
  * Fetches initial application data when the component is mounted.

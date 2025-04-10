@@ -63,13 +63,13 @@
           v-if="msg.isSent"
           class="message-bubble"
         >
-          {{ msg.text }}
+          {{ msg.text }} 
         </div>
         <!-- eslint-disable vue/no-v-html -->
         <div
           v-else
           class="message-bubble"
-          v-html="formatMessage(msg.text)"
+          v-html="msg.text"
         />
         <!-- eslint-enable vue/no-v-html -->
       </div>
@@ -143,14 +143,12 @@ const lastProductId = ref(''); // Track the last product ID to prevent duplicate
 
 // Chat Service Composable
 const {
-  messageInput, // Renamed from 'message' in the composable
+  messageInput, 
   inputDisabled,
-  // messages, // messages is now managed locally and passed to useChatService
   currentSuggestions,
-  formatMessage,
-  sendMessage,
-  sendSuggestion,
-  scrollToBottom, // Exposing for direct use if needed
+  sendMessage, // sendMessage in useChatService will now handle formatting for bot messages
+  sendSuggestion, // sendSuggestion in useChatService will also handle formatting
+  scrollToBottom, 
 } = useChatService(farmDataMode, contextType, messages, lastProductId);
 
 // Component-specific state
@@ -225,29 +223,61 @@ function startGeneralChat(): void {
 // Watch for the clicked point value to be loaded to proactively inform the user
 watch(
   () => productStore.clickedPoint,
-  (newClickedPoint, oldClickedPoint) => {
-    // Check if the value has been newly loaded, is a number, and is meant to be shown
-    if (
-      newClickedPoint &&
-      newClickedPoint.show &&
-      typeof newClickedPoint.value === 'number' &&
-      // Ensure this triggers when the point data transitions from not-loaded/not-shown to loaded/shown
-      // This condition relies on MapView.vue resetting show to false and value to null before loading a new point.
-      (oldClickedPoint?.show === false || typeof oldClickedPoint?.value !== 'number') &&
-      !isLocationSelectionActive.value // Only trigger if not in the initial farm location selection mode
-    ) {
-      const locationMessage = `For your selected farm location, the value at your selected point is ${newClickedPoint.value.toFixed(2)}. What would you like to do with this information?`;
-      
-      messages.value.push({ text: locationMessage, isSent: false, model: 'AgriBot' });
-      scrollToBottom(); // Ensure chat scrolls to the new message
+  (newPoint, oldPoint) => {
+    console.log('[ChatWidget] productStore.clickedPoint watcher. New:', JSON.parse(JSON.stringify(newPoint)), 'Old:', JSON.parse(JSON.stringify(oldPoint)));
 
-      // Ensure context type is updated if needed
-      if (contextType.value !== ContextTypeEnum.DATA_LOADED) {
-         contextType.value = ContextTypeEnum.DATA_LOADED;
+    // Condition: Message should only be shown if the point is marked to be shown,
+    // and it's not in location selection mode, and it's no longer loading.
+    if (newPoint && newPoint.show && !newPoint.isLoading && !isLocationSelectionActive.value) {
+      
+      const justFinishedLoadingThisPoint = oldPoint?.isLoading === true && 
+                                          newPoint.longitude === oldPoint?.longitude &&
+                                          newPoint.latitude === oldPoint?.latitude;
+
+      // isNewPointInteraction helps identify if the click is on a new map location
+      const isNewPointInteraction = newPoint.longitude !== oldPoint?.longitude || 
+                                   newPoint.latitude !== oldPoint?.latitude ||
+                                   (oldPoint === null || oldPoint === undefined); // Also treat initial load as new
+
+      if (newPoint.errorMessage) {
+        const lastMessageText = messages.value[messages.value.length - 1]?.text;
+        const potentialNewMessage = `Map data query issue: ${newPoint.errorMessage}`;
+        
+        // Show error if:
+        // 1. We just finished loading this specific point and it resulted in an error.
+        // 2. Or, it's an interaction with a new point that immediately has an error.
+        // 3. Or, the error message itself has changed for the same point (and not just a re-trigger of the watcher).
+        if (justFinishedLoadingThisPoint || isNewPointInteraction || (lastMessageText !== potentialNewMessage && !oldPoint?.isLoading && newPoint.longitude === oldPoint?.longitude && newPoint.latitude === oldPoint?.latitude)) {
+          // Avoid pushing the exact same error message if it's already the last one.
+          if (lastMessageText !== potentialNewMessage) {
+             messages.value.push({
+              text: potentialNewMessage,
+              isSent: false,
+              model: 'AgriBot',
+            });
+            scrollToBottom(); // Ensure chat scrolls
+          }
+        }
+        contextType.value = ContextTypeEnum.DATA_LOADED; // Consider a specific error context if available
+      } else if (typeof newPoint.value === 'number') {
+        // Show value if:
+        // 1. We just finished loading this specific point and got a value.
+        // 2. Or, it's an interaction with a new point that has a value.
+        // 3. Or, the value for the same point has changed (e.g. due to product/date change and auto-refresh).
+        if (justFinishedLoadingThisPoint || isNewPointInteraction || (newPoint.value !== oldPoint?.value && !oldPoint?.isLoading && newPoint.longitude === oldPoint?.longitude && newPoint.latitude === oldPoint?.latitude)) {
+          const locationMessage = `For your selected point (Lat: ${newPoint.latitude?.toFixed(4)}, Lon: ${newPoint.longitude?.toFixed(4)}), the value is ${newPoint.value.toFixed(2)}.`;
+          // Avoid pushing the exact same data message if it's already the last one and for the same point/value.
+          const lastMessageText = messages.value[messages.value.length - 1]?.text;
+          if (lastMessageText !== locationMessage) {
+            messages.value.push({ text: locationMessage, isSent: false, model: 'AgriBot' });
+            scrollToBottom(); // Ensure chat scrolls
+          }
+          contextType.value = ContextTypeEnum.DATA_LOADED;
+        }
       }
     }
   },
-  { deep: true } // Watch deeply as clickedPoint is an object
+  { deep: true }
 );
 
 </script>
@@ -544,3 +574,4 @@ watch(
   cursor: not-allowed;
 }
 </style>
+``` 
