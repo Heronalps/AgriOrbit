@@ -4,7 +4,8 @@ import { computeTileLayerURL } from '@/api/tile'
 import { defineStore } from 'pinia'
 import type { ProductMeta } from '@/api.d.ts'
 import { useAvailableDataStore } from './availableDataStore'
-import { queryValueByGeometry, type ApiGeomType } from '../api/query'
+import { queryValueByGeometry } from '../api/query'
+import type { ApiGeomType } from '../api/query'
 
 // Interface for entries in the productEntries.results array
 export interface ProductListEntry {
@@ -47,7 +48,7 @@ export interface productState {
   clickedPoint: clickedPointType
   isLoading: boolean
   error: string | null
-  currentMapSelectionCoordinates: { longitude: number, latitude: number } | null // New state for pinned point
+  currentMapSelectionCoordinates: { longitude: number; latitude: number } | null // New state for pinned point
 }
 
 export const useProductStore = defineStore('productStore', {
@@ -279,28 +280,42 @@ export const useProductStore = defineStore('productStore', {
      * The reactive loader will pick up this change to fetch data.
      */
     setCurrentMapSelectionCoordinates(longitude: number, latitude: number) {
-      this.currentMapSelectionCoordinates = { longitude, latitude };
-      console.log('[productStore] currentMapSelectionCoordinates updated:', JSON.parse(JSON.stringify(this.currentMapSelectionCoordinates)));
+      this.currentMapSelectionCoordinates = { longitude, latitude }
+      console.log(
+        '[productStore] currentMapSelectionCoordinates updated:',
+        JSON.parse(JSON.stringify(this.currentMapSelectionCoordinates))
+      )
     },
 
     /**
      * Fetches the data value for the selected product at a given map coordinate using a polygon.
      */
-    async loadDataForClickedPointViaPolygon(longitude: number, latitude: number) {
-      console.log(`[productStore] loadDataForClickedPointViaPolygon called for Lon: ${longitude}, Lat: ${latitude}. Current product: ${this.selectedProduct.product_id}, Date: ${this.selectedProduct.date}`);
+    async loadDataForClickedPointViaPolygon(
+      longitude: number,
+      latitude: number
+    ) {
+      console.log(
+        `[productStore] loadDataForClickedPointViaPolygon called for Lon: ${longitude}, Lat: ${latitude}. Current product: ${this.selectedProduct.product_id}, Date: ${this.selectedProduct.date}`
+      )
       if (!this.selectedProduct.product_id) {
-        console.warn('[productStore] loadDataForClickedPointViaPolygon: No product selected.');
+        console.warn(
+          '[productStore] loadDataForClickedPointViaPolygon: No product selected.'
+        )
         this.clickedPoint = {
           ...this.clickedPoint,
           value: null,
           show: true, // Show popup to display the message
           isLoading: false,
-          errorMessage: 'Please select a product layer to get data for a point.',
+          errorMessage:
+            'Please select a product layer to get data for a point.',
           longitude,
           latitude,
-        };
-        console.log('[productStore] clickedPoint updated (no product):', JSON.parse(JSON.stringify(this.clickedPoint)));
-        return;
+        }
+        console.log(
+          '[productStore] clickedPoint updated (no product):',
+          JSON.parse(JSON.stringify(this.clickedPoint))
+        )
+        return
       }
 
       this.clickedPoint = {
@@ -311,11 +326,12 @@ export const useProductStore = defineStore('productStore', {
         errorMessage: null,
         longitude,
         latitude,
-      };
+      }
       // console.log('[productStore] clickedPoint set for loading:', JSON.parse(JSON.stringify(this.clickedPoint))); // Optional: log initial set for loading
 
       try {
-        const { product_id, date, cropmask_id, ...otherProductParams } = this.selectedProduct;
+        const { product_id, date, cropmask_id, ...otherProductParams } =
+          this.selectedProduct
         const polygon: ApiGeomType = {
           type: 'Feature',
           properties: {},
@@ -331,7 +347,7 @@ export const useProductStore = defineStore('productStore', {
               ],
             ],
           },
-        };
+        }
 
         const response = await queryValueByGeometry(
           {
@@ -341,33 +357,42 @@ export const useProductStore = defineStore('productStore', {
             ...otherProductParams, // Include any other relevant parameters from selectedProduct
           },
           polygon
-        );
+        )
 
-        let extractedValue: number | null = null;
-        let friendlyMessage: string | null = null;
+        let extractedValue: number | null = null
+        let friendlyMessage: string | null = null
 
         if (typeof response === 'number') {
-          extractedValue = response;
+          extractedValue = response
         } else if (response && typeof response === 'object') {
           if (typeof response.mean === 'number') {
-            extractedValue = response.mean;
+            extractedValue = response.mean
           } else if (typeof response.value === 'number') {
-            extractedValue = response.value;
+            extractedValue = response.value
           } else if (response.features && response.features[0]?.properties) {
-            const props = response.features[0].properties;
-            if (typeof props.mean === 'number') extractedValue = props.mean;
-            else if (typeof props.value === 'number') extractedValue = props.value;
+            const props = response.features[0].properties
+            if (typeof props.mean === 'number') extractedValue = props.mean
+            else if (typeof props.value === 'number')
+              extractedValue = props.value
             else {
-              const numericProps = Object.values(props).filter(v => typeof v === 'number');
-              if (numericProps.length === 1) extractedValue = numericProps[0] as number;
-              else if (numericProps.length > 1) friendlyMessage = 'Multiple numeric properties found; unable to determine primary value.';
-              else friendlyMessage = 'No numeric value found in feature properties.';
+              const numericProps = Object.values(props).filter(
+                (v) => typeof v === 'number'
+              )
+              if (numericProps.length === 1)
+                extractedValue = numericProps[0] as number
+              else if (numericProps.length > 1)
+                friendlyMessage =
+                  'Multiple numeric properties found; unable to determine primary value.'
+              else
+                friendlyMessage =
+                  'No numeric value found in feature properties.'
             }
           } else {
-            friendlyMessage = 'Response format not recognized or no value found.';
+            friendlyMessage =
+              'Response format not recognized or no value found.'
           }
         } else {
-          friendlyMessage = 'Received unexpected data type from API.';
+          friendlyMessage = 'Received unexpected data type from API.'
         }
 
         if (extractedValue !== null) {
@@ -377,41 +402,57 @@ export const useProductStore = defineStore('productStore', {
             show: true,
             isLoading: false,
             errorMessage: null,
-          };
-          console.log('[productStore] clickedPoint updated (success):', JSON.parse(JSON.stringify(this.clickedPoint)));
+          }
+          console.log(
+            '[productStore] clickedPoint updated (success):',
+            JSON.parse(JSON.stringify(this.clickedPoint))
+          )
         } else {
           this.clickedPoint = {
             ...this.clickedPoint,
             value: null,
             show: true,
             isLoading: false,
-            errorMessage: friendlyMessage || 'Failed to extract a valid number from the response.',
-          };
-          console.log('[productStore] clickedPoint updated (error/no value):', JSON.parse(JSON.stringify(this.clickedPoint)));
+            errorMessage:
+              friendlyMessage ||
+              'Failed to extract a valid number from the response.',
+          }
+          console.log(
+            '[productStore] clickedPoint updated (error/no value):',
+            JSON.parse(JSON.stringify(this.clickedPoint))
+          )
         }
       } catch (caughtError: unknown) {
-        console.error('Error loading value at point:', caughtError);
-        let errorMessage = 'Failed to load data for the point.';
+        console.error('Error loading value at point:', caughtError)
+        let errorMessage = 'Failed to load data for the point.'
 
         // Asserting the type of caughtError to allow property access
         // This assumes the error object might have 'response.data.detail' or 'message'
-        const errorDetails = caughtError as { 
-          response?: { data?: { detail?: string } }; 
-          message?: string 
-        };
+        const errorDetails = caughtError as {
+          response?: { data?: { detail?: string } }
+          message?: string
+        }
 
-        if (errorDetails.response && errorDetails.response.data && typeof errorDetails.response.data.detail === 'string') {
-            errorMessage = errorDetails.response.data.detail;
+        if (
+          errorDetails.response &&
+          errorDetails.response.data &&
+          typeof errorDetails.response.data.detail === 'string'
+        ) {
+          errorMessage = errorDetails.response.data.detail
         } else if (typeof errorDetails.message === 'string') {
-            errorMessage = errorDetails.message;
+          errorMessage = errorDetails.message
         }
         this.clickedPoint = {
           ...this.clickedPoint,
           value: null,
-          show: true,          isLoading: false,
+          show: true,
+          isLoading: false,
           errorMessage: errorMessage,
-        };
-        console.log('[productStore] clickedPoint updated (exception):', JSON.parse(JSON.stringify(this.clickedPoint)));
+        }
+        console.log(
+          '[productStore] clickedPoint updated (exception):',
+          JSON.parse(JSON.stringify(this.clickedPoint))
+        )
       }
     },
 
