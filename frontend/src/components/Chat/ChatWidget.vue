@@ -63,7 +63,7 @@
           v-if="msg.isSent"
           class="message-bubble"
         >
-          {{ msg.text }} 
+          {{ msg.text }}
         </div>
         <!-- eslint-disable vue/no-v-html -->
         <div
@@ -115,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, type Ref } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useLocationStore } from '@/stores/locationStore';
 import { useProductStore } from '@/stores/productStore';
 import { useDraggableResizable } from '@/composables/useDraggableResizable';
@@ -129,7 +129,7 @@ const productStore = useProductStore();
 const chatWidgetRef = ref<HTMLElement | null>(null);
 
 // Draggable and Resizable Composable
-const { position, dimensions, startDrag, startResize, adjustInitialPosition } = useDraggableResizable(
+const { position, dimensions, startDrag, startResize } = useDraggableResizable(
   chatWidgetRef,
   { x: 10, y: 10 }, // Initial position, will be adjusted by adjustInitialPosition
   { width: 400, height: 600 } // Initial dimensions
@@ -143,12 +143,12 @@ const lastProductId = ref(''); // Track the last product ID to prevent duplicate
 
 // Chat Service Composable
 const {
-  messageInput, 
+  messageInput,
   inputDisabled,
   currentSuggestions,
   sendMessage, // sendMessage in useChatService will now handle formatting for bot messages
   sendSuggestion, // sendSuggestion in useChatService will also handle formatting
-  scrollToBottom, 
+  scrollToBottom,
 } = useChatService(farmDataMode, contextType, messages, lastProductId);
 
 // Component-specific state
@@ -156,7 +156,6 @@ const isLocationSelectionActive = ref(false);
 
 onMounted(() => {
   // Initial position adjustment is handled by useDraggableResizable
-  // adjustInitialPosition(); // No longer needed here, called within useDraggableResizable
 
   const targetLocation = locationStore.targetLocation;
   if (targetLocation) {
@@ -180,15 +179,10 @@ onMounted(() => {
   if (productStore.selectedProduct && productStore.selectedProduct.product_id) {
     lastProductId.value = productStore.selectedProduct.product_id;
   }
-
-  // Window resize handling for position is now in useDraggableResizable
-  // window.addEventListener('resize', adjustInitialPosition); // No longer needed here
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('location-selected', handleLocationSelected as EventListener);
-  // Event listeners for drag/resize are cleaned up by useDraggableResizable
-  // window.removeEventListener('resize', adjustInitialPosition); // No longer needed here
 });
 
 function activateLocationSelection(): void {
@@ -229,20 +223,20 @@ watch(
     // Condition: Message should only be shown if the point is marked to be shown,
     // and it's not in location selection mode, and it's no longer loading.
     if (newPoint && newPoint.show && !newPoint.isLoading && !isLocationSelectionActive.value) {
-      
-      const justFinishedLoadingThisPoint = oldPoint?.isLoading === true && 
+
+      const justFinishedLoadingThisPoint = oldPoint?.isLoading === true &&
                                           newPoint.longitude === oldPoint?.longitude &&
                                           newPoint.latitude === oldPoint?.latitude;
 
       // isNewPointInteraction helps identify if the click is on a new map location
-      const isNewPointInteraction = newPoint.longitude !== oldPoint?.longitude || 
+      const isNewPointInteraction = newPoint.longitude !== oldPoint?.longitude ||
                                    newPoint.latitude !== oldPoint?.latitude ||
                                    (oldPoint === null || oldPoint === undefined); // Also treat initial load as new
 
       if (newPoint.errorMessage) {
         const lastMessageText = messages.value[messages.value.length - 1]?.text;
         const potentialNewMessage = `Map data query issue: ${newPoint.errorMessage}`;
-        
+
         // Show error if:
         // 1. We just finished loading this specific point and it resulted in an error.
         // 2. Or, it's an interaction with a new point that immediately has an error.
@@ -279,7 +273,6 @@ watch(
   },
   { deep: true }
 );
-
 </script>
 
 <style scoped>
@@ -574,4 +567,3 @@ watch(
   cursor: not-allowed;
 }
 </style>
-``` 

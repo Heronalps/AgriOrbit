@@ -113,9 +113,7 @@ function handleClick(event: {
 }) {
   const { info } = event
   if (!info || typeof info.x !== 'number' || typeof info.y !== 'number') {
-    console.warn(
-      'MapView: Click event does not have valid screen coordinates.'
-    )
+    console.warn('MapView: Click event does not have valid screen coordinates.')
     return
   }
 
@@ -124,7 +122,11 @@ function handleClick(event: {
     const LngLat = mapInstance.value.unproject([info.x, info.y])
     longitude = LngLat.lng
     latitude = LngLat.lat
-  } else if (info.coordinate && Array.isArray(info.coordinate) && info.coordinate.length >= 2) {
+  } else if (
+    info.coordinate &&
+    Array.isArray(info.coordinate) &&
+    info.coordinate.length >= 2
+  ) {
     console.warn(
       'MapView: mapInstance not available for unprojecting click. Falling back to Deck.gl coordinates.'
     )
@@ -140,26 +142,30 @@ function handleClick(event: {
   if (isSetLocationMode.value) {
     locationStore.setTargetLocation({ longitude, latitude })
     // Also set this as the current map selection for immediate data loading if a product is selected
-    productStore.setCurrentMapSelectionCoordinates(longitude, latitude);
+    productStore.setCurrentMapSelectionCoordinates(longitude, latitude)
     isSetLocationMode.value = false // Exit explicit set location mode
     renderTargetMarker()
-    window.dispatchEvent(new CustomEvent('location-selected', { detail: { longitude, latitude } }))
+    window.dispatchEvent(
+      new CustomEvent('location-selected', { detail: { longitude, latitude } })
+    )
     // Data loading for this point will be handled by the reactive watcher for currentMapSelectionCoordinates
     // and the explicit call for the popup below.
   } else if (!locationStore.targetLocation) {
     // Scenario 2: Not in explicit "set location mode", AND no farm location is set yet.
     // This click sets the farm location AND the current map selection.
     locationStore.setTargetLocation({ longitude, latitude })
-    productStore.setCurrentMapSelectionCoordinates(longitude, latitude);
+    productStore.setCurrentMapSelectionCoordinates(longitude, latitude)
     renderTargetMarker()
-    window.dispatchEvent(new CustomEvent('location-selected', { detail: { longitude, latitude } }))
+    window.dispatchEvent(
+      new CustomEvent('location-selected', { detail: { longitude, latitude } })
+    )
     // Data loading for this point will be handled by the reactive watcher and explicit call below.
   } else {
     // Scenario 3: Farm location is already set. This click updates the current map selection for data fetching.
-    productStore.setCurrentMapSelectionCoordinates(longitude, latitude);
+    productStore.setCurrentMapSelectionCoordinates(longitude, latitude)
     // Data loading for this point will be handled by the reactive watcher and explicit call below.
   }
-  
+
   // Common logic for all click scenarios (after location handling):
   // Update `clickedPoint` for the popup and explicitly trigger its data load.
   // The `useReactiveMapDataManager` will handle data loading for the `currentMapSelectionCoordinates` (the "pinned" point)
@@ -173,7 +179,7 @@ function handleClick(event: {
       value: null,
       x: info.x,
       y: info.y,
-      show: true, 
+      show: true,
       longitude,
       latitude,
       isLoading: false,
@@ -184,19 +190,19 @@ function handleClick(event: {
 
   // Update clickedPoint for immediate popup display. This is for the *specific* click.
   productStore.clickedPoint = {
-    value: null, 
-    x: info.x, 
-    y: info.y, 
+    value: null,
+    x: info.x,
+    y: info.y,
     show: false, // Will be set to true by loadDataForClickedPointViaPolygon upon completion/error
-    longitude, 
+    longitude,
     latitude,
-    isLoading: true, 
+    isLoading: true,
     errorMessage: null,
   }
   // Explicitly load data for the *clicked point* for the popup.
-  // This ensures the popup always reflects the most recent click, 
+  // This ensures the popup always reflects the most recent click,
   // even if `currentMapSelectionCoordinates` (pinned point) is the same.
-  productStore.loadDataForClickedPointViaPolygon(longitude, latitude);
+  productStore.loadDataForClickedPointViaPolygon(longitude, latitude)
 }
 
 /**
@@ -323,7 +329,7 @@ watch(
       <MapboxView
         :access-token="mapboxAccessToken"
         :map-style="MAP_STYLES.DARK"
-        @map-loaded="(map) => onMapLoaded(map as mapboxgl.Map)" 
+        @map-loaded="(map) => onMapLoaded(map as mapboxgl.Map)"
       />
       <!-- Tile Layer for Product Data -->
       <TileLayer

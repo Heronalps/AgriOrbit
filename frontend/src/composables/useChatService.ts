@@ -43,7 +43,7 @@ export function useChatService(
    * @param {boolean} isUserInput - Flag to determine if the input is from the user.
    * @returns {Promise<string>} The formatted and sanitized HTML string.
    */
-  async function formatMessage(textInput: string | unknown, isUserInput: boolean = false): Promise<string> {
+  async function formatMessage(textInput: string | unknown, isUserInput = false): Promise<string> {
     let textToProcess: string;
 
     if (Array.isArray(textInput)) {

@@ -23,7 +23,7 @@ const absY = computed<string>(() => `${productStore.clickedPoint.y}px`)
 const displayContent = computed<string>(() => {
   const point = productStore.clickedPoint
 
-  if (!point) return 'No data'; // Guard against point being null/undefined initially
+  if (!point) return 'No data' // Guard against point being null/undefined initially
 
   if (point.isLoading) {
     return 'Loading...'

@@ -389,19 +389,26 @@ export const useProductStore = defineStore('productStore', {
           };
           console.log('[productStore] clickedPoint updated (error/no value):', JSON.parse(JSON.stringify(this.clickedPoint)));
         }
-      } catch (error: any) {
-        console.error('Error loading value at point:', error);
+      } catch (caughtError: unknown) {
+        console.error('Error loading value at point:', caughtError);
         let errorMessage = 'Failed to load data for the point.';
-        if (error.response && error.response.data && error.response.data.detail) {
-          errorMessage = error.response.data.detail;
-        } else if (error.message) {
-          errorMessage = error.message;
+
+        // Asserting the type of caughtError to allow property access
+        // This assumes the error object might have 'response.data.detail' or 'message'
+        const errorDetails = caughtError as { 
+          response?: { data?: { detail?: string } }; 
+          message?: string 
+        };
+
+        if (errorDetails.response && errorDetails.response.data && typeof errorDetails.response.data.detail === 'string') {
+            errorMessage = errorDetails.response.data.detail;
+        } else if (typeof errorDetails.message === 'string') {
+            errorMessage = errorDetails.message;
         }
         this.clickedPoint = {
           ...this.clickedPoint,
           value: null,
-          show: true, // Important to show the popup with the error
-          isLoading: false,
+          show: true,          isLoading: false,
           errorMessage: errorMessage,
         };
         console.log('[productStore] clickedPoint updated (exception):', JSON.parse(JSON.stringify(this.clickedPoint)));
