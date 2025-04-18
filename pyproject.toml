@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ag-advisor-map"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agricultural advice application"
 authors = [
     "Michael <heronalps@gmail.com>",

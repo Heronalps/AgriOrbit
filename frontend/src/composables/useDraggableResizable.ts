@@ -12,7 +12,7 @@ interface Dimensions {
 }
 
 export function useDraggableResizable(
-  chatWidget: Ref<HTMLElement | null>,
+  elementRef: Ref<HTMLElement | null>, // Renamed from chatWidget
   initialPosition: Position,
   initialDimensions: Dimensions
 ) {
@@ -29,7 +29,7 @@ export function useDraggableResizable(
     event.preventDefault()
     isDragging.value = true
     initialMousePos.value = { x: event.clientX, y: event.clientY }
-    if (chatWidget.value) {
+    if (elementRef.value) { // Use elementRef
       initialWidgetPos.value = {
         x: position.value.x,
         y: position.value.y,
@@ -40,7 +40,7 @@ export function useDraggableResizable(
   }
 
   const onDrag = (event: MouseEvent) => {
-    if (!isDragging.value || !chatWidget.value) return
+    if (!isDragging.value || !elementRef.value) return // Use elementRef
 
     const dx = event.clientX - initialMousePos.value.x
     const dy = event.clientY - initialMousePos.value.y
@@ -48,14 +48,8 @@ export function useDraggableResizable(
     position.value.x = initialWidgetPos.value.x + dx
     position.value.y = initialWidgetPos.value.y + dy
 
-    // Keep widget within viewport
-    const minX = 0
-    const minY = 0
-    const maxX = window.innerWidth - dimensions.value.width
-    const maxY = window.innerHeight - dimensions.value.height
-
-    position.value.x = Math.max(minX, Math.min(maxX, position.value.x))
-    position.value.y = Math.max(minY, Math.min(maxY, position.value.y))
+    // Keep widget within viewport (using adjustBounds logic)
+    adjustBounds()
   }
 
   const stopDrag = () => {
@@ -68,7 +62,7 @@ export function useDraggableResizable(
     event.preventDefault()
     isResizing.value = true
     initialMousePos.value = { x: event.clientX, y: event.clientY }
-    if (chatWidget.value) {
+    if (elementRef.value) { // Use elementRef
       initialWidgetDim.value = {
         width: dimensions.value.width,
         height: dimensions.value.height,
@@ -79,13 +73,13 @@ export function useDraggableResizable(
   }
 
   const onResize = (event: MouseEvent) => {
-    if (!isResizing.value || !chatWidget.value) return
+    if (!isResizing.value || !elementRef.value) return // Use elementRef
 
     const dx = event.clientX - initialMousePos.value.x
     const dy = event.clientY - initialMousePos.value.y
 
     const minWidth = 300
-    const minHeight = 200 // Adjusted min height
+    const minHeight = 200
 
     dimensions.value.width = Math.max(
       minWidth,
@@ -95,9 +89,7 @@ export function useDraggableResizable(
       minHeight,
       initialWidgetDim.value.height + dy
     )
-
-    // Adjust position if resizing pushes it out of bounds (optional, good for UX)
-    adjustPositionPostResize()
+    adjustBounds() // Adjust bounds after resize
   }
 
   const stopResize = () => {
@@ -106,37 +98,40 @@ export function useDraggableResizable(
     document.removeEventListener('mouseup', stopResize)
   }
 
-  const adjustPositionPostResize = () => {
-    if (!chatWidget.value) return
-    const padding = 0 // No padding from window edges for this adjustment
-    const maxX = window.innerWidth - dimensions.value.width - padding
-    const maxY = window.innerHeight - dimensions.value.height - padding
-
-    position.value.x = Math.max(padding, Math.min(position.value.x, maxX))
-    position.value.y = Math.max(padding, Math.min(position.value.y, maxY))
-  }
-
-  const adjustInitialPosition = () => {
-    if (!chatWidget.value) return
+  // Renamed and refactored from adjustInitialPosition and adjustPositionPostResize
+  const adjustBounds = () => {
+    if (!elementRef.value) return
     const padding = 10 // Padding from window edges
 
-    const maxX = window.innerWidth - dimensions.value.width - padding
-    const maxY = window.innerHeight - dimensions.value.height - padding
+    let currentX = position.value.x
+    let currentY = position.value.y
+    const elementWidth = dimensions.value.width
+    const elementHeight = dimensions.value.height
 
-    const defaultX = 10
-    const defaultY = window.innerHeight - initialDimensions.height - 35
+    // Ensure position is not off-screen to the top or left
+    currentX = Math.max(padding, currentX)
+    currentY = Math.max(padding, currentY)
 
-    position.value.x = Math.max(padding, Math.min(defaultX, maxX))
-    position.value.y = Math.max(padding, Math.min(defaultY, maxY))
+    // Ensure position is not off-screen to the bottom or right
+    const maxX = window.innerWidth - elementWidth - padding
+    const maxY = window.innerHeight - elementHeight - padding
+
+    position.value.x = Math.min(currentX, maxX)
+    position.value.y = Math.min(currentY, maxY)
+
+    // If the calculated position is less than padding (e.g. window too small), force to padding
+    if (position.value.x < padding) position.value.x = padding;
+    if (position.value.y < padding) position.value.y = padding;
   }
 
   const onWindowResize = () => {
-    // Re-adjust position and potentially dimensions if window resizes significantly
-    adjustPositionPostResize() // Ensures widget stays within new viewport bounds
+    adjustBounds() // Re-check bounds on window resize
   }
 
   onMounted(() => {
-    adjustInitialPosition()
+    // Position is already set from initialPosition in ref definition
+    // Just ensure it's within bounds on mount
+    adjustBounds()
     window.addEventListener('resize', onWindowResize)
   })
 
@@ -153,6 +148,5 @@ export function useDraggableResizable(
     dimensions,
     startDrag,
     startResize,
-    adjustInitialPosition, // Expose if needed externally, though typically managed internally
   }
 }

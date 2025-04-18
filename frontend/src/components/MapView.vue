@@ -341,7 +341,7 @@ watch(
     </DeckGL>
 
     <!-- Control Panel Component -->
-    <ControlPanel class="absolute right-10 bottom-10" />
+    <ControlPanel />
     <!-- Map Popup for Clicked Point Info -->
     <MapPopup />
   </div>
