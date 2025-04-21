@@ -9,68 +9,41 @@
       height: dimensions.height + 'px',
     }"
   >
-    <div
-      class="chat-header"
-      @mousedown="startDrag"
-    >
+    <div class="chat-header" @mousedown="startDrag">
       <h2>Agribot</h2>
     </div>
-    <div
-      class="resize-handle resize-handle-br"
-      @mousedown="startResize"
-    />
+    <div class="resize-handle resize-handle-br" @mousedown="startResize" />
 
     <!-- Initial State - No Farm Selected -->
-    <div
-      v-if="!farmDataMode"
-      class="farm-setup-container"
-    >
+    <div v-if="!farmDataMode" class="farm-setup-container">
       <div class="welcome-message">
         <p>Welcome to AgriBot! To get the most personalized assistance:</p>
         <div class="action-options">
-          <button
-            class="action-button"
-            @click="activateLocationSelection"
-          >
+          <button class="action-button" @click="activateLocationSelection">
             <span class="icon">📍</span>
             Select Farm Location
           </button>
         </div>
-        <p class="or-divider">
-          —— OR ——
-        </p>
-        <button
-          class="general-chat-button"
-          @click="startGeneralChat"
-        >
+        <p class="or-divider">—— OR ——</p>
+        <button class="general-chat-button" @click="startGeneralChat">
           Continue with General Chat
         </button>
       </div>
     </div>
 
     <!-- Chat UI -->
-    <div
-      class="chat-body"
-      :class="{ 'limited-mode': !farmDataMode }"
-    >
+    <div class="chat-body" :class="{ 'limited-mode': !farmDataMode }">
       <div
         v-for="(msg, index) in messages"
         :key="index"
         class="message"
         :class="{ sent: msg.isSent, received: !msg.isSent }"
       >
-        <div
-          v-if="msg.isSent"
-          class="message-bubble"
-        >
+        <div v-if="msg.isSent" class="message-bubble">
           {{ msg.text }}
         </div>
         <!-- eslint-disable vue/no-v-html -->
-        <div
-          v-else
-          class="message-bubble"
-          v-html="msg.text"
-        />
+        <div v-else class="message-bubble" v-html="msg.text" />
         <!-- eslint-enable vue/no-v-html -->
       </div>
     </div>
@@ -81,8 +54,10 @@
     >
       <div class="token-warning">
         <span class="icon">⚠️</span>
-        <span>Using limited context mode. For better insights, select a farm
-          location.</span>
+        <span
+          >Using limited context mode. For better insights, select a farm
+          location.</span
+        >
       </div>
     </div>
 
@@ -102,44 +77,43 @@
           placeholder="Type your message..."
           :disabled="inputDisabled"
           @keyup.enter="sendMessage"
-        >
-        <button
-          :disabled="inputDisabled"
-          @click="sendMessage"
-        >
-          Send
-        </button>
+        />
+        <button :disabled="inputDisabled" @click="sendMessage">Send</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
-import { useLocationStore } from '@/stores/locationStore';
-import { useProductStore } from '@/stores/productStore';
-import { useDraggableResizable } from '@/composables/useDraggableResizable';
-import { useChatService, ContextTypeEnum, type Message } from '@/composables/useChatService';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useLocationStore } from '@/stores/locationStore'
+import { useProductStore } from '@/stores/productStore'
+import { useDraggableResizable } from '@/composables/useDraggableResizable'
+import {
+  useChatService,
+  ContextTypeEnum,
+  type Message,
+} from '@/composables/useChatService'
 
 // Store instances
-const locationStore = useLocationStore();
-const productStore = useProductStore();
+const locationStore = useLocationStore()
+const productStore = useProductStore()
 
 // Chat widget DOM element reference
-const chatWidgetRef = ref<HTMLElement | null>(null);
+const chatWidgetRef = ref<HTMLElement | null>(null)
 
 // Draggable and Resizable Composable
 const { position, dimensions, startDrag, startResize } = useDraggableResizable(
   chatWidgetRef,
   { x: 10, y: 10 }, // Initial position, will be adjusted by adjustInitialPosition
-  { width: 400, height: 600 } // Initial dimensions
-);
+  { width: 400, height: 600 }, // Initial dimensions
+)
 
 // Chat Service Composable State
-const farmDataMode = ref(false);
-const contextType = ref<ContextTypeEnum>(ContextTypeEnum.GENERAL);
-const messages = ref<Message[]>([]);
-const lastProductId = ref(''); // Track the last product ID to prevent duplicates
+const farmDataMode = ref(false)
+const contextType = ref<ContextTypeEnum>(ContextTypeEnum.GENERAL)
+const messages = ref<Message[]>([])
+const lastProductId = ref('') // Track the last product ID to prevent duplicates
 
 // Chat Service Composable
 const {
@@ -149,130 +123,167 @@ const {
   sendMessage, // sendMessage in useChatService will now handle formatting for bot messages
   sendSuggestion, // sendSuggestion in useChatService will also handle formatting
   scrollToBottom,
-} = useChatService(farmDataMode, contextType, messages, lastProductId);
+} = useChatService(farmDataMode, contextType, messages, lastProductId)
 
 // Component-specific state
-const isLocationSelectionActive = ref(false);
+const isLocationSelectionActive = ref(false)
 
 onMounted(() => {
   // Initial position adjustment is handled by useDraggableResizable
 
-  const targetLocation = locationStore.targetLocation;
+  const targetLocation = locationStore.targetLocation
   if (targetLocation) {
-    farmDataMode.value = true;
-    contextType.value = ContextTypeEnum.FARM_SELECTED;
+    farmDataMode.value = true
+    contextType.value = ContextTypeEnum.FARM_SELECTED
     messages.value.push({
       text: "I see you've selected a farm location. How can I help you with your farm today?",
       isSent: false,
-      model: "AgriBot"
-    });
+      model: 'AgriBot',
+    })
   } else {
     messages.value.push({
       text: "Hello! I'm AgriBot. To get personalized farming advice, please select your farm location on the map.",
       isSent: false,
-      model: "AgriBot"
-    });
+      model: 'AgriBot',
+    })
   }
 
-  window.addEventListener('location-selected', handleLocationSelected as EventListener);
+  window.addEventListener(
+    'location-selected',
+    handleLocationSelected as EventListener,
+  )
 
   if (productStore.selectedProduct && productStore.selectedProduct.product_id) {
-    lastProductId.value = productStore.selectedProduct.product_id;
+    lastProductId.value = productStore.selectedProduct.product_id
   }
-});
+})
 
 onBeforeUnmount(() => {
-  window.removeEventListener('location-selected', handleLocationSelected as EventListener);
-});
+  window.removeEventListener(
+    'location-selected',
+    handleLocationSelected as EventListener,
+  )
+})
 
 function activateLocationSelection(): void {
-  isLocationSelectionActive.value = true;
+  isLocationSelectionActive.value = true
   messages.value.push({
     text: 'Please click on the map to select your farm location.',
     isSent: false,
-    model: "AgriBot"
-  });
-  window.dispatchEvent(new CustomEvent('activate-location-selection'));
+    model: 'AgriBot',
+  })
+  window.dispatchEvent(new CustomEvent('activate-location-selection'))
 }
 
 function handleLocationSelected(): void {
   if (isLocationSelectionActive.value) {
-    isLocationSelectionActive.value = false;
+    isLocationSelectionActive.value = false
     // Optionally, add a message confirming location selection was processed
     // messages.value.push({ text: "Location selection mode deactivated.", isSent: false, model: "AgriBot" });
   }
 }
 
 function startGeneralChat(): void {
-  farmDataMode.value = false;
-  contextType.value = ContextTypeEnum.GENERAL;
+  farmDataMode.value = false
+  contextType.value = ContextTypeEnum.GENERAL
   messages.value.push({
     text: "I'll be happy to help with general farming questions. Keep in mind that selecting a specific location will allow me to provide more tailored advice.",
     isSent: false,
-    model: "AgriBot"
-  });
-  scrollToBottom(); // Ensure chat scrolls after this interaction
+    model: 'AgriBot',
+  })
+  scrollToBottom() // Ensure chat scrolls after this interaction
 }
 
 // Watch for the clicked point value to be loaded to proactively inform the user
 watch(
   () => productStore.clickedPoint,
   (newPoint, oldPoint) => {
-    console.log('[ChatWidget] productStore.clickedPoint watcher. New:', JSON.parse(JSON.stringify(newPoint)), 'Old:', JSON.parse(JSON.stringify(oldPoint)));
+    console.log(
+      '[ChatWidget] productStore.clickedPoint watcher. New:',
+      JSON.parse(JSON.stringify(newPoint)),
+      'Old:',
+      JSON.parse(JSON.stringify(oldPoint)),
+    )
 
     // Condition: Message should only be shown if the point is marked to be shown,
     // and it's not in location selection mode, and it's no longer loading.
-    if (newPoint && newPoint.show && !newPoint.isLoading && !isLocationSelectionActive.value) {
-
-      const justFinishedLoadingThisPoint = oldPoint?.isLoading === true &&
-                                          newPoint.longitude === oldPoint?.longitude &&
-                                          newPoint.latitude === oldPoint?.latitude;
+    if (
+      newPoint &&
+      newPoint.show &&
+      !newPoint.isLoading &&
+      !isLocationSelectionActive.value
+    ) {
+      const justFinishedLoadingThisPoint =
+        oldPoint?.isLoading === true &&
+        newPoint.longitude === oldPoint?.longitude &&
+        newPoint.latitude === oldPoint?.latitude
 
       // isNewPointInteraction helps identify if the click is on a new map location
-      const isNewPointInteraction = newPoint.longitude !== oldPoint?.longitude ||
-                                   newPoint.latitude !== oldPoint?.latitude ||
-                                   (oldPoint === null || oldPoint === undefined); // Also treat initial load as new
+      const isNewPointInteraction =
+        newPoint.longitude !== oldPoint?.longitude ||
+        newPoint.latitude !== oldPoint?.latitude ||
+        oldPoint === null ||
+        oldPoint === undefined // Also treat initial load as new
 
       if (newPoint.errorMessage) {
-        const lastMessageText = messages.value[messages.value.length - 1]?.text;
-        const potentialNewMessage = `Map data query issue: ${newPoint.errorMessage}`;
+        const lastMessageText = messages.value[messages.value.length - 1]?.text
+        const potentialNewMessage = `Map data query issue: ${newPoint.errorMessage}`
 
         // Show error if:
         // 1. We just finished loading this specific point and it resulted in an error.
         // 2. Or, it's an interaction with a new point that immediately has an error.
         // 3. Or, the error message itself has changed for the same point (and not just a re-trigger of the watcher).
-        if (justFinishedLoadingThisPoint || isNewPointInteraction || (lastMessageText !== potentialNewMessage && !oldPoint?.isLoading && newPoint.longitude === oldPoint?.longitude && newPoint.latitude === oldPoint?.latitude)) {
+        if (
+          justFinishedLoadingThisPoint ||
+          isNewPointInteraction ||
+          (lastMessageText !== potentialNewMessage &&
+            !oldPoint?.isLoading &&
+            newPoint.longitude === oldPoint?.longitude &&
+            newPoint.latitude === oldPoint?.latitude)
+        ) {
           // Avoid pushing the exact same error message if it's already the last one.
           if (lastMessageText !== potentialNewMessage) {
-             messages.value.push({
+            messages.value.push({
               text: potentialNewMessage,
               isSent: false,
               model: 'AgriBot',
-            });
-            scrollToBottom(); // Ensure chat scrolls
+            })
+            scrollToBottom() // Ensure chat scrolls
           }
         }
-        contextType.value = ContextTypeEnum.DATA_LOADED; // Consider a specific error context if available
+        contextType.value = ContextTypeEnum.DATA_LOADED // Consider a specific error context if available
       } else if (typeof newPoint.value === 'number') {
         // Show value if:
         // 1. We just finished loading this specific point and got a value.
         // 2. Or, it's an interaction with a new point that has a value.
         // 3. Or, the value for the same point has changed (e.g. due to product/date change and auto-refresh).
-        if (justFinishedLoadingThisPoint || isNewPointInteraction || (newPoint.value !== oldPoint?.value && !oldPoint?.isLoading && newPoint.longitude === oldPoint?.longitude && newPoint.latitude === oldPoint?.latitude)) {
-          const locationMessage = `For your selected point (Lat: ${newPoint.latitude?.toFixed(4)}, Lon: ${newPoint.longitude?.toFixed(4)}), the value is ${newPoint.value.toFixed(2)}.`;
+        if (
+          justFinishedLoadingThisPoint ||
+          isNewPointInteraction ||
+          (newPoint.value !== oldPoint?.value &&
+            !oldPoint?.isLoading &&
+            newPoint.longitude === oldPoint?.longitude &&
+            newPoint.latitude === oldPoint?.latitude)
+        ) {
+          const locationMessage = `For your selected point (Lat: ${newPoint.latitude?.toFixed(4)}, Lon: ${newPoint.longitude?.toFixed(4)}), the value is ${newPoint.value.toFixed(2)}.`
           // Avoid pushing the exact same data message if it's already the last one and for the same point/value.
-          const lastMessageText = messages.value[messages.value.length - 1]?.text;
+          const lastMessageText =
+            messages.value[messages.value.length - 1]?.text
           if (lastMessageText !== locationMessage) {
-            messages.value.push({ text: locationMessage, isSent: false, model: 'AgriBot' });
-            scrollToBottom(); // Ensure chat scrolls
+            messages.value.push({
+              text: locationMessage,
+              isSent: false,
+              model: 'AgriBot',
+            })
+            scrollToBottom() // Ensure chat scrolls
           }
-          contextType.value = ContextTypeEnum.DATA_LOADED;
+          contextType.value = ContextTypeEnum.DATA_LOADED
         }
       }
     }
   },
-  { deep: true }
-);
+  { deep: true },
+)
 </script>
 
 <style scoped>

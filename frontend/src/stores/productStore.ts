@@ -60,7 +60,7 @@ export const useProductStore = defineStore('productStore', {
       isLoading: false,
       error: null,
       currentMapSelectionCoordinates: null, // Initialize new state
-    } as productState),
+    }) as productState,
 
   getters: {
     getSelectedProduct(state): selectedProductType {
@@ -112,7 +112,7 @@ export const useProductStore = defineStore('productStore', {
         // --- Genuine Product Switch ---
         const availableDataStore = useAvailableDataStore()
         const fullProductDetails = availableDataStore.getProducts.find(
-          (p) => p.product_id === newProductId
+          (p) => p.product_id === newProductId,
         )
 
         this.selectedProduct = {
@@ -137,7 +137,7 @@ export const useProductStore = defineStore('productStore', {
         ) {
           const availableDataStore = useAvailableDataStore()
           const fullProductDetails = availableDataStore.getProducts.find(
-            (p) => p.product_id === newProductId
+            (p) => p.product_id === newProductId,
           )
           if (fullProductDetails) {
             this.selectedProduct.display_name = fullProductDetails.display_name
@@ -209,7 +209,7 @@ export const useProductStore = defineStore('productStore', {
       try {
         if (!currentProductId) {
           console.warn(
-            'loadProductEntries: No product selected, skipping data load.'
+            'loadProductEntries: No product selected, skipping data load.',
           )
           this.productEntries = { results: [] }
           this.selectedProduct.date = undefined
@@ -259,7 +259,7 @@ export const useProductStore = defineStore('productStore', {
       } catch (error: unknown) {
         console.error(
           `Error in loadProductEntries for product ${currentProductId}:`,
-          error
+          error,
         )
         if (error instanceof Error) {
           this.error = error.message
@@ -283,7 +283,7 @@ export const useProductStore = defineStore('productStore', {
       this.currentMapSelectionCoordinates = { longitude, latitude }
       console.log(
         '[productStore] currentMapSelectionCoordinates updated:',
-        JSON.parse(JSON.stringify(this.currentMapSelectionCoordinates))
+        JSON.parse(JSON.stringify(this.currentMapSelectionCoordinates)),
       )
     },
 
@@ -292,14 +292,14 @@ export const useProductStore = defineStore('productStore', {
      */
     async loadDataForClickedPointViaPolygon(
       longitude: number,
-      latitude: number
+      latitude: number,
     ) {
       console.log(
-        `[productStore] loadDataForClickedPointViaPolygon called for Lon: ${longitude}, Lat: ${latitude}. Current product: ${this.selectedProduct.product_id}, Date: ${this.selectedProduct.date}`
+        `[productStore] loadDataForClickedPointViaPolygon called for Lon: ${longitude}, Lat: ${latitude}. Current product: ${this.selectedProduct.product_id}, Date: ${this.selectedProduct.date}`,
       )
       if (!this.selectedProduct.product_id) {
         console.warn(
-          '[productStore] loadDataForClickedPointViaPolygon: No product selected.'
+          '[productStore] loadDataForClickedPointViaPolygon: No product selected.',
         )
         this.clickedPoint = {
           ...this.clickedPoint,
@@ -313,7 +313,7 @@ export const useProductStore = defineStore('productStore', {
         }
         console.log(
           '[productStore] clickedPoint updated (no product):',
-          JSON.parse(JSON.stringify(this.clickedPoint))
+          JSON.parse(JSON.stringify(this.clickedPoint)),
         )
         return
       }
@@ -356,7 +356,7 @@ export const useProductStore = defineStore('productStore', {
             cropmask_id: cropmask_id || 'no-mask', // Ensure cropmask_id defaults to 'no-mask' if undefined
             ...otherProductParams, // Include any other relevant parameters from selectedProduct
           },
-          polygon
+          polygon,
         )
 
         let extractedValue: number | null = null
@@ -376,7 +376,7 @@ export const useProductStore = defineStore('productStore', {
               extractedValue = props.value
             else {
               const numericProps = Object.values(props).filter(
-                (v) => typeof v === 'number'
+                (v) => typeof v === 'number',
               )
               if (numericProps.length === 1)
                 extractedValue = numericProps[0] as number
@@ -405,7 +405,7 @@ export const useProductStore = defineStore('productStore', {
           }
           console.log(
             '[productStore] clickedPoint updated (success):',
-            JSON.parse(JSON.stringify(this.clickedPoint))
+            JSON.parse(JSON.stringify(this.clickedPoint)),
           )
         } else {
           this.clickedPoint = {
@@ -419,7 +419,7 @@ export const useProductStore = defineStore('productStore', {
           }
           console.log(
             '[productStore] clickedPoint updated (error/no value):',
-            JSON.parse(JSON.stringify(this.clickedPoint))
+            JSON.parse(JSON.stringify(this.clickedPoint)),
           )
         }
       } catch (caughtError: unknown) {
@@ -451,7 +451,7 @@ export const useProductStore = defineStore('productStore', {
         }
         console.log(
           '[productStore] clickedPoint updated (exception):',
-          JSON.parse(JSON.stringify(this.clickedPoint))
+          JSON.parse(JSON.stringify(this.clickedPoint)),
         )
       }
     },
@@ -477,7 +477,7 @@ export const useProductStore = defineStore('productStore', {
         const tileLayerUrl = computeTileLayerURL(
           this.selectedProduct.product_id,
           this.selectedProduct.date,
-          this.selectedProduct.cropmask_id // Pass cropmask_id if available
+          this.selectedProduct.cropmask_id, // Pass cropmask_id if available
         )
         return tileLayerUrl
       }

@@ -1,11 +1,12 @@
 {
   "name": "ag-advisor-frontend",
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "serve": "vite preview",
-    "lint": "eslint --ext .js,.vue,.ts --ignore-path ../.gitignore --fix src",
+    "lint": "eslint --fix src",
     "format": "prettier .  --write"
   },
   "dependencies": {
@@ -13,6 +14,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.6",
-    "@types/dompurify": "^3.2.0"
+    "eslint-define-config": "^2.1.0"
   }
 }

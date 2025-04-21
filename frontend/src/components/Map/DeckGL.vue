@@ -2,30 +2,37 @@
 instance, view state, and layer rendering. * Integrates with a Mapbox map,
 typically provided as a child component. */
 <script setup lang="ts">
-import { viewStateType } from '@/shared';
-import { DECKGL_SETTINGS } from '@/utils/defaultSettings';
+import { viewStateType } from '@/shared'
+import { DECKGL_SETTINGS } from '@/utils/defaultSettings'
 // Import necessary types from Deck.gl
-import { Deck, type PickingInfo, type Layer } from '@deck.gl/core';
-import { onMounted, onBeforeUnmount, provide, reactive, useAttrs, watch } from 'vue';
+import { Deck, type PickingInfo, type Layer } from '@deck.gl/core'
+import {
+  onMounted,
+  onBeforeUnmount,
+  provide,
+  reactive,
+  useAttrs,
+  watch,
+} from 'vue'
 
 /**
  * Captures non-prop attributes passed to this component.
  * These can be spread onto the Deck.gl instance if needed.
  */
-const attrs = useAttrs();
+const attrs = useAttrs()
 
 /**
  * Holds the Deck.gl instance. Initialized in `onMounted`.
  */
-let deckInstance: Deck | null = null;
+let deckInstance: Deck | null = null
 
 /**
  * Defines the events emitted by this component.
  * @emits click - Emitted when the Deck.gl canvas is clicked, providing Deck.gl's `PickingInfo` and the original MouseEvent.
  */
 const emit = defineEmits<{
-  (e: 'click', payload: { info: PickingInfo; event: Event }): void;
-}>();
+  (e: 'click', payload: { info: PickingInfo; event: Event }): void
+}>()
 
 // Define component props to accept isSelectingLocation for cursor management
 const props = defineProps({
@@ -33,7 +40,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-});
+})
 
 /**
  * Reactive state for the Deck.gl view (camera position, zoom, etc.).
@@ -41,12 +48,12 @@ const props = defineProps({
  * @type {viewStateType}
  */
 const viewState = reactive<viewStateType>({
-  latitude: 36.102376,    // Default initial latitude
-  longitude: -80.649277,   // Default initial longitude
-  zoom: 4,                 // Default initial zoom level
-  pitch: 0,                // Default initial pitch (0 for 2D view)
-  bearing: 0,              // Default initial bearing (0 for North up)
-});
+  latitude: 36.102376, // Default initial latitude
+  longitude: -80.649277, // Default initial longitude
+  zoom: 4, // Default initial zoom level
+  pitch: 0, // Default initial pitch (0 for 2D view)
+  bearing: 0, // Default initial bearing (0 for North up)
+})
 
 /**
  * Vue lifecycle hook called when the component is mounted.
@@ -60,23 +67,23 @@ onMounted(() => {
     controller: true, // Enable Deck.gl's built-in view controller (for pan, zoom, rotate)
     onViewStateChange: ({ viewState: newDeckViewState }) => {
       // Cast to viewStateType for type safety
-      handleViewChange(newDeckViewState as viewStateType);
+      handleViewChange(newDeckViewState as viewStateType)
     },
     onClick: (info: PickingInfo, event: Event) => {
       // Emit a custom 'click' event with Deck.gl picking info and the original event
-      emit('click', { info, event });
+      emit('click', { info, event })
     },
     // Add getCursor callback to change cursor style based on isSelectingLocation prop
     getCursor: ({ isDragging }: { isDragging: boolean }) => {
       if (props.isSelectingLocation) {
-        return 'crosshair'; // Use crosshair when selecting location
+        return 'crosshair' // Use crosshair when selecting location
       }
-      return isDragging ? 'grabbing' : 'grab'; // Default grab/grabbing cursors
+      return isDragging ? 'grabbing' : 'grab' // Default grab/grabbing cursors
     },
     ...DECKGL_SETTINGS, // Spread default Deck.gl settings
     ...attrs, // Spread any additional attributes passed to this component
-  });
-});
+  })
+})
 
 /**
  * Vue lifecycle hook called before the component is unmounted.
@@ -84,10 +91,10 @@ onMounted(() => {
  */
 onBeforeUnmount(() => {
   if (deckInstance) {
-    deckInstance.finalize();
-    deckInstance = null;
+    deckInstance.finalize()
+    deckInstance = null
   }
-});
+})
 
 /**
  * Handles view state changes originating from Deck.gl interactions (e.g., user panning/zooming).
@@ -95,11 +102,11 @@ onBeforeUnmount(() => {
  * @param {viewStateType} newDeckViewState - The new view state from Deck.gl.
  */
 function handleViewChange(newDeckViewState: viewStateType): void {
-  viewState.latitude = newDeckViewState.latitude;
-  viewState.longitude = newDeckViewState.longitude;
-  viewState.zoom = newDeckViewState.zoom;
-  viewState.pitch = newDeckViewState.pitch;
-  viewState.bearing = newDeckViewState.bearing;
+  viewState.latitude = newDeckViewState.latitude
+  viewState.longitude = newDeckViewState.longitude
+  viewState.zoom = newDeckViewState.zoom
+  viewState.pitch = newDeckViewState.pitch
+  viewState.bearing = newDeckViewState.bearing
 }
 
 /**
@@ -110,13 +117,13 @@ function handleViewChange(newDeckViewState: viewStateType): void {
  */
 function updateLayers(newLayers: Layer[]): void {
   if (deckInstance) {
-    deckInstance.setProps({ layers: newLayers });
+    deckInstance.setProps({ layers: newLayers })
   }
 }
 
 // Provide the reactive viewState and the updateLayers function to child components.
-provide('viewState', viewState);
-provide('updateLayers', updateLayers); // Ensure clarity in provided function name
+provide('viewState', viewState)
+provide('updateLayers', updateLayers) // Ensure clarity in provided function name
 
 // Watch for changes in the isSelectingLocation prop to update the cursor dynamically
 watch(
@@ -126,15 +133,16 @@ watch(
       // Update the getCursor prop when isSelectingLocation changes
       deckInstance.setProps({
         getCursor: ({ isDragging }: { isDragging: boolean }) => {
-          if (newValue) { // Use newValue from the watcher argument
-            return 'crosshair';
+          if (newValue) {
+            // Use newValue from the watcher argument
+            return 'crosshair'
           }
-          return isDragging ? 'grabbing' : 'grab';
+          return isDragging ? 'grabbing' : 'grab'
         },
-      });
+      })
     }
-  }
-);
+  },
+)
 </script>
 
 <template>

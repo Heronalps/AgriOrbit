@@ -1,24 +1,27 @@
 <script setup lang="ts">
-import { useAvailableDataStore, type CropmaskResultItem } from '../stores/availableDataStore';
-import { useProductStore } from '../stores/productStore'; // Removed 'type Product'
-import { useMapStore } from '../stores/mapStore';
-import SelectMenu from './SelectMenu.vue';
-import Datepicker from '@vuepic/vue-datepicker';
-import '@vuepic/vue-datepicker/dist/main.css';
-import { watch, ref, computed, Ref } from 'vue';
-import { useDraggableResizable } from '../composables/useDraggableResizable';
+import {
+  useAvailableDataStore,
+  type CropmaskResultItem,
+} from '../stores/availableDataStore'
+import { useProductStore } from '../stores/productStore' // Removed 'type Product'
+import { useMapStore } from '../stores/mapStore'
+import SelectMenu from './SelectMenu.vue'
+import Datepicker from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
+import { watch, ref, computed, Ref } from 'vue'
+import { useDraggableResizable } from '../composables/useDraggableResizable'
 
 // Initialize stores
-const availableDataStore = useAvailableDataStore();
-const productStore = useProductStore();
-const mapStore = useMapStore();
+const availableDataStore = useAvailableDataStore()
+const productStore = useProductStore()
+const mapStore = useMapStore()
 
 // Draggable and Resizable Composable
-const controlPanelRef = ref<HTMLElement | null>(null);
+const controlPanelRef = ref<HTMLElement | null>(null)
 
 // Initial dimensions - keep these consistent
-const initialWidth = 384;
-const initialHeight = 480; // Or your preferred initial height
+const initialWidth = 384
+const initialHeight = 480 // Or your preferred initial height
 
 const { position, dimensions, startDrag, startResize } = useDraggableResizable(
   controlPanelRef,
@@ -26,22 +29,22 @@ const { position, dimensions, startDrag, startResize } = useDraggableResizable(
     x: window.innerWidth - initialWidth - 10, // Consistent 10px buffer from the right edge
     y: window.innerHeight - initialHeight - 10, // Consistent 10px buffer from the bottom edge
   },
-  { width: initialWidth, height: initialHeight }
-);
+  { width: initialWidth, height: initialHeight },
+)
 
 /**
  * Represents an item in the basemap selection dropdown.
  */
 interface BasemapOption {
-  id: string;
-  name: string;
-  [key: string]: any; // Index signature for SelectMenu compatibility
+  id: string
+  name: string
+  [key: string]: any // Index signature for SelectMenu compatibility
 }
 
 /**
  * Local reactive state for the datepicker's v-model.
  */
-const selectedDate: Ref<Date | null> = ref<Date | null>(null);
+const selectedDate: Ref<Date | null> = ref<Date | null>(null)
 
 /**
  * Available basemap options for the SelectMenu.
@@ -55,34 +58,36 @@ const availableBasemaps: Ref<BasemapOption[]> = ref<BasemapOption[]>([
   { id: 'satellite-streets', name: 'Mapbox Satellite Streets' },
   { id: 'navigation-day', name: 'Mapbox Navigation Day' },
   { id: 'navigation-night', name: 'Mapbox Navigation Night' },
-]);
+])
 
 // ... existing watcher for selectedDate synchronization ...
 watch(
   () => productStore.getSelectedProduct.date,
   (newStoreDate?: string) => {
     if (newStoreDate) {
-      const newDateObj = new Date(newStoreDate.replace(/-/g, '/'));
+      const newDateObj = new Date(newStoreDate.replace(/-/g, '/'))
       if (
         !selectedDate.value ||
         selectedDate.value.getTime() !== newDateObj.getTime()
       ) {
-        selectedDate.value = newDateObj;
+        selectedDate.value = newDateObj
       }
     } else {
       if (selectedDate.value !== null) {
-        selectedDate.value = null;
+        selectedDate.value = null
       }
     }
   },
-  { immediate: true }
-);
+  { immediate: true },
+)
 
 // ... existing watcher for product_id changes ...
 watch(
   () => productStore.getSelectedProduct.product_id,
-  () => { /* ... */ }
-);
+  () => {
+    /* ... */
+  },
+)
 
 // ... existing watcher for basemap changes ...
 watch(
@@ -90,132 +95,141 @@ watch(
   (newBasemap?: string) => {
     if (newBasemap) {
       const dropdown = document.querySelector(
-        'select[data-basemap-selector="true"]'
-      ) as HTMLSelectElement | null;
+        'select[data-basemap-selector="true"]',
+      ) as HTMLSelectElement | null
       if (dropdown && dropdown.value !== newBasemap) {
-        dropdown.value = newBasemap;
+        dropdown.value = newBasemap
       }
     }
   },
-  { immediate: true }
-);
-
+  { immediate: true },
+)
 
 const handleProductSelectionEvent = (value: unknown) => {
   if (typeof value === 'string' && value) {
-    productStore.setProduct(value);
+    productStore.setProduct(value)
   }
-};
+}
 
 const handleCropmaskSelectionEvent = (value: unknown) => {
-  if (typeof value === 'string') { // Allow empty string for "no cropmask"
-    productStore.setCropmask(value);
+  if (typeof value === 'string') {
+    // Allow empty string for "no cropmask"
+    productStore.setCropmask(value)
   } else if (value === null || value === undefined) {
-    productStore.setCropmask(''); // Explicitly set to empty string
+    productStore.setCropmask('') // Explicitly set to empty string
   }
-};
+}
 
 const handleBasemapSelectionEvent = (value: unknown) => {
   if (typeof value === 'string' && value) {
-    mapStore.setBasemap(value);
+    mapStore.setBasemap(value)
   }
-};
+}
 
 // ... existing handleDateSelection, onDatepickerDateUpdate, dateFormat ...
-const handleDateSelection = async (dateFromPicker: Date | null): Promise<void> => {
+const handleDateSelection = async (
+  dateFromPicker: Date | null,
+): Promise<void> => {
   if (dateFromPicker instanceof Date && !isNaN(dateFromPicker.getTime())) {
-    const day = dateFromPicker.getDate().toString().padStart(2, '0');
-    const month = (dateFromPicker.getMonth() + 1).toString().padStart(2, '0');
-    const year = dateFromPicker.getFullYear();
-    const storeDateString = `${year}/${month}/${day}`;
-    await productStore.setDate(storeDateString);
+    const day = dateFromPicker.getDate().toString().padStart(2, '0')
+    const month = (dateFromPicker.getMonth() + 1).toString().padStart(2, '0')
+    const year = dateFromPicker.getFullYear()
+    const storeDateString = `${year}/${month}/${day}`
+    await productStore.setDate(storeDateString)
   } else if (dateFromPicker === null) {
-    await productStore.setDate(undefined);
+    await productStore.setDate(undefined)
   } else {
     console.warn(
       '[ControlPanel.vue EVENT @update:modelValue]: Received invalid date or unexpected value from datepicker:',
-      dateFromPicker
-    );
+      dateFromPicker,
+    )
   }
-};
+}
 
 const onDatepickerDateUpdate = (newDateVal: Date | null): void => {
-  handleDateSelection(newDateVal);
-};
+  handleDateSelection(newDateVal)
+}
 
 const dateFormat = (date: Date): string => {
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  return `${year}-${month}-${day}`;
-};
+  const day = date.getDate().toString().padStart(2, '0')
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const year = date.getFullYear()
+  return `${year}-${month}-${day}`
+}
 
 // ... existing computed properties: availableDates, currentDateStr, currentIndex, canGoPrevious, canGoNext ...
-const availableDates = computed<string[]>(() => productStore.getProductDates || []);
+const availableDates = computed<string[]>(
+  () => productStore.getProductDates || [],
+)
 const currentDateStr = computed<string | undefined>(
-  () => productStore.getSelectedProduct.date
-);
+  () => productStore.getSelectedProduct.date,
+)
 const currentIndex = computed<number>(() => {
-  if (!currentDateStr.value || !availableDates.value || availableDates.value.length === 0) {
-    return -1;
+  if (
+    !currentDateStr.value ||
+    !availableDates.value ||
+    availableDates.value.length === 0
+  ) {
+    return -1
   }
-  const normalizedCurrentDate = currentDateStr.value.replace(/-/g, '/');
+  const normalizedCurrentDate = currentDateStr.value.replace(/-/g, '/')
   return availableDates.value.findIndex(
-    (d) => d.replace(/-/g, '/') === normalizedCurrentDate
-  );
-});
+    (d) => d.replace(/-/g, '/') === normalizedCurrentDate,
+  )
+})
 const canGoPrevious = computed<boolean>(() => {
-  return currentIndex.value > 0;
-});
+  return currentIndex.value > 0
+})
 const canGoNext = computed<boolean>(() => {
   return (
     currentIndex.value !== -1 &&
     currentIndex.value < availableDates.value.length - 1
-  );
-});
+  )
+})
 
 // ... existing date navigation functions: goToPreviousDate, goToNextDate ...
 const goToPreviousDate = async (): Promise<void> => {
   if (canGoPrevious.value) {
-    const prevDate = availableDates.value[currentIndex.value - 1];
+    const prevDate = availableDates.value[currentIndex.value - 1]
     if (prevDate) {
-      await productStore.setDate(prevDate.replace(/-/g, '/'));
+      await productStore.setDate(prevDate.replace(/-/g, '/'))
     }
   }
-};
+}
 
 const goToNextDate = async (): Promise<void> => {
   if (canGoNext.value) {
-    const nextDate = availableDates.value[currentIndex.value + 1];
+    const nextDate = availableDates.value[currentIndex.value + 1]
     if (nextDate) {
-      await productStore.setDate(nextDate.replace(/-/g, '/'));
+      await productStore.setDate(nextDate.replace(/-/g, '/'))
     }
   }
-};
+}
 
 /**
  * Computed property to get the list of products for the SelectMenu.
  * Using any[] for now to avoid complex type issues, assuming structure matches SelectMenu needs.
  */
 const productsForSelect = computed<any[]>(() => {
-    return availableDataStore.getProducts || [];
-});
+  return availableDataStore.getProducts || []
+})
 
 /**
  * Computed property to get the list of cropmasks for the SelectMenu.
  * Assuming CropmaskResultItem is compatible or SelectMenu is flexible.
  */
 const cropmasksForSelect = computed<CropmaskResultItem[]>(() => {
-    return availableDataStore.getCropmasks || [];
-});
-
+  return availableDataStore.getCropmasks || []
+})
 
 /**
  * Computed property for the `allowed-dates` prop of the Datepicker.
  */
 const allowedDatesForPicker = computed<string[]>(() => {
-  return (productStore.getProductDates || []).map(dateStr => dateStr.replace(/-/g, '/'));
-});
+  return (productStore.getProductDates || []).map((dateStr) =>
+    dateStr.replace(/-/g, '/'),
+  )
+})
 </script>
 
 <template>
@@ -229,10 +243,7 @@ const allowedDatesForPicker = computed<string[]>(() => {
       height: dimensions.height + 'px',
     }"
   >
-    <div
-      class="control-panel-header"
-      @mousedown="startDrag"
-    >
+    <div class="control-panel-header" @mousedown="startDrag">
       <h4>Map Controls</h4>
     </div>
 
@@ -313,10 +324,7 @@ const allowedDatesForPicker = computed<string[]>(() => {
         />
       </div>
     </div>
-    <div
-      class="resize-handle resize-handle-br"
-      @mousedown="startResize"
-    />
+    <div class="resize-handle resize-handle-br" @mousedown="startResize" />
   </div>
 </template>
 
@@ -413,7 +421,6 @@ const allowedDatesForPicker = computed<string[]>(() => {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* blue-500 focus ring */
 }
 
-
 .resize-handle {
   position: absolute;
   width: 20px;
@@ -438,19 +445,19 @@ const allowedDatesForPicker = computed<string[]>(() => {
 /* Datepicker theme overrides for dark mode */
 :deep(.dp__theme_light) {
   --dp-background-color: #374151; /* gray-700 */
-  --dp-text-color: #d1d5db;       /* gray-300 */
-  --dp-hover-color: #4b5563;      /* gray-600 */
+  --dp-text-color: #d1d5db; /* gray-300 */
+  --dp-hover-color: #4b5563; /* gray-600 */
   --dp-hover-text-color: #f3f4f6; /* gray-100 */
   --dp-hover-icon-color: #9ca3af; /* gray-400 */
-  --dp-primary-color: #3b82f6;    /* blue-500 */
+  --dp-primary-color: #3b82f6; /* blue-500 */
   --dp-primary-text-color: #ffffff;
-  --dp-secondary-color: #6b7280;  /* gray-500 */
-  --dp-border-color: #4b5563;     /* gray-600 */
-  --dp-menu-border-color: #374151;/* gray-700 */
-  --dp-border-color-hover: #6b7280;/* gray-500 */
-  --dp-disabled-color: #4b5563;   /* gray-600 */
-  --dp-icon-color: #9ca3af;       /* gray-400 */
-  --dp-danger-color: #ef4444;     /* red-500 */
+  --dp-secondary-color: #6b7280; /* gray-500 */
+  --dp-border-color: #4b5563; /* gray-600 */
+  --dp-menu-border-color: #374151; /* gray-700 */
+  --dp-border-color-hover: #6b7280; /* gray-500 */
+  --dp-disabled-color: #4b5563; /* gray-600 */
+  --dp-icon-color: #9ca3af; /* gray-400 */
+  --dp-danger-color: #ef4444; /* red-500 */
   --dp-highlight-color: rgba(59, 130, 246, 0.2); /* blue-500 with opacity */
   --dp-input-padding: 8px 12px; /* Match other inputs */
   --dp-font-size: 1rem;
@@ -473,5 +480,4 @@ const allowedDatesForPicker = computed<string[]>(() => {
   background-color: #4b5563; /* gray-600 */
   color: #f3f4f6; /* gray-100 */
 }
-
 </style>

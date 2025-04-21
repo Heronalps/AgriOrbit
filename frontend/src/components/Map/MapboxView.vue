@@ -94,14 +94,14 @@ onMounted(() => {
   const mapContainer = document.getElementById('map')
   if (!mapContainer) {
     console.error(
-      "[MapboxView.vue] Map container element with ID 'map' not found in the DOM."
+      "[MapboxView.vue] Map container element with ID 'map' not found in the DOM.",
     )
     return
   }
 
   if (!props.accessToken) {
     console.error(
-      '[MapboxView.vue] Mapbox access token is required but was not provided.'
+      '[MapboxView.vue] Mapbox access token is required but was not provided.',
     )
     return
   }
@@ -109,7 +109,7 @@ onMounted(() => {
 
   if (!viewState) {
     console.error(
-      '[MapboxView.vue] ViewState was not injected. Map cannot be initialized without it.'
+      '[MapboxView.vue] ViewState was not injected. Map cannot be initialized without it.',
     )
     return
   }
@@ -180,19 +180,19 @@ onMounted(() => {
           console.warn(
             `[MapboxView.vue] Unrecognized initial map style name: '${initialStyleName}'. Could not map to a known basemapId. Style URL: ${
               currentStyle?.url || 'N/A'
-            }`
+            }`,
           )
       }
       if (initialBasemapId) {
         mapStore.selectedBasemap = initialBasemapId
       } else {
         console.warn(
-          `[MapboxView.vue] Could not determine a basemapId for style name: '${initialStyleName}'. Check style name to basemapId mappings.`
+          `[MapboxView.vue] Could not determine a basemapId for style name: '${initialStyleName}'. Check style name to basemapId mappings.`,
         )
       }
     } else {
       console.warn(
-        '[MapboxView.vue] Initial map style name is undefined (props.mapStyle might be missing or style has no name). Basemap synchronization might be affected.'
+        '[MapboxView.vue] Initial map style name is undefined (props.mapStyle might be missing or style has no name). Basemap synchronization might be affected.',
       )
     }
 
@@ -206,7 +206,7 @@ onMounted(() => {
   initialMapInstance.on('error', (errorEvent) => {
     console.error(
       '[MapboxView.vue] A Mapbox GL error occurred:',
-      errorEvent?.error
+      errorEvent?.error,
     )
   })
 })
@@ -219,7 +219,7 @@ onBeforeUnmount(() => {
   if (darkModeMediaQuery) {
     darkModeMediaQuery.removeEventListener(
       'change',
-      handleSystemColorSchemeChange
+      handleSystemColorSchemeChange,
     )
     darkModeMediaQuery = null
   }
@@ -246,7 +246,7 @@ watch(
       })
     }
   },
-  { deep: true } // Deep watch is necessary for objects like viewState
+  { deep: true }, // Deep watch is necessary for objects like viewState
 )
 
 /**
@@ -286,7 +286,7 @@ watch(
         default:
           // Do not set a default styleUrl; let the map retain its current style.
           console.warn(
-            `[MapboxView.vue] Unknown basemap ID: '${newBasemapId}'. Cannot set style. Ensure ControlPanel provides valid IDs.`
+            `[MapboxView.vue] Unknown basemap ID: '${newBasemapId}'. Cannot set style. Ensure ControlPanel provides valid IDs.`,
           )
         // styleUrl remains undefined
       }
@@ -304,15 +304,12 @@ watch(
         })
       }
     }
-  }
+  },
 )
 </script>
 
 <template>
-  <div
-    id="map"
-    class="w-full h-full absolute top-0 left-0"
-  />
+  <div id="map" class="w-full h-full absolute top-0 left-0" />
   <!-- The ref="map" on the div is not necessary when using getElementById for map container -->
 </template>
 

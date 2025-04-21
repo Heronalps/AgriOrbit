@@ -33,7 +33,7 @@ export function useChatService(
   farmDataMode: Ref<boolean>,
   contextType: Ref<ContextTypeEnum>,
   messages: Ref<Message[]>,
-  lastProductId: Ref<string>
+  lastProductId: Ref<string>,
 ) {
   const locationStore = useLocationStore()
   const productStore = useProductStore()
@@ -49,7 +49,7 @@ export function useChatService(
    */
   async function formatMessage(
     textInput: string | unknown,
-    isUserInput = false
+    isUserInput = false,
   ): Promise<string> {
     let textToProcess: string
 
@@ -149,7 +149,7 @@ export function useChatService(
    */
   async function handleErrorResponse(
     response: Response,
-    messageToUpdate?: Message
+    messageToUpdate?: Message,
   ): Promise<void> {
     let errorText = `Error: ${response.status} ${response.statusText}`
     try {
@@ -215,7 +215,7 @@ export function useChatService(
           selectedProduct?.product_id ||
           'the current data layer'
         let pointContext = `(Selected map data: Value ${clickedPoint.value.toFixed(
-          2
+          2,
         )} for ${productNameForPoint}`
         if (selectedProduct?.date) {
           pointContext += ` on ${selectedProduct.date}`
@@ -225,7 +225,7 @@ export function useChatService(
           clickedPoint.latitude !== undefined
         ) {
           pointContext += ` at Lon: ${clickedPoint.longitude.toFixed(
-            4
+            4,
           )}, Lat: ${clickedPoint.latitude.toFixed(4)}`
         }
         pointContext += '.) '
@@ -238,7 +238,7 @@ export function useChatService(
     if (locationStore.targetLocation) {
       const { latitude, longitude } = locationStore.targetLocation
       context += `(Farm location: Lat ${latitude.toFixed(
-        4
+        4,
       )}, Lon ${longitude.toFixed(4)}. `
       const currentDate = new Date()
       const month = currentDate.getMonth()
@@ -267,7 +267,7 @@ export function useChatService(
     const thinkingMessageText = 'AgriBot is thinking...'
     const formattedThinkingMessage = await formatMessage(
       thinkingMessageText,
-      false
+      false,
     )
     const botResponseInProgressMessage: Message = {
       text: formattedThinkingMessage,
@@ -297,7 +297,7 @@ export function useChatService(
       if (!response.body) {
         botResponseInProgressMessage.text = await formatMessage(
           'Received an empty response from the server.',
-          false
+          false,
         )
         botResponseInProgressMessage.model = 'System'
         scrollToBottom()
@@ -348,7 +348,7 @@ export function useChatService(
           }
           botResponseInProgressMessage.text = await formatMessage(
             currentStreamedText,
-            false
+            false,
           )
           scrollToBottom()
         }
@@ -356,7 +356,7 @@ export function useChatService(
       // Ensure final text is set
       botResponseInProgressMessage.text = await formatMessage(
         currentStreamedText,
-        false
+        false,
       )
       scrollToBottom()
     } catch (error) {
@@ -366,7 +366,7 @@ export function useChatService(
       }.`
       botResponseInProgressMessage.text = await formatMessage(
         errorMessageText,
-        false
+        false,
       )
       botResponseInProgressMessage.model = 'System'
     } finally {
@@ -408,7 +408,7 @@ export function useChatService(
         contextType.value = ContextTypeEnum.FARM_SELECTED
 
         let messageText = `Great! I now have your farm location at latitude ${newLocation.latitude.toFixed(
-          4
+          4,
         )} and longitude ${newLocation.longitude.toFixed(4)}.`
 
         const { selectedProduct } = productStore
@@ -434,7 +434,7 @@ export function useChatService(
           messages.value.push({
             text: await formatMessage(
               "Your farm location has been cleared. We're back to general chat.",
-              false
+              false,
             ),
             isSent: false,
             model: 'AgriBot',
@@ -443,14 +443,14 @@ export function useChatService(
       }
       scrollToBottom()
     },
-    { deep: true }
+    { deep: true },
   )
 
   watch(
     () => productStore.selectedProduct,
     async (
       newProduct: selectedProductType | null,
-      oldProduct: selectedProductType | null
+      oldProduct: selectedProductType | null,
     ) => {
       if (newProduct && newProduct.product_id) {
         if (
@@ -497,7 +497,7 @@ export function useChatService(
         }
       }
     },
-    { deep: true }
+    { deep: true },
   )
 
   return {

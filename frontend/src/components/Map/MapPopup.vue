@@ -48,31 +48,14 @@ function hidePopup(): void {
 <template>
   <div
     v-if="productStore.clickedPoint && productStore.clickedPoint.show"
-    class="
-      absolute
-      font-bold
-      text-lg
-      p-2
-      rounded-xl
-      flex flex-row
-      space-x-3
-      items-center
-      bg-white
-      shadow-lg
-    "
+    class="absolute font-bold text-lg p-2 rounded-xl flex flex-row space-x-3 items-center bg-white shadow-lg"
     :style="{ left: absX, top: absY, zIndex: 1001 }"
   >
     <p>{{ displayContent }}</p>
     <button
       type="button"
       aria-label="Close popup"
-      class="
-        text-gray-600
-        hover:text-gray-800
-        text-xs
-        cursor-pointer
-        focus:outline-none
-      "
+      class="text-gray-600 hover:text-gray-800 text-xs cursor-pointer focus:outline-none"
       @click="hidePopup"
     >
       X
@@ -100,7 +83,8 @@ function hidePopup(): void {
   align-items: center;
 }
 .shadow-lg {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 .text-gray-600 {

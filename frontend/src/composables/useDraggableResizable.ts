@@ -14,7 +14,7 @@ interface Dimensions {
 export function useDraggableResizable(
   elementRef: Ref<HTMLElement | null>, // Renamed from chatWidget
   initialPosition: Position,
-  initialDimensions: Dimensions
+  initialDimensions: Dimensions,
 ) {
   const position = ref<Position>({ ...initialPosition })
   const dimensions = ref<Dimensions>({ ...initialDimensions })
@@ -29,7 +29,8 @@ export function useDraggableResizable(
     event.preventDefault()
     isDragging.value = true
     initialMousePos.value = { x: event.clientX, y: event.clientY }
-    if (elementRef.value) { // Use elementRef
+    if (elementRef.value) {
+      // Use elementRef
       initialWidgetPos.value = {
         x: position.value.x,
         y: position.value.y,
@@ -62,7 +63,8 @@ export function useDraggableResizable(
     event.preventDefault()
     isResizing.value = true
     initialMousePos.value = { x: event.clientX, y: event.clientY }
-    if (elementRef.value) { // Use elementRef
+    if (elementRef.value) {
+      // Use elementRef
       initialWidgetDim.value = {
         width: dimensions.value.width,
         height: dimensions.value.height,
@@ -83,11 +85,11 @@ export function useDraggableResizable(
 
     dimensions.value.width = Math.max(
       minWidth,
-      initialWidgetDim.value.width + dx
+      initialWidgetDim.value.width + dx,
     )
     dimensions.value.height = Math.max(
       minHeight,
-      initialWidgetDim.value.height + dy
+      initialWidgetDim.value.height + dy,
     )
     adjustBounds() // Adjust bounds after resize
   }
@@ -120,8 +122,8 @@ export function useDraggableResizable(
     position.value.y = Math.min(currentY, maxY)
 
     // If the calculated position is less than padding (e.g. window too small), force to padding
-    if (position.value.x < padding) position.value.x = padding;
-    if (position.value.y < padding) position.value.y = padding;
+    if (position.value.x < padding) position.value.x = padding
+    if (position.value.y < padding) position.value.y = padding
   }
 
   const onWindowResize = () => {

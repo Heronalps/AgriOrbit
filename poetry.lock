@@ -1020,17 +1020,17 @@ typing-extensions = ">=4.7"
 
 [[package]]
 name = "langchain-openai"
-version = "0.3.16"
+version = "0.3.17"
 description = "An integration package connecting OpenAI and LangChain"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "langchain_openai-0.3.16-py3-none-any.whl", hash = "sha256:eae74a6758d38a26159c5fde5abf8ef313e6400efb01a08f12dd7410c9f4fd0f"},
-    {file = "langchain_openai-0.3.16.tar.gz", hash = "sha256:4e423e39d072f1432adc9430f2905fe635cc019f01ad1bdffa5ed8d0dda32149"},
+    {file = "langchain_openai-0.3.17-py3-none-any.whl", hash = "sha256:d4d9cf945e2453ee5895ccd12fd8a3ea9131a0f6130dcc21427c77cc2206b1c0"},
+    {file = "langchain_openai-0.3.17.tar.gz", hash = "sha256:10bcdfac3edb3dea4a8aabb12f01566e5ff8756634cc52aa169c62e4c4b73801"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.3.58,<1.0.0"
+langchain-core = ">=0.3.59,<1.0.0"
 openai = ">=1.68.2,<2.0.0"
 tiktoken = ">=0.7,<1"
 
@@ -1566,18 +1566,18 @@ type = ["mypy (>=1.14.1)"]
 
 [[package]]
 name = "pluggy"
-version = "1.5.0"
+version = "1.6.0"
 description = "plugin and hook calling mechanisms for python"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669"},
-    {file = "pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1"},
+    {file = "pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746"},
+    {file = "pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3"},
 ]
 
 [package.extras]
 dev = ["pre-commit", "tox"]
-testing = ["pytest", "pytest-benchmark"]
+testing = ["coverage", "pytest", "pytest-benchmark"]
 
 [[package]]
 name = "propcache"

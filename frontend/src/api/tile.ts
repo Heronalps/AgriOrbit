@@ -10,7 +10,7 @@ import { selectedProductType } from '@/shared'
  * (product_id or date) are missing.
  */
 export function computeTileLayerURL(
-  selectedProduct: selectedProductType
+  selectedProduct: selectedProductType,
 ): string | null {
   const { product_id, date, ...otherParams } = selectedProduct
 
@@ -30,7 +30,7 @@ export function computeTileLayerURL(
   if (product_id === undefined || date === undefined) {
     console.error(
       'Tile URL computation failed: Missing product_id or date.',
-      { product_id, date } // Log the problematic values
+      { product_id, date }, // Log the problematic values
     )
     return null
   }
@@ -39,19 +39,22 @@ export function computeTileLayerURL(
   // Dates are expected to be in a format that might contain '/', which are replaced with '-'.
   const tileURL = `${BASEURL}/tiles/${product_id}/${date.replaceAll(
     '/',
-    '-'
+    '-',
   )}/{z}/{x}/{y}.png?`
 
   // Convert the remaining parameters into a query string.
   // Ensure all parameter values are strings for URLSearchParams.
   const queryParams = new URLSearchParams(
-    Object.entries(paramsObject).reduce((acc, [key, value]) => {
-      if (value !== undefined && value !== null) {
-        // Only include defined, non-null values
-        acc[key] = String(value)
-      }
-      return acc
-    }, {} as Record<string, string>)
+    Object.entries(paramsObject).reduce(
+      (acc, [key, value]) => {
+        if (value !== undefined && value !== null) {
+          // Only include defined, non-null values
+          acc[key] = String(value)
+        }
+        return acc
+      },
+      {} as Record<string, string>,
+    ),
   ).toString()
 
   return tileURL + queryParams
@@ -74,7 +77,7 @@ export async function fetchTile(url: string): Promise<Response | null> {
     if (!response.ok) {
       // Log more details for failed requests.
       console.error(
-        `Tile request failed with status ${response.status} (${response.statusText}) for URL: ${url}`
+        `Tile request failed with status ${response.status} (${response.statusText}) for URL: ${url}`,
       )
       return null
     }

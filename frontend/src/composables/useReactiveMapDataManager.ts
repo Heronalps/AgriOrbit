@@ -18,7 +18,7 @@ export function useReactiveMapDataManager() {
           '[useReactiveMapDataManager] Watcher triggered. New values:',
           JSON.parse(JSON.stringify(newValues)),
           'Old values:',
-          JSON.parse(JSON.stringify(oldValues))
+          JSON.parse(JSON.stringify(oldValues)),
         )
 
         const { productId, date, coordinates } = newValues
@@ -39,24 +39,24 @@ export function useReactiveMapDataManager() {
           ) {
             console.log(
               '[useReactiveMapDataManager] Conditions met. Calling loadDataForClickedPointViaPolygon for pinned point:',
-              JSON.parse(JSON.stringify(coordinates))
+              JSON.parse(JSON.stringify(coordinates)),
             )
             await productStore.loadDataForClickedPointViaPolygon(
               coordinates.longitude,
-              coordinates.latitude
+              coordinates.latitude,
             )
           } else {
             console.log(
-              '[useReactiveMapDataManager] Watched values changed, but key data (productId, date, coordinates) for pinned point remains the same. No API call.'
+              '[useReactiveMapDataManager] Watched values changed, but key data (productId, date, coordinates) for pinned point remains the same. No API call.',
             )
           }
         } else {
           console.log(
-            '[useReactiveMapDataManager] Not all conditions met for reactive data load (productId, date, or coordinates missing).'
+            '[useReactiveMapDataManager] Not all conditions met for reactive data load (productId, date, or coordinates missing).',
           )
         }
       },
-      { deep: true } // Deep watch on coordinates
+      { deep: true }, // Deep watch on coordinates
     )
   })
 

@@ -70,7 +70,7 @@ provide('viewState', viewState) // Provide viewState to child components
 onMounted(() => {
   window.addEventListener(
     'activate-location-selection',
-    activateLocationSelection
+    activateLocationSelection,
   )
 })
 
@@ -81,7 +81,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener(
     'activate-location-selection',
-    activateLocationSelection
+    activateLocationSelection,
   )
   if (mapInstance.value) {
     mapInstance.value.off('sourcedata', bringMarkerToFront)
@@ -128,12 +128,12 @@ function handleClick(event: {
     info.coordinate.length >= 2
   ) {
     console.warn(
-      'MapView: mapInstance not available for unprojecting click. Falling back to Deck.gl coordinates.'
+      'MapView: mapInstance not available for unprojecting click. Falling back to Deck.gl coordinates.',
     )
     ;[longitude, latitude] = info.coordinate
   } else {
     console.warn(
-      'MapView: Click event does not contain valid coordinate data for any action.'
+      'MapView: Click event does not contain valid coordinate data for any action.',
     )
     return
   }
@@ -146,7 +146,7 @@ function handleClick(event: {
     isSetLocationMode.value = false // Exit explicit set location mode
     renderTargetMarker()
     window.dispatchEvent(
-      new CustomEvent('location-selected', { detail: { longitude, latitude } })
+      new CustomEvent('location-selected', { detail: { longitude, latitude } }),
     )
     // Data loading for this point will be handled by the reactive watcher for currentMapSelectionCoordinates
     // and the explicit call for the popup below.
@@ -157,7 +157,7 @@ function handleClick(event: {
     productStore.setCurrentMapSelectionCoordinates(longitude, latitude)
     renderTargetMarker()
     window.dispatchEvent(
-      new CustomEvent('location-selected', { detail: { longitude, latitude } })
+      new CustomEvent('location-selected', { detail: { longitude, latitude } }),
     )
     // Data loading for this point will be handled by the reactive watcher and explicit call below.
   } else {
@@ -173,7 +173,7 @@ function handleClick(event: {
 
   if (!productStore.isProductSelected) {
     console.warn(
-      'MapView: No product selected. Skipping data load for clicked point popup.'
+      'MapView: No product selected. Skipping data load for clicked point popup.',
     )
     productStore.clickedPoint = {
       value: null,
@@ -282,7 +282,7 @@ watch(
     // Removed unused newLocation parameter
     renderTargetMarker()
   },
-  { deep: true }
+  { deep: true },
 ) // Deep watch for changes within the location object
 
 // Watch for changes in the selected product's tile layer URL to potentially re-render or adjust map view.
@@ -293,7 +293,7 @@ watch(
       // console.log("Tile layer URL changed:", newUrl); // Debug log
       // Potentially trigger map updates or layer refreshes if needed here
     }
-  }
+  },
 )
 </script>
 

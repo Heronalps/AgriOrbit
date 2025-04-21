@@ -35,7 +35,7 @@ interface QueryPayload {
  */
 export async function queryValueByGeometry(
   selectedProduct: selectedProductType,
-  geom: ApiGeomType
+  geom: ApiGeomType,
 ): Promise<number | Record<string, unknown> | null> {
   if (!selectedProduct.product_id) {
     console.error('Product ID is missing for queryValueByGeometry')
@@ -73,7 +73,7 @@ export async function queryValueByGeometry(
   } catch (error) {
     console.error(
       'Error in queryValueByGeometry:',
-      error.response ? error.response.data : error.message
+      error.response ? error.response.data : error.message,
     )
     throw error // Re-throw to be handled by the calling action in the store
   }

@@ -61,21 +61,7 @@ const handleChange = (event: Event): void => {
 
 <template>
   <select
-    class="
-      select select-bordered select-primary
-      w-full
-      max-w-xs
-      px-3
-      py-1
-      md:py-2
-      font-medium
-      md:text-base
-      text-sm
-      bg-white
-      text-gray-900
-      border-gray-300
-      focus:border-primary focus:ring-primary
-    "
+    class="select select-bordered select-primary w-full max-w-xs px-3 py-1 md:py-2 font-medium md:text-base text-sm bg-white text-gray-900 border-gray-300 focus:border-primary focus:ring-primary"
     :value="props.modelValue"
     @change="handleChange"
   >

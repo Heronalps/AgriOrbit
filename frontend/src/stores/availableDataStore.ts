@@ -141,7 +141,7 @@ export const useAvailableDataStore = defineStore('availableDataStore', {
       } catch (err) {
         console.error(
           '[availableDataStore] Failed to load available products:',
-          err
+          err,
         )
         this.error =
           err instanceof Error
@@ -180,7 +180,7 @@ export const useAvailableDataStore = defineStore('availableDataStore', {
       } catch (err) {
         console.error(
           '[availableDataStore] Failed to load available cropmasks:',
-          err
+          err,
         )
         this.error =
           err instanceof Error
