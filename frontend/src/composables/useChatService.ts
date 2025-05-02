@@ -62,7 +62,7 @@ export function useChatService(
     } else {
       try {
         textToProcess = String(textInput)
-      } catch (e) {
+      } catch {
         return '[Error: Invalid message format]'
       }
     }
@@ -155,8 +155,8 @@ export function useChatService(
     try {
       const errorData = await response.json()
       errorText = errorData.detail || errorData.message || errorText
-    } catch (e) {
-      console.warn('Could not parse error response JSON:', e)
+    } catch {
+      console.warn('Could not parse error response JSON')
     }
     const formattedError = await formatMessage(errorText, false)
     if (messageToUpdate) {
@@ -338,7 +338,7 @@ export function useChatService(
                 if (parsedData.model) {
                   botResponseInProgressMessage.model = parsedData.model
                 }
-              } catch (e) {
+              } catch {
                 if (eventData && eventData !== '[DONE]') {
                   currentStreamedText +=
                     eventData + (eventData.endsWith('\n') ? '' : '\n')

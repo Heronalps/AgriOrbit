@@ -38,7 +38,7 @@ const { position, dimensions, startDrag, startResize } = useDraggableResizable(
 interface BasemapOption {
   id: string
   name: string
-  [key: string]: any // Index signature for SelectMenu compatibility
+  [key: string]: unknown // Index signature for SelectMenu compatibility
 }
 
 /**
@@ -210,7 +210,7 @@ const goToNextDate = async (): Promise<void> => {
  * Computed property to get the list of products for the SelectMenu.
  * Using any[] for now to avoid complex type issues, assuming structure matches SelectMenu needs.
  */
-const productsForSelect = computed<any[]>(() => {
+const productsForSelect = computed<Array<Record<string, unknown>>>(() => {
   return availableDataStore.getProducts || []
 })
 
