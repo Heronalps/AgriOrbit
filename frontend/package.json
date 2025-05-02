@@ -10,7 +10,9 @@
     "format": "prettier .  --write"
   },
   "dependencies": {
-    "dompurify": "^3.2.5"
+    "dompurify": "^3.2.5",
+    "primeicons": "^7.0.0",
+    "primevue": "3.48.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.6",

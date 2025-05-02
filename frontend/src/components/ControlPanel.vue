@@ -3,11 +3,9 @@ import {
   useAvailableDataStore,
   type CropmaskResultItem,
 } from '../stores/availableDataStore'
-import { useProductStore } from '../stores/productStore' // Removed 'type Product'
+import { useProductStore } from '../stores/productStore'
 import { useMapStore } from '../stores/mapStore'
 import SelectMenu from './SelectMenu.vue'
-import Datepicker from '@vuepic/vue-datepicker'
-import '@vuepic/vue-datepicker/dist/main.css'
 import { watch, ref, computed, Ref } from 'vue'
 import { useDraggableResizable } from '../composables/useDraggableResizable'
 
@@ -42,7 +40,7 @@ interface BasemapOption {
 }
 
 /**
- * Local reactive state for the datepicker's v-model.
+ * Local reactive state for the calendar's v-model.
  */
 const selectedDate: Ref<Date | null> = ref<Date | null>(null)
 
@@ -60,7 +58,7 @@ const availableBasemaps: Ref<BasemapOption[]> = ref<BasemapOption[]>([
   { id: 'navigation-night', name: 'Mapbox Navigation Night' },
 ])
 
-// ... existing watcher for selectedDate synchronization ...
+// Watch for date changes in the store and sync with local state
 watch(
   () => productStore.getSelectedProduct.date,
   (newStoreDate?: string) => {
@@ -81,25 +79,20 @@ watch(
   { immediate: true },
 )
 
-// ... existing watcher for product_id changes ...
+// Watch for product_id changes
 watch(
   () => productStore.getSelectedProduct.product_id,
   () => {
-    /* ... */
+    /* placeholder for product-specific logic */
   },
 )
 
-// ... existing watcher for basemap changes ...
+// Watch for basemap changes
 watch(
   () => mapStore.selectedBasemap,
   (newBasemap?: string) => {
     if (newBasemap) {
-      const dropdown = document.querySelector(
-        'select[data-basemap-selector="true"]',
-      ) as HTMLSelectElement | null
-      if (dropdown && dropdown.value !== newBasemap) {
-        dropdown.value = newBasemap
-      }
+      // No need to manually update dropdown with PrimeVue's two-way binding
     }
   },
   { immediate: true },
@@ -126,10 +119,8 @@ const handleBasemapSelectionEvent = (value: unknown) => {
   }
 }
 
-// ... existing handleDateSelection, onDatepickerDateUpdate, dateFormat ...
-const handleDateSelection = async (
-  dateFromPicker: Date | null,
-): Promise<void> => {
+// Date handling logic
+const handleDateSelection = async (dateFromPicker: Date | null): Promise<void> => {
   if (dateFromPicker instanceof Date && !isNaN(dateFromPicker.getTime())) {
     const day = dateFromPicker.getDate().toString().padStart(2, '0')
     const month = (dateFromPicker.getMonth() + 1).toString().padStart(2, '0')
@@ -140,54 +131,29 @@ const handleDateSelection = async (
     await productStore.setDate(undefined)
   } else {
     console.warn(
-      '[ControlPanel.vue EVENT @update:modelValue]: Received invalid date or unexpected value from datepicker:',
+      '[ControlPanel.vue EVENT @change]: Received invalid date or unexpected value from calendar:',
       dateFromPicker,
     )
   }
 }
 
-const onDatepickerDateUpdate = (newDateVal: Date | null): void => {
-  handleDateSelection(newDateVal)
-}
+const dateFormat = "yy-mm-dd" // PrimeVue Calendar format string - note: 'yy' is 4-digit year in PrimeVue
 
-const dateFormat = (date: Date): string => {
-  const day = date.getDate().toString().padStart(2, '0')
-  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const year = date.getFullYear()
-  return `${year}-${month}-${day}`
-}
-
-// ... existing computed properties: availableDates, currentDateStr, currentIndex, canGoPrevious, canGoNext ...
-const availableDates = computed<string[]>(
-  () => productStore.getProductDates || [],
-)
-const currentDateStr = computed<string | undefined>(
-  () => productStore.getSelectedProduct.date,
-)
+// Date navigation computed properties and functions
+const availableDates = computed<string[]>(() => productStore.getProductDates || [])
+const currentDateStr = computed<string | undefined>(() => productStore.getSelectedProduct.date)
 const currentIndex = computed<number>(() => {
-  if (
-    !currentDateStr.value ||
-    !availableDates.value ||
-    availableDates.value.length === 0
-  ) {
+  if (!currentDateStr.value || !availableDates.value || availableDates.value.length === 0) {
     return -1
   }
   const normalizedCurrentDate = currentDateStr.value.replace(/-/g, '/')
-  return availableDates.value.findIndex(
-    (d) => d.replace(/-/g, '/') === normalizedCurrentDate,
-  )
+  return availableDates.value.findIndex((d) => d.replace(/-/g, '/') === normalizedCurrentDate)
 })
-const canGoPrevious = computed<boolean>(() => {
-  return currentIndex.value > 0
-})
-const canGoNext = computed<boolean>(() => {
-  return (
-    currentIndex.value !== -1 &&
-    currentIndex.value < availableDates.value.length - 1
-  )
-})
+const canGoPrevious = computed<boolean>(() => currentIndex.value > 0)
+const canGoNext = computed<boolean>(() => 
+  currentIndex.value !== -1 && currentIndex.value < availableDates.value.length - 1
+)
 
-// ... existing date navigation functions: goToPreviousDate, goToNextDate ...
 const goToPreviousDate = async (): Promise<void> => {
   if (canGoPrevious.value) {
     const prevDate = availableDates.value[currentIndex.value - 1]
@@ -207,35 +173,31 @@ const goToNextDate = async (): Promise<void> => {
 }
 
 /**
- * Computed property to get the list of products for the SelectMenu.
- * Using any[] for now to avoid complex type issues, assuming structure matches SelectMenu needs.
+ * Filter function for PCalendar to only allow dates available in the product
  */
+const isDateSelectable = (date: Date) => {
+  const formattedDate = new Date(date).toLocaleDateString('en-CA') // Format as YYYY-MM-DD
+  return allowedDatesForPicker.value.includes(formattedDate.replace(/-/g, '/'))
+}
+
+// Computed properties for select components
 const productsForSelect = computed<Array<Record<string, unknown>>>(() => {
   return availableDataStore.getProducts || []
 })
 
-/**
- * Computed property to get the list of cropmasks for the SelectMenu.
- * Assuming CropmaskResultItem is compatible or SelectMenu is flexible.
- */
 const cropmasksForSelect = computed<CropmaskResultItem[]>(() => {
   return availableDataStore.getCropmasks || []
 })
 
-/**
- * Computed property for the `allowed-dates` prop of the Datepicker.
- */
 const allowedDatesForPicker = computed<string[]>(() => {
-  return (productStore.getProductDates || []).map((dateStr) =>
-    dateStr.replace(/-/g, '/'),
-  )
+  return (productStore.getProductDates || []).map((dateStr) => dateStr.replace(/-/g, '/'))
 })
 </script>
 
 <template>
   <div
     ref="controlPanelRef"
-    class="control-panel-widget"
+    class="control-panel-widget widget-dark-theme"
     :style="{
       left: position.x + 'px',
       top: position.y + 'px',
@@ -244,9 +206,10 @@ const allowedDatesForPicker = computed<string[]>(() => {
     }"
   >
     <div class="control-panel-header" @mousedown="startDrag">
-      <h4>Map Controls</h4>
+      <h2>Map Controls</h2>
     </div>
-
+    <div class="resize-handle resize-handle-br" @mousedown="startResize"></div>
+    
     <div class="control-panel-body">
       <!-- Product Selection Section -->
       <div class="control-section">
@@ -260,44 +223,38 @@ const allowedDatesForPicker = computed<string[]>(() => {
           @update:model-value="handleProductSelectionEvent"
         />
       </div>
+      
       <!-- Date Selection Section -->
       <div class="control-section">
         <p class="section-title">Date</p>
         <div class="date-controls">
-          <button
+          <PButton
+            icon="pi pi-chevron-left"
+            class="p-button-rounded p-button-secondary"
             :disabled="!canGoPrevious"
-            class="date-nav-button"
             aria-label="Previous Date"
-            type="button"
             @click="goToPreviousDate"
-          >
-            &lt;
-          </button>
-          <Datepicker
-            v-model="selectedDate"
-            :enable-time-picker="false"
-            :allowed-dates="allowedDatesForPicker"
-            :format="dateFormat"
-            placeholder="Select Date"
-            :clearable="true"
-            :auto-apply="true"
-            month-name-format="long"
-            class="flex-grow"
-            aria-label="Select Date"
-            @update:model-value="handleDateSelection"
-            @date-update="onDatepickerDateUpdate"
           />
-          <button
+          <PCalendar
+            v-model="selectedDate"
+            :dateFormat="dateFormat"
+            :showButtonBar="true"
+            :showIcon="true"
+            :selectionMode="'single'"
+            placeholder="Select Date"
+            class="w-full"
+            @change="handleDateSelection"
+          />
+          <PButton
+            icon="pi pi-chevron-right"
+            class="p-button-rounded p-button-secondary"
             :disabled="!canGoNext"
-            class="date-nav-button"
             aria-label="Next Date"
-            type="button"
             @click="goToNextDate"
-          >
-            &gt;
-          </button>
+          />
         </div>
       </div>
+      
       <!-- Cropmask Selection Section -->
       <div class="control-section">
         <p class="section-title">Cropmask</p>
@@ -310,6 +267,7 @@ const allowedDatesForPicker = computed<string[]>(() => {
           @update:model-value="handleCropmaskSelectionEvent"
         />
       </div>
+      
       <!-- Basemap Selection Section -->
       <div class="control-section">
         <p class="section-title">Basemap</p>
@@ -324,49 +282,50 @@ const allowedDatesForPicker = computed<string[]>(() => {
         />
       </div>
     </div>
-    <div class="resize-handle resize-handle-br" @mousedown="startResize" />
   </div>
 </template>
 
 <style scoped>
-/* Styles adapted from ChatWidget.vue and modernized */
+/* Styling to match the Agribot chat widget */
 .control-panel-widget {
-  border: 1px solid #ccc; /* Matched from ChatWidget.vue */
+  border: 1px solid #ccc;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  background: #231f1fc8; /* Matched from ChatWidget.vue */
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* Matched from ChatWidget.vue */
+  background: #231f1fc8;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   position: fixed;
   z-index: 1000;
-  color: white; /* Matched from ChatWidget.vue general text color */
+  color: white;
 }
 
 .control-panel-header {
-  background: #368535; /* Matched from ChatWidget.vue */
+  background: #368535;
   color: white;
-  padding: 10px; /* Matched from ChatWidget.vue */
+  padding: 10px;
   text-align: center;
-  border-top-left-radius: 8px; /* Matched from ChatWidget.vue */
-  border-top-right-radius: 8px; /* Matched from ChatWidget.vue */
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  position: relative;
   cursor: move;
   user-select: none;
 }
 
-.control-panel-header h4 {
+.control-panel-header h2 {
   margin: 0;
-  font-size: 1.2em;
+  font-size: 1.5em;
   font-weight: 600;
+  font-family: var(--font-family);
 }
 
 .control-panel-body {
   flex: 1;
-  padding: 1rem;
+  padding: 10px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem; /* Increased gap */
+  gap: 1rem;
 }
 
 .control-section {
@@ -376,9 +335,10 @@ const allowedDatesForPicker = computed<string[]>(() => {
 }
 
 .section-title {
-  font-size: 1rem; /* Adjusted from text-xl */
+  font-size: 1rem;
   font-weight: 500;
-  color: #9ca3af; /* gray-400 */
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
 }
 
 .date-controls {
@@ -386,39 +346,6 @@ const allowedDatesForPicker = computed<string[]>(() => {
   align-items: center;
   gap: 0.5rem;
   width: 100%;
-}
-
-.date-nav-button {
-  padding: 0.5rem 0.75rem;
-  background-color: #4b5563; /* gray-600 */
-  color: white;
-  border: none;
-  border-radius: 0.375rem; /* rounded-md */
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-.date-nav-button:hover:not(:disabled) {
-  background-color: #6b7280; /* gray-500 */
-}
-.date-nav-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* SelectMenu and Datepicker specific styling */
-:deep(.control-panel-body .select-menu-container .select-menu-input),
-:deep(.control-panel-body .dp__input) {
-  background-color: #374151; /* gray-700 */
-  color: #d1d5db; /* gray-300 */
-  border: 1px solid #4b5563; /* gray-600 */
-  border-radius: 0.375rem;
-  padding: 0.5rem 0.75rem;
-  width: 100%;
-}
-:deep(.control-panel-body .select-menu-container .select-menu-input:focus),
-:deep(.control-panel-body .dp__input:focus) {
-  border-color: #60a5fa; /* blue-400 */
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* blue-500 focus ring */
 }
 
 .resize-handle {
@@ -438,46 +365,101 @@ const allowedDatesForPicker = computed<string[]>(() => {
   bottom: 4px;
   width: 12px;
   height: 12px;
-  border-right: 2px solid rgba(255, 255, 255, 0.5); /* Matched from ChatWidget.vue */
-  border-bottom: 2px solid rgba(255, 255, 255, 0.5); /* Matched from ChatWidget.vue */
+  border-right: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
 }
 
-/* Datepicker theme overrides for dark mode */
-:deep(.dp__theme_light) {
-  --dp-background-color: #374151; /* gray-700 */
-  --dp-text-color: #d1d5db; /* gray-300 */
-  --dp-hover-color: #4b5563; /* gray-600 */
-  --dp-hover-text-color: #f3f4f6; /* gray-100 */
-  --dp-hover-icon-color: #9ca3af; /* gray-400 */
-  --dp-primary-color: #3b82f6; /* blue-500 */
-  --dp-primary-text-color: #ffffff;
-  --dp-secondary-color: #6b7280; /* gray-500 */
-  --dp-border-color: #4b5563; /* gray-600 */
-  --dp-menu-border-color: #374151; /* gray-700 */
-  --dp-border-color-hover: #6b7280; /* gray-500 */
-  --dp-disabled-color: #4b5563; /* gray-600 */
-  --dp-icon-color: #9ca3af; /* gray-400 */
-  --dp-danger-color: #ef4444; /* red-500 */
-  --dp-highlight-color: rgba(59, 130, 246, 0.2); /* blue-500 with opacity */
-  --dp-input-padding: 8px 12px; /* Match other inputs */
-  --dp-font-size: 1rem;
-}
-:deep(.dp__input_icon),
-:deep(.dp__clear_icon) {
-  color: #9ca3af; /* gray-400 */
+/* Calendar styling */
+:deep(.p-calendar) {
+  width: 100%;
 }
 
-/* Ensure SelectMenu options are also styled for dark theme if it has its own dropdown */
-:deep(.select-menu-options) {
-  background-color: #374151; /* gray-700 */
-  border: 1px solid #4b5563; /* gray-600 */
+:deep(.p-calendar .p-inputtext) {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
-:deep(.select-menu-option) {
-  color: #d1d5db; /* gray-300 */
+
+:deep(.p-calendar .p-inputtext::placeholder) {
+  color: rgba(255, 255, 255, 0.5);
 }
-:deep(.select-menu-option:hover),
-:deep(.select-menu-option.selected) {
-  background-color: #4b5563; /* gray-600 */
-  color: #f3f4f6; /* gray-100 */
+
+:deep(.p-calendar .p-inputtext:focus) {
+  box-shadow: 0 0 0 1px #368535;
+  border-color: #368535;
+}
+
+/* Datepicker styling */
+:deep(.p-datepicker) {
+  background-color: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+:deep(.p-datepicker .p-datepicker-header) {
+  background-color: #2d2d2d;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:deep(.p-datepicker .p-datepicker-header .p-datepicker-title) {
+  color: white;
+}
+
+:deep(.p-datepicker .p-datepicker-header .p-datepicker-prev),
+:deep(.p-datepicker .p-datepicker-header .p-datepicker-next) {
+  color: white;
+}
+
+:deep(.p-datepicker table th) {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+:deep(.p-datepicker table td > span) {
+  color: white;
+}
+
+:deep(.p-datepicker table td > span.p-highlight) {
+  background-color: #368535;
+  color: white;
+}
+
+:deep(.p-datepicker table td > span:not(.p-highlight):not(.p-disabled):hover) {
+  background-color: rgba(54, 133, 53, 0.2);
+}
+
+:deep(.p-datepicker .p-datepicker-buttonbar) {
+  background-color: #2d2d2d;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:deep(.p-datepicker .p-datepicker-buttonbar .p-button) {
+  background-color: #368535;
+  border-color: #368535;
+  color: white;
+}
+
+:deep(.p-datepicker .p-datepicker-buttonbar .p-button:hover) {
+  background-color: #297029;
+  border-color: #297029;
+}
+
+/* Button styling */
+:deep(.p-button.p-button-secondary) {
+  background-color: #368535;
+  border-color: #368535;
+  color: white;
+}
+
+:deep(.p-button.p-button-secondary:enabled:hover) {
+  background-color: #297029;
+  border-color: #297029;
+}
+
+:deep(.p-button.p-button-secondary:disabled) {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.5);
+  opacity: 0.6;
 }
 </style>

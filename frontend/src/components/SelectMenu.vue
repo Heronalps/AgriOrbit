@@ -47,56 +47,75 @@ const emit = defineEmits<{
 }>()
 
 /**
- * Handles the change event of the native select element.
- * Emits the `update:modelValue` event with the new selected value to support `v-model`.
- * @param {Event} event - The native change event from the select element.
+ * Handles the change event when a dropdown option is selected.
+ * Emits the update:modelValue event with the new selected value from the PDropdown component.
+ * @param {Event} event - The change event with the selected option value.
  */
-const handleChange = (event: Event): void => {
-  const target = event.target as HTMLSelectElement
-  // Ensure that if the placeholder is re-selected (if it were possible and had a value),
-  // or if a value is cleared, we handle it. Typically, disabled options aren't selected.
-  emit('update:modelValue', target.value)
+const handleChange = (event: any): void => {
+  emit('update:modelValue', event.value)
 }
 </script>
 
 <template>
-  <select
-    class="select select-bordered select-primary w-full max-w-xs px-3 py-1 md:py-2 font-medium md:text-base text-sm bg-white text-gray-900 border-gray-300 focus:border-primary focus:ring-primary"
-    :value="props.modelValue"
+  <PDropdown
+    :model-value="props.modelValue"
+    :options="props.data"
+    :option-label="props.labelBy"
+    :option-value="props.keyBy"
+    :placeholder="props.placeholder || 'Select'"
+    class="w-full"
     @change="handleChange"
-  >
-    <!-- Display placeholder if provided and no value is selected -->
-    <option
-      v-if="props.placeholder"
-      value=""
-      :disabled="!props.modelValue"
-      :selected="!props.modelValue"
-    >
-      {{ props.placeholder }}
-    </option>
-    <!-- Iterate over data to create options -->
-    <!-- eslint-disable vue/no-deprecated-filter -->
-    <option
-      v-for="item in props.data"
-      :key="item[props.keyBy] as string | number"
-      :value="item[props.keyBy]"
-      class="bg-gray-200 text-gray-900"
-    >
-      {{ item[props.labelBy] }}
-    </option>
-    <!-- eslint-enable vue/no-deprecated-filter -->
-  </select>
+  />
 </template>
 
 <style scoped>
-/* Add any component-specific styles here */
-.select {
-  /* Ensure consistent appearance, Tailwind classes usually handle this */
-  /* Example: Add a specific border or background if needed beyond Tailwind defaults */
+/* Enhanced styles for the dropdown component */
+:deep(.p-dropdown) {
+  width: 100%;
+  max-width: 20rem;
 }
 
-/* Styling for options, though often limited by browser defaults */
-.select option {
-  /* Example: padding or color, but cross-browser consistency can be an issue */
+:deep(.p-dropdown-label) {
+  font-weight: 500;
+}
+
+/* Widget dark theme styling */
+.widget-dark-theme :deep(.p-dropdown) {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.widget-dark-theme :deep(.p-dropdown:hover),
+.widget-dark-theme :deep(.p-dropdown:focus) {
+  border-color: #368535;
+}
+
+.widget-dark-theme :deep(.p-dropdown-panel) {
+  background-color: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.widget-dark-theme :deep(.p-dropdown-panel .p-dropdown-items .p-dropdown-item) {
+  color: white;
+  padding: 0.75rem 1rem;
+}
+
+.widget-dark-theme :deep(.p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover) {
+  background-color: rgba(54, 133, 53, 0.2);
+}
+
+/* Light theme styling (default) */
+:deep(.p-dropdown.p-component) {
+  background-color: white;
+  border-color: var(--neutral-300);
+}
+
+:deep(.p-dropdown.p-component:hover) {
+  border-color: var(--primary-light);
+}
+
+:deep(.p-dropdown-panel .p-dropdown-items .p-dropdown-item) {
+  padding: 0.75rem 1rem;
 }
 </style>

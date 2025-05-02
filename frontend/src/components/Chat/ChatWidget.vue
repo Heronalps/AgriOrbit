@@ -1,7 +1,6 @@
-<template>
-  <div
+<template>  <div
     ref="chatWidgetRef"
-    class="chat-widget"
+    class="chat-widget widget-dark-theme"
     :style="{
       left: position.x + 'px',
       top: position.y + 'px',
@@ -16,19 +15,27 @@
 
     <!-- Initial State - No Farm Selected -->
     <div v-if="!farmDataMode" class="farm-setup-container">
-      <div class="welcome-message">
-        <p>Welcome to AgriBot! To get the most personalized assistance:</p>
-        <div class="action-options">
-          <button class="action-button" @click="activateLocationSelection">
-            <span class="icon">📍</span>
-            Select Farm Location
-          </button>
-        </div>
-        <p class="or-divider">—— OR ——</p>
-        <button class="general-chat-button" @click="startGeneralChat">
-          Continue with General Chat
-        </button>
-      </div>
+      <PCard class="welcome-card">
+        <template #title>Welcome to AgriBot!</template>
+        <template #content>
+          <p>To get the most personalized assistance:</p>
+          <div class="action-options">
+            <PButton 
+              icon="pi pi-map-marker" 
+              class="p-button-success" 
+              label="Select Farm Location" 
+              @click="activateLocationSelection"
+            />
+          </div>
+          <p class="or-divider">—— OR ——</p>
+          <PButton 
+            icon="pi pi-comments" 
+            class="p-button-outlined p-button-secondary" 
+            label="Continue with General Chat" 
+            @click="startGeneralChat" 
+          />
+        </template>
+      </PCard>
     </div>
 
     <!-- Chat UI -->
@@ -54,31 +61,38 @@
     >
       <div class="token-warning">
         <span class="icon">⚠️</span>
-        <span
-          >Using limited context mode. For better insights, select a farm
-          location.</span
-        >
+        <span>Using limited context mode. For better insights, select a farm location.</span>
       </div>
     </div>
 
     <div class="chat-footer">
       <div class="suggestions">
-        <button
+        <PButton
           v-for="(suggestion, index) in currentSuggestions"
           :key="index"
+          class="p-button-rounded p-button-outlined p-button-sm"
           @click="sendSuggestion(suggestion)"
         >
           {{ suggestion }}
-        </button>
+        </PButton>
       </div>
       <div class="chat-input">
-        <input
-          v-model="messageInput"
-          placeholder="Type your message..."
-          :disabled="inputDisabled"
-          @keyup.enter="sendMessage"
+        <span class="p-input-icon-right">
+          <i class="pi pi-send" v-if="!inputDisabled" />
+          <PInputText
+            v-model="messageInput"
+            placeholder="Type your message..."
+            :disabled="inputDisabled"
+            class="w-full"
+            @keyup.enter="sendMessage"
+          />
+        </span>
+        <PButton 
+          icon="pi pi-send" 
+          class="p-button-success" 
+          :disabled="inputDisabled" 
+          @click="sendMessage"
         />
-        <button :disabled="inputDisabled" @click="sendMessage">Send</button>
       </div>
     </div>
   </div>
@@ -86,14 +100,17 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useLocationStore } from '@/stores/locationStore'
-import { useProductStore } from '@/stores/productStore'
-import { useDraggableResizable } from '@/composables/useDraggableResizable'
+import { useLocationStore } from '../../stores/locationStore'
+import { useProductStore } from '../../stores/productStore'
+import { useDraggableResizable } from '../../composables/useDraggableResizable'
 import {
   useChatService,
   ContextTypeEnum,
   type Message,
-} from '@/composables/useChatService'
+} from '../../composables/useChatService'
+import PCard from 'primevue/card'
+import PButton from 'primevue/button'
+import PInputText from 'primevue/inputtext'
 
 // Store instances
 const locationStore = useLocationStore()
@@ -287,7 +304,7 @@ watch(
 </script>
 
 <style scoped>
-/* ... existing styles ... */
+/* ... existing styles with some modifications */
 .chat-widget {
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -346,10 +363,25 @@ watch(
   padding: 20px;
   text-align: center;
   color: white;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.welcome-message {
-  margin-bottom: 15px;
+.welcome-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 8px;
+}
+
+:deep(.p-card .p-card-title) {
+  color: white;
+  font-size: 1.5rem;
+}
+
+:deep(.p-card .p-card-content) {
+  color: white;
 }
 
 .action-options {
@@ -359,44 +391,9 @@ watch(
   margin: 20px 0;
 }
 
-.action-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  background: rgba(54, 133, 53, 0.6);
-  border: 1px solid #368535;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.action-button:hover {
-  background: rgba(54, 133, 53, 0.8);
-}
-
-.icon {
-  margin-right: 8px;
-  font-size: 18px;
-}
-
 .or-divider {
   margin: 20px 0;
   opacity: 0.7;
-}
-
-.general-chat-button {
-  padding: 10px 15px;
-  background: rgba(79, 79, 88, 0.6);
-  border: 1px solid #4f4f58;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-}
-
-.general-chat-button:hover {
-  background: rgba(79, 79, 88, 0.8);
 }
 
 .chat-body {
@@ -444,7 +441,7 @@ watch(
 .message-bubble {
   padding: 10px;
   border-radius: 10px;
-  max-width: 80%; /* Increase from 70% to 80% for more space */
+  max-width: 80%;
   word-wrap: break-word;
   white-space: normal;
   overflow-wrap: break-word;
@@ -459,8 +456,8 @@ watch(
 .received .message-bubble {
   background: #4f4f58;
   color: white;
-  max-height: none; /* Remove any height limitation */
-  overflow-y: visible; /* Allow content to expand */
+  max-height: none;
+  overflow-y: visible;
 }
 
 /* Add styling for markdown elements in bot messages */
@@ -524,57 +521,39 @@ watch(
 
 .suggestions {
   display: flex;
-  flex-wrap: wrap; /* Allow suggestions to wrap */
+  flex-wrap: wrap;
   padding: 5px;
-  gap: 5px; /* Add gap between suggestion buttons */
-}
-
-.suggestions button {
-  padding: 8px 12px;
-  border: 1px solid #4f4f58;
-  background: rgba(79, 79, 88, 0.6);
-  color: white;
-  border-radius: 15px; /* More rounded buttons */
-  cursor: pointer;
-  font-size: 0.85em;
-  transition: background-color 0.2s;
-}
-
-.suggestions button:hover {
-  background-color: #368535;
+  gap: 5px;
 }
 
 .chat-input {
   display: flex;
   padding: 10px;
-  border-top: 1px solid #4f4f58; /* Match darker theme */
+  border-top: 1px solid #4f4f58;
+  align-items: center;
+  gap: 10px;
 }
 
-.chat-input input {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #4f4f58;
-  border-radius: 5px;
-  margin-right: 10px;
-  background-color: #333; /* Darker input background */
+.chat-input :deep(.p-inputtext) {
+  background-color: rgba(255, 255, 255, 0.1);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.chat-input input::placeholder {
-  color: #aaa; /* Lighter placeholder text */
+.chat-input :deep(.p-inputtext)::placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.chat-input button {
-  padding: 10px 15px;
-  background: #368535;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.chat-input :deep(.p-inputtext:focus) {
+  box-shadow: 0 0 0 1px #368535;
+  border-color: #368535;
 }
 
-.chat-input button:disabled {
-  background: #555;
-  cursor: not-allowed;
+.chat-input :deep(.p-inputicon-right) {
+  width: 100%;
+}
+
+.chat-input :deep(.p-button.p-component:disabled) {
+  opacity: 0.6;
 }
 </style>

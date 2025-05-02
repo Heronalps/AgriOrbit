@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useProductStore } from '@/stores/productStore'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const productStore = useProductStore()
 
@@ -38,6 +38,20 @@ const displayContent = computed<string>(() => {
 })
 
 /**
+ * Computed property to determine if a loading indicator should be shown.
+ */
+const isLoading = computed<boolean>(() => 
+  productStore.clickedPoint && productStore.clickedPoint.isLoading
+)
+
+/**
+ * Computed property to determine if an error indicator should be shown.
+ */
+const hasError = computed<boolean>(() => 
+  productStore.clickedPoint && !!productStore.clickedPoint.errorMessage
+)
+
+/**
  * Hides the popup by setting the 'show' property in the productStore to false.
  */
 function hidePopup(): void {
@@ -45,56 +59,60 @@ function hidePopup(): void {
 }
 </script>
 
-<template>
-  <div
+<template>  <POverlayPanel
     v-if="productStore.clickedPoint && productStore.clickedPoint.show"
-    class="absolute font-bold text-lg p-2 rounded-xl flex flex-row space-x-3 items-center bg-white shadow-lg"
-    :style="{ left: absX, top: absY, zIndex: 1001 }"
+    :showCloseIcon="true"
+    @hide="hidePopup"
+    class="map-popup widget-dark-theme"
+    :style="{ left: absX, top: absY }"    :dismissable="true"
+    :modal="false"
+    :autoZIndex="true"
+    :baseZIndex="1001"
+    appendTo="self"
+    :visible="true"
   >
-    <p>{{ displayContent }}</p>
-    <button
-      type="button"
-      aria-label="Close popup"
-      class="text-gray-600 hover:text-gray-800 text-xs cursor-pointer focus:outline-none"
-      @click="hidePopup"
-    >
-      X
-    </button>
-  </div>
+    <template #content>
+      <div class="popup-content">
+        <i v-if="isLoading" class="pi pi-spin pi-spinner mr-2" />
+        <i v-else-if="hasError" class="pi pi-exclamation-triangle text-red-500 mr-2" />
+        <span :class="{'font-bold': !isLoading && !hasError}">{{ displayContent }}</span>
+      </div>
+    </template>
+  </POverlayPanel>
 </template>
 
 <style scoped>
-/* Scoped styles for MapPopup if needed */
-.bg-white {
+.map-popup {
+  position: absolute;
+  min-width: 120px;
+}
+
+.popup-content {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+}
+
+:deep(.p-overlaypanel) {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
   background-color: white;
 }
-.p-2 {
-  padding: 0.5rem; /* 8px */
+
+:deep(.p-overlaypanel-content) {
+  padding: 0.75rem 1rem;
 }
-.rounded-xl {
-  border-radius: 0.75rem; /* 12px */
+
+:deep(.p-overlaypanel-close) {
+  background: transparent;
+  color: var(--neutral-700);
+  width: 1.5rem;
+  height: 1.5rem;
+  transition: background-color 0.2s;
 }
-.space-x-3 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-x-reverse: 0;
-  margin-right: calc(0.75rem * var(--tw-space-x-reverse)); /* 12px */
-  margin-left: calc(0.75rem * calc(1 - var(--tw-space-x-reverse)));
-}
-.items-center {
-  align-items: center;
-}
-.shadow-lg {
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-.text-gray-600 {
-  color: #4b5563; /* Tailwind gray-600 */
-}
-.hover\:text-gray-800:hover {
-  color: #1f2937; /* Tailwind gray-800 */
-}
-.focus\:outline-none:focus {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
+
+:deep(.p-overlaypanel-close:hover) {
+  background: var(--neutral-200);
+  color: var(--neutral-900);
 }
 </style>
