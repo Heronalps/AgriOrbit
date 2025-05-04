@@ -2,13 +2,21 @@
 
 /* Theme variables */
 :root {
-    /* Base surface colors */
-    --surface-a: #ffffff;
-    --surface-b: #f8f9fa;
-    --surface-c: #e9ecef;
-    --surface-d: #dee2e6;
-    --surface-e: #ffffff;
-    --surface-f: #ffffff;
+    /* PrimeVue standard surface variables (using original color values) */
+    --surface-ground: #f8f9fa; /* Original --surface-b value */
+    --surface-card: #ffffff;   /* Original --surface-a, --surface-e, --surface-f value */
+    --surface-overlay: #ffffff;/* Original --surface-a, --surface-e, --surface-f value (typically same as card) */
+    --surface-border: #dee2e6; /* Original --surface-d value */
+    --surface-hover: #e9ecef;  /* Original --surface-c value (plausible for hover) */
+
+    /* Aliases for backward compatibility with existing custom styles */
+    /* These can be phased out by refactoring usages to the standard PrimeVue variables above */
+    --surface-a: var(--surface-card);
+    --surface-b: var(--surface-ground);
+    --surface-c: var(--surface-hover);
+    --surface-d: var(--surface-border);
+    --surface-e: var(--surface-card);
+    --surface-f: var(--surface-card);
     
     /* Text colors */
     --text-color: #343a40;
@@ -111,11 +119,53 @@
 /* Dropdown styling */
 .p-dropdown {
     border-radius: var(--border-radius);
+    width: 100%;
+    max-width: 20rem;
+}
+
+.p-dropdown-label {
+    font-weight: 500;
 }
 
 .p-dropdown:not(.p-disabled).p-focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+
+/* Widget dark theme styling for PDropdown */
+.widget-dark-theme .p-dropdown {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.widget-dark-theme .p-dropdown:hover,
+.widget-dark-theme .p-dropdown:focus {
+    border-color: #368535; /* PrimeVue green for consistency */
+}
+
+.widget-dark-theme .p-dropdown-panel {
+    background-color: #1a1a1a; /* Dark background for dropdown panel */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item {
+    color: white;
+    padding: 0.75rem 1rem;
+}
+
+.widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover {
+    background-color: rgba(54, 133, 53, 0.2); /* Subtle green highlight on hover */
+}
+
+/* Light theme styling for PDropdown (default) */
+.p-dropdown.p-component {
+    background-color: white;
+    border-color: var(--neutral-300);
+}
+
+.p-dropdown.p-component:hover {
+    border-color: var(--primary-light);
 }
 
 /* Calendar styling */
@@ -397,4 +447,234 @@
 .widget-dark-theme .resize-handle:after {
     border-right: 2px solid rgba(255, 255, 255, 0.5);
     border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* General style for the resize handle element */
+.resize-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+    z-index: 1001; /* Ensure this z-index is managed correctly with other components */
+}
+
+/* Visual indicator for bottom-right resize handle */
+.resize-handle-br:after {
+    content: '';
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 12px;
+    height: 12px;
+    border-right: 2px solid var(--neutral-400); /* Default for light themes or less prominent */
+    border-bottom: 2px solid var(--neutral-400);
+}
+
+/* Specific styling for resize handle indicator in widget-dark-theme */
+.widget-dark-theme .resize-handle-br:after {
+    border-right-color: rgba(255, 255, 255, 0.5);
+    border-bottom-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ChatWidget.vue specific styles */
+.chat-widget {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent content overflow */
+    position: fixed;
+    z-index: 1000;
+    /* Theme properties like background, color, border, border-radius, box-shadow
+       are expected to be applied via .widget-dark-theme or other theme classes */
+}
+
+.chat-header {
+    padding: 10px;
+    text-align: center;
+    position: relative;
+    cursor: move; /* Indicate draggable */
+    user-select: none; /* Prevent text selection while dragging */
+    /* Background and text color should come from .widget-dark-theme or similar */
+}
+
+.chat-header h2 {
+    margin: 0;
+    font-size: 1.5em;
+    font-weight: 700;
+    font-family: 'Montserrat', sans-serif; /* Consider moving to --font-family-headings if used elsewhere */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    /* Color should come from .widget-dark-theme or similar */
+}
+
+.farm-setup-container {
+    padding: 20px;
+    text-align: center;
+    /* color: white; -- Should be handled by .widget-dark-theme */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* .welcome-card styling might be better handled by p-card in widget-dark-theme */
+/* Or if specific, prefix with .chat-widget */
+.chat-widget .welcome-card { /* Assuming this is specific to chat widget */
+    background: rgba(255, 255, 255, 0.05); /* Consider using a variable if this color is reused */
+    border: none;
+    border-radius: var(--border-radius); /* Use theme variable */
+}
+
+.action-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Consider a theme variable for spacing */
+    margin: 20px 0;
+}
+
+.or-divider {
+    margin: 20px 0;
+    opacity: 0.7;
+    /* Color should come from .widget-dark-theme or similar */
+}
+
+.chat-body {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.limited-mode {
+    position: relative;
+}
+
+.limited-mode::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(to bottom, rgba(255, 193, 7, 0.1), transparent); /* Consider theme variables for colors */
+    pointer-events: none;
+}
+
+.token-usage-indicator {
+    padding: 8px;
+    background: rgba(255, 193, 7, 0.1); /* Consider theme variables for colors */
+    border-top: 1px solid rgba(255, 193, 7, 0.3); /* Consider theme variables for colors */
+}
+
+.token-warning {
+    display: flex;
+    align-items: center;
+    color: #ffc107; /* Consider a theme variable for warning color */
+    font-size: 0.85rem;
+}
+
+.chat-footer {
+    border-top: 1px solid var(--surface-d); /* Use theme variable */
+}
+
+.message {
+    margin: 5px 0;
+}
+
+.message-bubble {
+    padding: 10px;
+    border-radius: 10px; /* Consider var(--border-radius-sm) or similar */
+    max-width: 80%;
+    word-wrap: break-word;
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+/* Styling for sent messages within .widget-dark-theme */
+.widget-dark-theme .sent .message-bubble {
+    background: var(--primary-dark); /* Use theme variable */
+    color: var(--primary-color-text); /* Use theme variable */
+    margin-left: auto;
+}
+
+/* Styling for received messages within .widget-dark-theme */
+.widget-dark-theme .received .message-bubble {
+    background: #4f4f58; /* Consider a theme variable e.g., --surface-received-message */
+    color: var(--widget-text-color); /* Use theme variable */
+    max-height: none;
+    overflow-y: visible;
+}
+
+/* Markdown styling within received messages in .widget-dark-theme */
+.widget-dark-theme .received .message-bubble p {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    white-space: normal;
+}
+
+.widget-dark-theme .received .message-bubble ul,
+.widget-dark-theme .received .message-bubble ol {
+    padding-left: 1.5em;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.widget-dark-theme .received .message-bubble li {
+    margin-bottom: 0.25em;
+}
+
+.widget-dark-theme .received .message-bubble strong,
+.widget-dark-theme .received .message-bubble b {
+    font-weight: bold;
+}
+
+.widget-dark-theme .received .message-bubble em,
+.widget-dark-theme .received .message-bubble i {
+    font-style: italic;
+}
+
+.widget-dark-theme .received .message-bubble code {
+    background-color: rgba(0, 0, 0, 0.1); /* Consider a theme variable */
+    padding: 0.2em 0.4em;
+    border-radius: var(--border-radius-sm); /* Use theme variable */
+    font-family: 'Courier New', Courier, monospace; /* Consider a theme variable for monospace font */
+}
+
+.widget-dark-theme .received .message-bubble pre {
+    background-color: rgba(0, 0, 0, 0.1); /* Consider a theme variable */
+    padding: 0.5em;
+    border-radius: var(--border-radius-sm); /* Use theme variable */
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.widget-dark-theme .received .message-bubble pre code {
+    padding: 0;
+    background-color: transparent;
+    white-space: pre-wrap;
+}
+
+.widget-dark-theme .received .message-bubble a {
+    color: #8ab4f8; /* Consider a theme variable for link color */
+    text-decoration: underline;
+}
+
+.widget-dark-theme .received .message-bubble a:hover {
+    color: #aecbfa; /* Consider a theme variable for link hover color */
+}
+
+.suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 5px;
+    gap: 5px; /* Consider a theme variable for spacing */
+}
+
+.chat-input {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #4f4f58; /* Consider var(--surface-d) or a specific chat input border color */
+    align-items: center;
+    gap: 10px; /* Consider a theme variable for spacing */
 }

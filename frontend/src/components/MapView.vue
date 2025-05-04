@@ -8,6 +8,7 @@ import { ref, onMounted, watch, provide, onBeforeUnmount } from 'vue'
 import mapboxgl from 'mapbox-gl'
 import { useProductStore } from '@/stores/productStore'
 import { useLocationStore } from '@/stores/locationStore'
+import { useMapViewState } from '@/composables/useMapViewState'
 import { MAP_STYLES } from '@/utils/defaultSettings'
 import ControlPanel from './ControlPanel.vue'
 import DeckGL from './Map/DeckGL.vue'
@@ -50,17 +51,10 @@ const targetMarker = ref<mapboxgl.Marker | null>(null)
 const showLocationHelp = ref(false)
 
 /**
- * Reactive object representing the current map view state (camera position).
- * This is provided to child components (like DeckGL) for synchronization.
- * @type {ref<object>}
+ * Use the centralized map view state composable
+ * This state is shared across components (DeckGL, Mapbox, etc.)
  */
-const viewState = ref({
-  latitude: 36.102376, // Default latitude
-  longitude: -80.649277, // Default longitude
-  zoom: 4, // Default zoom level
-  pitch: 0, // Default pitch (0 for 2D view)
-  bearing: 0, // Default bearing (0 for North up)
-})
+const { viewState } = useMapViewState()
 provide('viewState', viewState) // Provide viewState to child components
 
 /**

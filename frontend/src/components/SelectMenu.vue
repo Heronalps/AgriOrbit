@@ -58,64 +58,15 @@ const handleChange = (event: any): void => {
 
 <template>
   <PDropdown
-    :model-value="props.modelValue"
+    :modelValue="props.modelValue"
     :options="props.data"
-    :option-label="props.labelBy"
-    :option-value="props.keyBy"
-    :placeholder="props.placeholder || 'Select'"
-    class="w-full"
+    :optionLabel="props.labelBy"
+    :optionValue="props.keyBy"
+    :placeholder="props.placeholder"
     @change="handleChange"
   />
 </template>
 
 <style scoped>
-/* Enhanced styles for the dropdown component */
-:deep(.p-dropdown) {
-  width: 100%;
-  max-width: 20rem;
-}
-
-:deep(.p-dropdown-label) {
-  font-weight: 500;
-}
-
-/* Widget dark theme styling */
-.widget-dark-theme :deep(.p-dropdown) {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.widget-dark-theme :deep(.p-dropdown:hover),
-.widget-dark-theme :deep(.p-dropdown:focus) {
-  border-color: #368535;
-}
-
-.widget-dark-theme :deep(.p-dropdown-panel) {
-  background-color: #1a1a1a;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.widget-dark-theme :deep(.p-dropdown-panel .p-dropdown-items .p-dropdown-item) {
-  color: white;
-  padding: 0.75rem 1rem;
-}
-
-.widget-dark-theme :deep(.p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover) {
-  background-color: rgba(54, 133, 53, 0.2);
-}
-
-/* Light theme styling (default) */
-:deep(.p-dropdown.p-component) {
-  background-color: white;
-  border-color: var(--neutral-300);
-}
-
-:deep(.p-dropdown.p-component:hover) {
-  border-color: var(--primary-light);
-}
-
-:deep(.p-dropdown-panel .p-dropdown-items .p-dropdown-item) {
-  padding: 0.75rem 1rem;
-}
+/* All styles moved to theme.css */
 </style>

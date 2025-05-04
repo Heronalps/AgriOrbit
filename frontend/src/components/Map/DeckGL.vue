@@ -10,10 +10,10 @@ import {
   onMounted,
   onBeforeUnmount,
   provide,
-  reactive,
   useAttrs,
   watch,
 } from 'vue'
+import { useMapViewState } from '@/composables/useMapViewState'
 
 /**
  * Captures non-prop attributes passed to this component.
@@ -43,17 +43,10 @@ const props = defineProps({
 })
 
 /**
- * Reactive state for the Deck.gl view (camera position, zoom, etc.).
+ * Using the centralized map view state composable.
  * This state is two-way synchronized with the Deck.gl instance.
- * @type {viewStateType}
  */
-const viewState = reactive<viewStateType>({
-  latitude: 36.102376, // Default initial latitude
-  longitude: -80.649277, // Default initial longitude
-  zoom: 4, // Default initial zoom level
-  pitch: 0, // Default initial pitch (0 for 2D view)
-  bearing: 0, // Default initial bearing (0 for North up)
-})
+const { viewState, updateViewState } = useMapViewState()
 
 /**
  * Vue lifecycle hook called when the component is mounted.
@@ -98,15 +91,12 @@ onBeforeUnmount(() => {
 
 /**
  * Handles view state changes originating from Deck.gl interactions (e.g., user panning/zooming).
- * Updates the local reactive `viewState` to keep it synchronized.
+ * Updates the reactive view state via the composable.
  * @param {viewStateType} newDeckViewState - The new view state from Deck.gl.
  */
 function handleViewChange(newDeckViewState: viewStateType): void {
-  viewState.latitude = newDeckViewState.latitude
-  viewState.longitude = newDeckViewState.longitude
-  viewState.zoom = newDeckViewState.zoom
-  viewState.pitch = newDeckViewState.pitch
-  viewState.bearing = newDeckViewState.bearing
+  // Use updateViewState for all view state changes to avoid readonly warnings
+  updateViewState(newDeckViewState)
 }
 
 /**

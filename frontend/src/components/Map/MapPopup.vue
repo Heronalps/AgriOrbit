@@ -1,8 +1,23 @@
 <script setup lang="ts">
 import { useProductStore } from '@/stores/productStore'
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { useUITheme } from '@/composables/useUITheme'
 
 const productStore = useProductStore()
+const { widgetClasses, widgetStyles, initSystemThemeListener } = useUITheme()
+
+// Initialize system theme listener and store cleanup function
+let cleanupThemeListener: (() => void) | null = null
+
+onMounted(() => {
+  cleanupThemeListener = initSystemThemeListener()
+})
+
+onBeforeUnmount(() => {
+  if (cleanupThemeListener) {
+    cleanupThemeListener()
+  }
+})
 
 /**
  * Computed property for the absolute X position of the popup.
@@ -63,8 +78,9 @@ function hidePopup(): void {
     v-if="productStore.clickedPoint && productStore.clickedPoint.show"
     :showCloseIcon="true"
     @hide="hidePopup"
-    class="map-popup widget-dark-theme"
-    :style="{ left: absX, top: absY }"    :dismissable="true"
+    :class="['map-popup', widgetClasses]"
+    :style="{ left: absX, top: absY, ...widgetStyles }"
+    :dismissable="true"
     :modal="false"
     :autoZIndex="true"
     :baseZIndex="1001"
