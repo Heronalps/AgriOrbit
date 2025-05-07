@@ -45,11 +45,13 @@
     --neutral-400: #cbd5e0;
     --neutral-500: #a0aec0;
     --neutral-700: #4a5568;
+    --neutral-800: #2d3748; /* Adding a darker neutral for dark themes */
     --neutral-900: #1a202c;
     
     /* Typography */
     --font-family: 'Inter', system-ui, -apple-system, sans-serif;
     --font-size-base: 16px;
+    --font-family-monospace: 'Courier New', Courier, monospace; /* Example monospace font */
     
     /* Border radius */
     --border-radius: 8px;
@@ -76,6 +78,16 @@
     
     /* Primary text color */
     --primary-color-text: #ffffff;
+
+    /* RGB versions of colors for opacity usage */
+    --primary-color-rgb: 54, 133, 53; /* From --primary-color: #368535; */
+    --surface-d-rgb: 222, 226, 230; /* From --surface-d: #dee2e6; */
+    --text-color-secondary-rgb: 108, 117, 125; /* From --text-color-secondary: #6c757d; */
+    --surface-ground-rgb: 248, 249, 250; /* From --surface-ground: #f8f9fa; */
+    --warning-color-rgb: 255, 193, 7; /* Example warning color (yellow/amber) */
+    --warning-color: #ffc107; /* Example warning color */
+    --link-color: #8ab4f8; /* Example link color */
+    --link-hover-color: #aecbfa; /* Example link hover color */
 }
 
 /* Base component styling */
@@ -134,28 +146,33 @@
 
 /* Widget dark theme styling for PDropdown */
 .widget-dark-theme .p-dropdown {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: var(--input-background); /* Use theme variable */
+    color: var(--input-text-color); /* Use theme variable */
+    border: var(--input-border); /* Use theme variable */
 }
 
 .widget-dark-theme .p-dropdown:hover,
 .widget-dark-theme .p-dropdown:focus {
-    border-color: #368535; /* PrimeVue green for consistency */
+    border-color: var(--primary-color); /* Use theme variable */
 }
 
 .widget-dark-theme .p-dropdown-panel {
-    background-color: #1a1a1a; /* Dark background for dropdown panel */
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: var(--neutral-900); /* Use theme variable for dark background */
+    border: var(--input-border); /* Use theme variable */
 }
 
 .widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item {
-    color: white;
+    color: var(--input-text-color); /* Use theme variable */
     padding: 0.75rem 1rem;
 }
 
 .widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover {
-    background-color: rgba(54, 133, 53, 0.2); /* Subtle green highlight on hover */
+    background-color: rgba(var(--primary-color-rgb), 0.2); /* Use theme variable with opacity */
+}
+
+.widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
+    background-color: rgba(var(--primary-color-rgb), 0.5); /* Use theme variable with opacity */
+    color: var(--primary-color-text); /* Use theme variable */
 }
 
 /* Light theme styling for PDropdown (default) */
@@ -213,13 +230,13 @@
 }
 
 .widget-dark-theme .p-datepicker {
-    background-color: #2d2d2d;
-    border-color: #444;
+    background-color: var(--neutral-800); /* Darker shade for datepicker */
+    border-color: var(--neutral-700); /* Slightly lighter border */
 }
 
 .widget-dark-theme .p-datepicker .p-datepicker-header {
-    background-color: #1f1f1f;
-    color: white;
+    background-color: var(--neutral-900); /* Even darker for header */
+    color: var(--widget-text-color); /* Use theme variable */
 }
 
 /* Panel styling for Control panels (ControlPanel, ChatWidget) */
@@ -239,6 +256,7 @@
     border: var(--widget-border);
     border-bottom-right-radius: var(--widget-border-radius);
     border-bottom-left-radius: var(--widget-border-radius);
+    border-top: none; /* Remove top border as header has bottom border */
 }
 
 .p-panel .p-panel-header-icon {
@@ -252,7 +270,9 @@
 }
 
 /* Input styling in dark panels */
-.widget-dark-theme .p-inputtext {
+.widget-dark-theme .p-inputtext,
+.widget-dark-theme .p-dropdown, /* This selector is already handled above, but ensure consistency */
+.widget-dark-theme .p-calendar input { /* More specific selector for calendar input */
     background-color: var(--input-background);
     color: var(--input-text-color);
     border: var(--input-border);
@@ -373,15 +393,16 @@
 
 .widget-dark-theme .chat-header,
 .widget-dark-theme :deep(.p-panel-header) {
-    background-color: #368535;
-    color: white;
+    background-color: var(--primary-color); /* Use theme variable */
+    color: var(--primary-color-text); /* Use theme variable */
     padding: 10px;
     text-align: center;
     position: relative;
     cursor: move;
     user-select: none;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
+    border-top-left-radius: var(--border-radius); /* Use theme variable */
+    border-top-right-radius: var(--border-radius); /* Use theme variable */
+    border-bottom: 1px solid var(--primary-dark); /* Add a subtle border */
 }
 
 /* Consistent font size across widgets */
@@ -394,35 +415,22 @@
 }
 
 /* Consistent input styling */
-.widget-dark-theme .p-inputtext,
-.widget-dark-theme .p-dropdown,
-.widget-dark-theme .p-calendar input {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
 .widget-dark-theme .p-inputtext::placeholder {
     color: rgba(255, 255, 255, 0.5);
 }
 
 /* Dropdown panel styling */
-.widget-dark-theme .p-dropdown-panel {
-    background-color: #1a1a1a;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
 .widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--input-text-color); /* Use theme variable */
 }
 
 .widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover {
-    background-color: rgba(54, 133, 53, 0.2);
+    background-color: rgba(var(--primary-color-rgb), 0.2); /* Use theme variable with opacity */
 }
 
 .widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
-    background-color: rgba(54, 133, 53, 0.5);
-    color: white;
+    background-color: rgba(var(--primary-color-rgb), 0.5); /* Use theme variable with opacity */
+    color: var(--primary-color-text); /* Use theme variable */
 }
 
 /* Button styling consistency */
@@ -438,9 +446,9 @@
 }
 
 .widget-dark-theme .p-button.p-button-secondary:disabled {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(var(--surface-d-rgb), 0.1); /* Use theme variable with opacity */
+    border-color: rgba(var(--surface-d-rgb), 0.2); /* Use theme variable with opacity */
+    color: rgba(var(--text-color-secondary-rgb), 0.5); /* Use theme variable with opacity */
 }
 
 /* Consistent resize handle */
@@ -468,14 +476,14 @@
     bottom: 4px;
     width: 12px;
     height: 12px;
-    border-right: 2px solid var(--neutral-400); /* Default for light themes or less prominent */
+    border-right: 2px solid var(--neutral-400); 
     border-bottom: 2px solid var(--neutral-400);
 }
 
 /* Specific styling for resize handle indicator in widget-dark-theme */
 .widget-dark-theme .resize-handle-br:after {
-    border-right-color: rgba(255, 255, 255, 0.5);
-    border-bottom-color: rgba(255, 255, 255, 0.5);
+    border-right-color: var(--input-placeholder-color); /* Use theme variable */
+    border-bottom-color: var(--input-placeholder-color); /* Use theme variable */
 }
 
 /* ChatWidget.vue specific styles */
@@ -520,10 +528,16 @@
 
 /* .welcome-card styling might be better handled by p-card in widget-dark-theme */
 /* Or if specific, prefix with .chat-widget */
-.chat-widget .welcome-card { /* Assuming this is specific to chat widget */
-    background: rgba(255, 255, 255, 0.05); /* Consider using a variable if this color is reused */
+.chat-widget .welcome-card { 
+    background: rgba(var(--surface-ground-rgb), 0.1); /* Slightly increased opacity for better separation */
     border: none;
-    border-radius: var(--border-radius); /* Use theme variable */
+    border-radius: var(--border-radius); 
+}
+
+/* Ensure text within the welcome card in dark theme is legible */
+.widget-dark-theme .welcome-card .p-card-title,
+.widget-dark-theme .welcome-card .p-card-content p {
+    color: var(--widget-text-color); /* Explicitly set to widget text color (white) */
 }
 
 .action-options {
@@ -535,8 +549,8 @@
 
 .or-divider {
     margin: 20px 0;
-    opacity: 0.7;
-    /* Color should come from .widget-dark-theme or similar */
+    opacity: 0.8; /* Increased opacity slightly */
+    color: var(--widget-text-color); /* Ensure it uses widget text color */
 }
 
 .chat-body {
@@ -556,20 +570,20 @@
     left: 0;
     right: 0;
     height: 30px;
-    background: linear-gradient(to bottom, rgba(255, 193, 7, 0.1), transparent); /* Consider theme variables for colors */
+    background: linear-gradient(to bottom, rgba(var(--warning-color-rgb), 0.1), transparent); /* Assuming a --warning-color is defined or use specific RGB */
     pointer-events: none;
 }
 
 .token-usage-indicator {
     padding: 8px;
-    background: rgba(255, 193, 7, 0.1); /* Consider theme variables for colors */
-    border-top: 1px solid rgba(255, 193, 7, 0.3); /* Consider theme variables for colors */
+    background: rgba(var(--warning-color-rgb), 0.1); /* Assuming a --warning-color is defined */
+    border-top: 1px solid rgba(var(--warning-color-rgb), 0.3); /* Assuming a --warning-color is defined */
 }
 
 .token-warning {
     display: flex;
     align-items: center;
-    color: #ffc107; /* Consider a theme variable for warning color */
+    color: var(--warning-color); /* Assuming a --warning-color is defined */
     font-size: 0.85rem;
 }
 
@@ -599,8 +613,8 @@
 
 /* Styling for received messages within .widget-dark-theme */
 .widget-dark-theme .received .message-bubble {
-    background: #4f4f58; /* Consider a theme variable e.g., --surface-received-message */
-    color: var(--widget-text-color); /* Use theme variable */
+    background: var(--neutral-700); /* Darker background for received messages */
+    color: var(--widget-text-color);
     max-height: none;
     overflow-y: visible;
 }
@@ -634,16 +648,16 @@
 }
 
 .widget-dark-theme .received .message-bubble code {
-    background-color: rgba(0, 0, 0, 0.1); /* Consider a theme variable */
+    background-color: rgba(var(--surface-d-rgb), 0.1); /* Use theme variable with opacity */
     padding: 0.2em 0.4em;
-    border-radius: var(--border-radius-sm); /* Use theme variable */
-    font-family: 'Courier New', Courier, monospace; /* Consider a theme variable for monospace font */
+    border-radius: var(--border-radius-sm); 
+    font-family: var(--font-family-monospace); /* Assuming a --font-family-monospace is defined */
 }
 
 .widget-dark-theme .received .message-bubble pre {
-    background-color: rgba(0, 0, 0, 0.1); /* Consider a theme variable */
+    background-color: rgba(var(--surface-d-rgb), 0.1); /* Use theme variable with opacity */
     padding: 0.5em;
-    border-radius: var(--border-radius-sm); /* Use theme variable */
+    border-radius: var(--border-radius-sm); 
     overflow-x: auto;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -656,12 +670,12 @@
 }
 
 .widget-dark-theme .received .message-bubble a {
-    color: #8ab4f8; /* Consider a theme variable for link color */
+    color: var(--link-color); /* Assuming a --link-color is defined */
     text-decoration: underline;
 }
 
 .widget-dark-theme .received .message-bubble a:hover {
-    color: #aecbfa; /* Consider a theme variable for link hover color */
+    color: var(--link-hover-color); /* Assuming a --link-hover-color is defined */
 }
 
 .suggestions {
@@ -674,7 +688,7 @@
 .chat-input {
     display: flex;
     padding: 10px;
-    border-top: 1px solid #4f4f58; /* Consider var(--surface-d) or a specific chat input border color */
+    border-top: 1px solid var(--surface-d); /* Use theme variable */
     align-items: center;
-    gap: 10px; /* Consider a theme variable for spacing */
+    gap: 10px; 
 }

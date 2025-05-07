@@ -1,5 +1,5 @@
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import type { Ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, type Ref } from 'vue'
+import { useMapStore } from '../stores/mapStore' // Changed to relative path
 
 interface Position {
   x: number
@@ -12,7 +12,7 @@ interface Dimensions {
 }
 
 export function useDraggableResizable(
-  elementRef: Ref<HTMLElement | null>, // Renamed from chatWidget
+  elementRef: Ref<HTMLElement | null>,
   initialPosition: Position,
   initialDimensions: Dimensions,
 ) {
@@ -25,12 +25,53 @@ export function useDraggableResizable(
   const initialWidgetPos = ref<Position>({ x: 0, y: 0 })
   const initialWidgetDim = ref<Dimensions>({ width: 0, height: 0 })
 
+  // --- BEGIN THEME LOGIC ---
+  const mapStore = useMapStore()
+  const prefersDarkMode = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
+  let cleanupSystemThemeListener: () => void = () => {}
+
+  function initSystemThemeListenerInternal() {
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+    const handleSystemThemeChange = (event: MediaQueryListEvent) => {
+      prefersDarkMode.value = event.matches
+
+      if (mapStore.syncBasemapWithSystemTheme) {
+        const newBasemapId = event.matches ? 'dark' : 'light'
+        if (mapStore.selectedBasemap !== newBasemapId) {
+          mapStore.setBasemap(newBasemapId)
+        }
+      }
+    }
+
+    darkModeMediaQuery.addEventListener('change', handleSystemThemeChange)
+    
+    cleanupSystemThemeListener = () => {
+      darkModeMediaQuery.removeEventListener('change', handleSystemThemeChange)
+    }
+  }
+
+  const widgetClasses = computed(() => {
+    const baseClasses = 'rounded-lg shadow-lg transition-all duration-200'
+    if (prefersDarkMode.value) {
+      return `${baseClasses} widget-dark-theme bg-gray-800 text-white border border-gray-700`
+    }
+    return `${baseClasses} widget-light-theme bg-white text-gray-800 border border-gray-200`
+  })
+
+  const widgetStyles = computed(() => ({
+    '--shadow': prefersDarkMode.value
+      ? '0 4px 6px rgba(0, 0, 0, 0.3)'
+      : '0 4px 6px rgba(0, 0, 0, 0.1)',
+    '--border-radius': '0.375rem',
+  }))
+  // --- END THEME LOGIC ---
+
   const startDrag = (event: MouseEvent) => {
     event.preventDefault()
     isDragging.value = true
     initialMousePos.value = { x: event.clientX, y: event.clientY }
     if (elementRef.value) {
-      // Use elementRef
       initialWidgetPos.value = {
         x: position.value.x,
         y: position.value.y,
@@ -41,7 +82,7 @@ export function useDraggableResizable(
   }
 
   const onDrag = (event: MouseEvent) => {
-    if (!isDragging.value || !elementRef.value) return // Use elementRef
+    if (!isDragging.value || !elementRef.value) return
 
     const dx = event.clientX - initialMousePos.value.x
     const dy = event.clientY - initialMousePos.value.y
@@ -49,7 +90,6 @@ export function useDraggableResizable(
     position.value.x = initialWidgetPos.value.x + dx
     position.value.y = initialWidgetPos.value.y + dy
 
-    // Keep widget within viewport (using adjustBounds logic)
     adjustBounds()
   }
 
@@ -64,7 +104,6 @@ export function useDraggableResizable(
     isResizing.value = true
     initialMousePos.value = { x: event.clientX, y: event.clientY }
     if (elementRef.value) {
-      // Use elementRef
       initialWidgetDim.value = {
         width: dimensions.value.width,
         height: dimensions.value.height,
@@ -75,7 +114,7 @@ export function useDraggableResizable(
   }
 
   const onResize = (event: MouseEvent) => {
-    if (!isResizing.value || !elementRef.value) return // Use elementRef
+    if (!isResizing.value || !elementRef.value) return
 
     const dx = event.clientX - initialMousePos.value.x
     const dy = event.clientY - initialMousePos.value.y
@@ -91,7 +130,7 @@ export function useDraggableResizable(
       minHeight,
       initialWidgetDim.value.height + dy,
     )
-    adjustBounds() // Adjust bounds after resize
+    adjustBounds()
   }
 
   const stopResize = () => {
@@ -100,41 +139,36 @@ export function useDraggableResizable(
     document.removeEventListener('mouseup', stopResize)
   }
 
-  // Renamed and refactored from adjustInitialPosition and adjustPositionPostResize
   const adjustBounds = () => {
     if (!elementRef.value) return
-    const padding = 10 // Padding from window edges
+    const padding = 10
 
     let currentX = position.value.x
     let currentY = position.value.y
     const elementWidth = dimensions.value.width
     const elementHeight = dimensions.value.height
 
-    // Ensure position is not off-screen to the top or left
     currentX = Math.max(padding, currentX)
     currentY = Math.max(padding, currentY)
 
-    // Ensure position is not off-screen to the bottom or right
     const maxX = window.innerWidth - elementWidth - padding
     const maxY = window.innerHeight - elementHeight - padding
 
     position.value.x = Math.min(currentX, maxX)
     position.value.y = Math.min(currentY, maxY)
 
-    // If the calculated position is less than padding (e.g. window too small), force to padding
     if (position.value.x < padding) position.value.x = padding
     if (position.value.y < padding) position.value.y = padding
   }
 
   const onWindowResize = () => {
-    adjustBounds() // Re-check bounds on window resize
+    adjustBounds()
   }
 
   onMounted(() => {
-    // Position is already set from initialPosition in ref definition
-    // Just ensure it's within bounds on mount
     adjustBounds()
     window.addEventListener('resize', onWindowResize)
+    initSystemThemeListenerInternal()
   })
 
   onBeforeUnmount(() => {
@@ -143,6 +177,7 @@ export function useDraggableResizable(
     document.removeEventListener('mousemove', onResize)
     document.removeEventListener('mouseup', stopResize)
     window.removeEventListener('resize', onWindowResize)
+    cleanupSystemThemeListener()
   })
 
   return {
@@ -150,5 +185,8 @@ export function useDraggableResizable(
     dimensions,
     startDrag,
     startResize,
+    prefersDarkMode,
+    widgetClasses,
+    widgetStyles,
   }
 }
