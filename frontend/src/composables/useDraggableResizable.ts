@@ -1,5 +1,4 @@
-import { ref, onMounted, onBeforeUnmount, computed, type Ref } from 'vue'
-import { useMapStore } from '../stores/mapStore' // Changed to relative path
+import { ref, onMounted, onBeforeUnmount, type Ref } from 'vue'
 
 interface Position {
   x: number
@@ -24,48 +23,6 @@ export function useDraggableResizable(
   const initialMousePos = ref<Position>({ x: 0, y: 0 })
   const initialWidgetPos = ref<Position>({ x: 0, y: 0 })
   const initialWidgetDim = ref<Dimensions>({ width: 0, height: 0 })
-
-  // --- BEGIN THEME LOGIC ---
-  const mapStore = useMapStore()
-  const prefersDarkMode = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
-  let cleanupSystemThemeListener: () => void = () => {}
-
-  function initSystemThemeListenerInternal() {
-    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-
-    const handleSystemThemeChange = (event: MediaQueryListEvent) => {
-      prefersDarkMode.value = event.matches
-
-      if (mapStore.syncBasemapWithSystemTheme) {
-        const newBasemapId = event.matches ? 'dark' : 'light'
-        if (mapStore.selectedBasemap !== newBasemapId) {
-          mapStore.setBasemap(newBasemapId)
-        }
-      }
-    }
-
-    darkModeMediaQuery.addEventListener('change', handleSystemThemeChange)
-    
-    cleanupSystemThemeListener = () => {
-      darkModeMediaQuery.removeEventListener('change', handleSystemThemeChange)
-    }
-  }
-
-  const widgetClasses = computed(() => {
-    const baseClasses = 'rounded-lg shadow-lg transition-all duration-200'
-    if (prefersDarkMode.value) {
-      return `${baseClasses} widget-dark-theme bg-gray-800 text-white border border-gray-700`
-    }
-    return `${baseClasses} widget-light-theme bg-white text-gray-800 border border-gray-200`
-  })
-
-  const widgetStyles = computed(() => ({
-    '--shadow': prefersDarkMode.value
-      ? '0 4px 6px rgba(0, 0, 0, 0.3)'
-      : '0 4px 6px rgba(0, 0, 0, 0.1)',
-    '--border-radius': '0.375rem',
-  }))
-  // --- END THEME LOGIC ---
 
   const startDrag = (event: MouseEvent) => {
     event.preventDefault()
@@ -168,7 +125,6 @@ export function useDraggableResizable(
   onMounted(() => {
     adjustBounds()
     window.addEventListener('resize', onWindowResize)
-    initSystemThemeListenerInternal()
   })
 
   onBeforeUnmount(() => {
@@ -177,7 +133,6 @@ export function useDraggableResizable(
     document.removeEventListener('mousemove', onResize)
     document.removeEventListener('mouseup', stopResize)
     window.removeEventListener('resize', onWindowResize)
-    cleanupSystemThemeListener()
   })
 
   return {
@@ -185,8 +140,5 @@ export function useDraggableResizable(
     dimensions,
     startDrag,
     startResize,
-    prefersDarkMode,
-    widgetClasses,
-    widgetStyles,
   }
 }

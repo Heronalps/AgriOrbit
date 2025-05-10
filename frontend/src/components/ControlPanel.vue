@@ -5,9 +5,9 @@ import {
 } from '../stores/availableDataStore'
 import { useProductStore } from '../stores/productStore'
 import { useMapStore } from '../stores/mapStore'
-import SelectMenu from './SelectMenu.vue'
 import { watch, ref, computed, Ref } from 'vue'
 import { useDraggableResizable } from '../composables/useDraggableResizable'
+import PDropdown from 'primevue/dropdown'
 
 // Initialize stores
 const availableDataStore = useAvailableDataStore()
@@ -98,13 +98,15 @@ watch(
   { immediate: true },
 )
 
-const handleProductSelectionEvent = (value: unknown) => {
+const handleProductSelectionEvent = (event: { originalEvent: Event, value: unknown }) => {
+  const value = event.value;
   if (typeof value === 'string' && value) {
     productStore.setProduct(value)
   }
 }
 
-const handleCropmaskSelectionEvent = (value: unknown) => {
+const handleCropmaskSelectionEvent = (event: { originalEvent: Event, value: unknown }) => {
+  const value = event.value;
   if (typeof value === 'string') {
     // Allow empty string for "no cropmask"
     productStore.setCropmask(value)
@@ -113,7 +115,8 @@ const handleCropmaskSelectionEvent = (value: unknown) => {
   }
 }
 
-const handleBasemapSelectionEvent = (value: unknown) => {
+const handleBasemapSelectionEvent = (event: { originalEvent: Event, value: unknown }) => {
+  const value = event.value;
   if (typeof value === 'string' && value) {
     mapStore.setBasemap(value)
   }
@@ -214,13 +217,14 @@ const allowedDatesForPicker = computed<string[]>(() => {
       <!-- Product Selection Section -->
       <div class="control-section">
         <p class="section-title">Product</p>
-        <SelectMenu
-          :model-value="productStore.getSelectedProduct.product_id"
-          :data="productsForSelect"
-          key-by="product_id"
-          label-by="display_name"
+        <PDropdown
+          :modelValue="productStore.getSelectedProduct.product_id"
+          :options="productsForSelect"
+          optionValue="product_id"
+          optionLabel="display_name"
           placeholder="Select Product"
-          @update:model-value="handleProductSelectionEvent"
+          @change="handleProductSelectionEvent"
+          class="w-full" 
         />
       </div>
       
@@ -258,27 +262,29 @@ const allowedDatesForPicker = computed<string[]>(() => {
       <!-- Cropmask Selection Section -->
       <div class="control-section">
         <p class="section-title">Cropmask</p>
-        <SelectMenu
-          :model-value="productStore.getSelectedProduct.cropmask_id"
-          :data="cropmasksForSelect"
-          key-by="cropmask_id"
-          label-by="display_name"
+        <PDropdown
+          :modelValue="productStore.getSelectedProduct.cropmask_id"
+          :options="cropmasksForSelect"
+          optionValue="cropmask_id"
+          optionLabel="display_name"
           placeholder="Select Cropmask (Optional)"
-          @update:model-value="handleCropmaskSelectionEvent"
+          @change="handleCropmaskSelectionEvent"
+          class="w-full"
         />
       </div>
       
       <!-- Basemap Selection Section -->
       <div class="control-section">
         <p class="section-title">Basemap</p>
-        <SelectMenu
-          :model-value="mapStore.selectedBasemap"
-          :data="availableBasemaps"
-          key-by="id"
-          label-by="name"
+        <PDropdown
+          :modelValue="mapStore.selectedBasemap"
+          :options="availableBasemaps"
+          optionValue="id"
+          optionLabel="name"
           placeholder="Select Basemap"
           data-basemap-selector="true"
-          @update:model-value="handleBasemapSelectionEvent"
+          @change="handleBasemapSelectionEvent"
+          class="w-full"
         />
       </div>
     </div>
