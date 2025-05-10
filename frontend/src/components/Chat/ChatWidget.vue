@@ -219,7 +219,3 @@ watch(
   { deep: true },
 )
 </script>
-
-<style scoped>
-/* All styles moved to theme.css */
-</style>
