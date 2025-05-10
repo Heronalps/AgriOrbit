@@ -293,26 +293,6 @@ watch(
 
 <template>
   <div class="map-container relative w-screen h-screen overflow-hidden">
-    <!-- Application Title -->
-    <div class="absolute z-50 top-10 left-10">
-      <p
-        class="text-3xl font-bold text-center text-white app-title-text-shadow"
-      >
-        AgriOrbit
-      </p>
-    </div>
-
-    <!-- Location Selection Help Overlay -->
-    <div
-      v-if="showLocationHelp"
-      class="location-help-overlay"
-      aria-live="polite"
-    >
-      <div class="location-help-content">
-        <p><strong>Click on the map</strong> to set your farm location.</p>
-      </div>
-    </div>
-
     <!-- Deck.gl Canvas for data layers and map interaction -->
     <DeckGL
       class="w-full h-full"

@@ -66,7 +66,6 @@
     /* Component-specific styles */
     --widget-header-background: var(--primary-color);
     --widget-header-text-color: white;
-    --widget-border: 1px solid #ccc;
     --widget-border-radius: var(--border-radius);
     --widget-box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     
@@ -239,24 +238,50 @@
     color: var(--widget-text-color); /* Use theme variable */
 }
 
-/* Panel styling for Control panels (ControlPanel, ChatWidget) */
-.p-panel .p-panel-header {
-    background: var(--widget-header-background);
+/* Panel styling for PPanel with .widget-dark-theme (e.g., ControlPanel, ChatWidget) */
+.widget-dark-theme.p-panel {
+    background-color: var(--widget-background);
+    color: var(--widget-text-color);
+    border-radius: var(--widget-border-radius); /* Apply border radius */
+    box-shadow: var(--widget-box-shadow); /* Apply box shadow for depth */
+    border: none !important; /* Ensure no default border from PPanel itself */
+    overflow: hidden !important; /* Ensure content is clipped to border-radius, added !important */
+}
+
+.widget-dark-theme.p-panel .p-panel-header {
+    background-color: var(--widget-header-background);
     color: var(--widget-header-text-color);
+    border-bottom: 1px solid var(--primary-dark); /* Keep a separator for the header */
     border-top-left-radius: var(--widget-border-radius);
     border-top-right-radius: var(--widget-border-radius);
+}
+
+.widget-dark-theme.p-panel .p-panel-content {
+    background-color: transparent; /* Content background should be the widget background */
+    color: var(--widget-text-color);
+    border-bottom-left-radius: var(--widget-border-radius);
+    border-bottom-right-radius: var(--widget-border-radius);
+}
+
+/* Panel styling (Default Light Theme for PPanel) */
+.p-panel .p-panel-header {
+    background: var(--surface-ground);    /* Light, neutral background (e.g., #f8f9fa) */
+    color: var(--text-color);             /* Standard dark text color */
     padding: 0.75rem 1rem;
     font-weight: 600;
+    border: 1px solid var(--surface-border); /* Standard border color (e.g., #dee2e6) */
+    border-top-left-radius: var(--widget-border-radius);
+    border-top-right-radius: var(--widget-border-radius);
 }
 
 .p-panel .p-panel-content {
-    background: var(--widget-background);
-    color: var(--widget-text-color);
+    background: var(--surface-card);      /* White background (e.g., #ffffff) */
+    color: var(--text-color);             /* Standard dark text color */
     padding: 1rem;
-    border: var(--widget-border);
+    border: 1px solid var(--surface-border);
+    border-top: none; /* Usually content top border is omitted if header has one or panel has global border */
     border-bottom-right-radius: var(--widget-border-radius);
     border-bottom-left-radius: var(--widget-border-radius);
-    border-top: none; /* Remove top border as header has bottom border */
 }
 
 .p-panel .p-panel-header-icon {
@@ -327,19 +352,6 @@
     color: var(--text-color);
 }
 
-/* Panel styling */
-.p-panel .p-panel-header {
-    background: var(--primary-lightest);
-    color: var(--primary-dark);
-    border-color: var(--primary-light);
-    font-weight: 500;
-}
-
-.p-panel .p-panel-content {
-    padding: 1rem;
-    background: var(--surface-a);
-}
-
 /* Toast styling */
 .p-toast {
     font-family: var(--font-family);
@@ -391,8 +403,7 @@
     overflow: hidden;
 }
 
-.widget-dark-theme .chat-header,
-.widget-dark-theme :deep(.p-panel-header) {
+.widget-dark-theme .chat-header {
     background-color: var(--primary-color); /* Use theme variable */
     color: var(--primary-color-text); /* Use theme variable */
     padding: 10px;
@@ -460,12 +471,13 @@
 /* General style for the resize handle element */
 .resize-handle {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    width: 12px; /* Slightly larger for easier grabbing */
+    height: 12px;
     bottom: 0;
     right: 0;
     cursor: nwse-resize;
-    z-index: 1001; /* Ensure this z-index is managed correctly with other components */
+    z-index: 10; /* Ensure it's above panel content, adjust if necessary for stacking context */
+    /* display: none; Temporarily hide resize handles if all resizing is disabled */
 }
 
 /* Visual indicator for bottom-right resize handle */
@@ -482,21 +494,27 @@
 
 /* Specific styling for resize handle indicator in widget-dark-theme */
 .widget-dark-theme .resize-handle-br:after {
-    border-right-color: var(--input-placeholder-color); /* Use theme variable */
-    border-bottom-color: var(--input-placeholder-color); /* Use theme variable */
+    border-right-color: var(--p-primary-500); /* Adjust if a specific dark theme variant is needed */
+    border-bottom-color: var(--p-primary-500);
+    /* Consider using a more generic variable like --widget-text-color or --input-placeholder-color if --p-primary-500 isn't suitable for all dark widgets */
 }
 
 /* ChatWidget.vue specific styles */
 .chat-widget {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Prevent content overflow */
-    position: fixed;
-    z-index: 1000;
-    /* Theme properties like background, color, border, border-radius, box-shadow
-       are expected to be applied via .widget-dark-theme or other theme classes */
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
 }
 
+/* Ensure the .chat-body (our custom div inside ScrollPanel) behaves correctly */
+.chat-widget .p-scrollpanel .p-scrollpanel-content .chat-body {
+    /* This is our message container */
+    /* It should naturally expand with its content. */
+    /* Height should be 'auto' or not set, to be determined by messages. */
+    /* min-height might be useful if you want a minimum chat area even if empty, but usually not needed for scrolling issues. */
+}
+
+/* .chat-header is defined in .widget-dark-theme .p-panel-header, so this might be redundant or for non-PPanel headers */
 .chat-header {
     padding: 10px;
     text-align: center;
@@ -519,44 +537,34 @@
 .farm-setup-container {
     padding: 20px;
     text-align: center;
-    /* color: white; -- Should be handled by .widget-dark-theme */
-    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
-}
-
-/* .welcome-card styling might be better handled by p-card in widget-dark-theme */
-/* Or if specific, prefix with .chat-widget */
-.chat-widget .welcome-card { 
-    background: rgba(var(--surface-ground-rgb), 0.1); /* Slightly increased opacity for better separation */
-    border: none;
-    border-radius: var(--border-radius); 
-}
-
-/* Ensure text within the welcome card in dark theme is legible */
-.widget-dark-theme .welcome-card .p-card-title,
-.widget-dark-theme .welcome-card .p-card-content p {
-    color: var(--widget-text-color); /* Explicitly set to widget text color (white) */
-}
-
-.action-options {
-    display: flex;
-    flex-direction: column;
-    gap: 12px; /* Consider a theme variable for spacing */
-    margin: 20px 0;
-}
-
-.or-divider {
-    margin: 20px 0;
-    opacity: 0.8; /* Increased opacity slightly */
-    color: var(--widget-text-color); /* Ensure it uses widget text color */
+    overflow-y: auto; /* Added to ensure scrolling if content overflows */
+    flex-shrink: 0; /* Ensure it doesn't shrink */
 }
 
 .chat-body {
-    flex: 1;
-    padding: 10px;
-    overflow-y: auto;
+    flex: 1 1 auto; /* Allow chat body to grow and shrink, but also have a base size (auto from content) */
+    overflow-y: auto; /* This is the primary rule for scrolling messages */
+    padding: 10px; /* Add some padding inside the scrollable area */
+}
+
+.chat-footer {
+    border-top: 1px solid var(--surface-d); /* Use theme variable */
+    flex-shrink: 0; /* Ensure footer does not shrink */
+    padding: 10px; /* Added padding for consistency */
+}
+
+.message {
+    margin: 5px 0;
+}
+
+.chat-input {
+    display: flex;
+    border-top: 1px solid var(--surface-d); /* Use theme variable */
+    align-items: center;
+    gap: 10px; 
 }
 
 .limited-mode {
@@ -578,6 +586,7 @@
     padding: 8px;
     background: rgba(var(--warning-color-rgb), 0.1); /* Assuming a --warning-color is defined */
     border-top: 1px solid rgba(var(--warning-color-rgb), 0.3); /* Assuming a --warning-color is defined */
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .token-warning {
@@ -585,23 +594,6 @@
     align-items: center;
     color: var(--warning-color); /* Assuming a --warning-color is defined */
     font-size: 0.85rem;
-}
-
-.chat-footer {
-    border-top: 1px solid var(--surface-d); /* Use theme variable */
-}
-
-.message {
-    margin: 5px 0;
-}
-
-.message-bubble {
-    padding: 10px;
-    border-radius: 10px; /* Consider var(--border-radius-sm) or similar */
-    max-width: 80%;
-    word-wrap: break-word;
-    white-space: normal;
-    overflow-wrap: break-word;
 }
 
 /* Styling for sent messages within .widget-dark-theme */
@@ -683,12 +675,4 @@
     flex-wrap: wrap;
     padding: 5px;
     gap: 5px; /* Consider a theme variable for spacing */
-}
-
-.chat-input {
-    display: flex;
-    padding: 10px;
-    border-top: 1px solid var(--surface-d); /* Use theme variable */
-    align-items: center;
-    gap: 10px; 
 }

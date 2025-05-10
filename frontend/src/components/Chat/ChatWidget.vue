@@ -1,62 +1,39 @@
-<template>  <div
+<template>
+  <PPanel
     ref="chatWidgetRef"
+    header="AgriBot Chat"
     class="chat-widget widget-dark-theme"
-    :style="{
-      left: position.x + 'px',
-      top: position.y + 'px',
-      width: dimensions.width + 'px',
-      height: dimensions.height + 'px',
-    }"
+    :style="panelStyle"
+    :pt="panelPt"
+    :toggleable="false"
   >
-    <div class="chat-header" @mousedown="startDrag">
-      <h2>Agribot</h2>
-    </div>
-    <div class="resize-handle resize-handle-br" @mousedown="startResize" />
-
-    <!-- Initial State - No Farm Selected -->
-    <div v-if="!farmDataMode" class="farm-setup-container">
-      <PCard class="welcome-card">
-        <template #title>Welcome to AgriBot!</template>
-        <template #content>
-          <p>To get the most personalized assistance:</p>
-          <div class="action-options">
-            <PButton 
-              icon="pi pi-map-marker" 
-              class="p-button-success" 
-              label="Select Farm Location" 
-              @click="activateLocationSelection"
-            />
+    <ScrollPanel 
+      ref="scrollPanelComponentRef"
+      class="chat-body-scroll-panel" 
+      :pt="{
+        wrapper: { style: 'height: 100%; display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--surface-border);' },
+        content: { style: 'flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 1rem;' }
+      }"
+    >
+      <div class="chat-body">
+        <div
+          v-for="(msg, index) in messages"
+          :key="index"
+          class="message"
+          :class="{ sent: msg.isSent, received: !msg.isSent }"
+        >
+          <div v-if="msg.isSent" class="message-bubble">
+            {{ msg.text }}
           </div>
-          <p class="or-divider">—— OR ——</p>
-          <PButton 
-            icon="pi pi-comments" 
-            class="p-button-outlined p-button-secondary" 
-            label="Continue with General Chat" 
-            @click="startGeneralChat" 
-          />
-        </template>
-      </PCard>
-    </div>
-
-    <!-- Chat UI -->
-    <div class="chat-body" :class="{ 'limited-mode': !farmDataMode }">
-      <div
-        v-for="(msg, index) in messages"
-        :key="index"
-        class="message"
-        :class="{ sent: msg.isSent, received: !msg.isSent }"
-      >
-        <div v-if="msg.isSent" class="message-bubble">
-          {{ msg.text }}
+          <!-- eslint-disable vue/no-v-html -->
+          <div v-else class="message-bubble" v-html="msg.text" />
+          <!-- eslint-enable vue/no-v-html -->
         </div>
-        <!-- eslint-disable vue/no-v-html -->
-        <div v-else class="message-bubble" v-html="msg.text" />
-        <!-- eslint-enable vue/no-v-html -->
       </div>
-    </div>
+    </ScrollPanel>
 
     <div
-      v-if="!farmDataMode && messages.length > 3"
+      v-if="!farmDataMode && messages.length > 0 && initialInteractionMade"
       class="token-usage-indicator"
     >
       <div class="token-warning">
@@ -77,8 +54,8 @@
         </PButton>
       </div>
       <div class="chat-input">
-        <span class="p-input-icon-right">
-          <i class="pi pi-send" v-if="!inputDisabled" />
+        <span class="p-input-icon-right w-full">
+          <i class="pi pi-send" v-if="!inputDisabled && messageInput" @click="sendMessage" style="cursor: pointer;" />
           <PInputText
             v-model="messageInput"
             placeholder="Type your message..."
@@ -87,19 +64,19 @@
             @keyup.enter="sendMessage"
           />
         </span>
-        <PButton 
-          icon="pi pi-send" 
-          class="p-button-success" 
-          :disabled="inputDisabled" 
+        <PButton
+          icon="pi pi-send"
+          class="p-button-primary"
+          :disabled="inputDisabled || !messageInput"
           @click="sendMessage"
         />
       </div>
     </div>
-  </div>
+  </PPanel>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, computed, nextTick } from 'vue'
 import { useLocationStore } from '../../stores/locationStore'
 import { useProductStore } from '../../stores/productStore'
 import { useDraggableResizable } from '../../composables/useDraggableResizable'
@@ -108,9 +85,10 @@ import {
   ContextTypeEnum,
   type Message,
 } from '../../composables/useChatService'
-import PCard from 'primevue/card'
 import PButton from 'primevue/button'
 import PInputText from 'primevue/inputtext'
+import PPanel from 'primevue/panel'
+import ScrollPanel from 'primevue/scrollpanel';
 
 // Store instances
 const locationStore = useLocationStore()
@@ -119,103 +97,232 @@ const productStore = useProductStore()
 // Chat widget DOM element reference
 const chatWidgetRef = ref<HTMLElement | null>(null)
 
+// Ref for the ScrollPanel component instance
+const scrollPanelComponentRef = ref<InstanceType<typeof ScrollPanel> | null>(null)
+
 // Draggable and Resizable Composable
-const { position, dimensions, startDrag, startResize } = useDraggableResizable(
+const initialWidth = 400;
+const initialHeight = 600;
+const { position, dimensions, startDrag } = useDraggableResizable(
   chatWidgetRef,
-  { x: 10, y: 10 }, // Initial position, will be adjusted by adjustInitialPosition
-  { width: 400, height: 600 }, // Initial dimensions
-)
+  { x: 10, y: window.innerHeight - initialHeight - 10 }, // Positioned to the bottom-left
+  { width: initialWidth, height: initialHeight },
+);
+
+const panelPt = computed(() => ({
+  header: {
+    onmousedown: startDrag,
+    style: 'cursor: move; width: 100%; user-select: none; flex-shrink: 0;'
+  },
+  toggleablecontent: { // Wrapper for the main content slot
+    style: 'flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column;'
+  },
+  content: { // The .p-panel-content div itself
+    style: 'display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0; height: 100%;'
+  }
+}));
+
+// Computed style for PPanel positioning and dimensions
+const panelStyle = computed(() => ({
+  left: position.value.x + 'px',
+  top: position.value.y + 'px',
+  width: dimensions.value.width + 'px',
+  height: dimensions.value.height + 'px',
+  position: 'fixed',
+  zIndex: 1050, // Ensure it's not under the ActionToolbar
+  display: 'flex', // Make PPanel a flex container
+  flexDirection: 'column', // Arrange PPanel sections (header, content) vertically
+  overflow: 'hidden' // Prevent PPanel itself from growing beyond its dimensions
+}))
 
 // Chat Service Composable State
 const farmDataMode = ref(false)
 const contextType = ref<ContextTypeEnum>(ContextTypeEnum.GENERAL)
 const messages = ref<Message[]>([])
-const lastProductId = ref('') // Track the last product ID to prevent duplicates
+const lastProductId = ref('')
+const initialInteractionMade = ref(false);
 
 // Chat Service Composable
 const {
   messageInput,
   inputDisabled,
   currentSuggestions,
-  sendMessage, // sendMessage in useChatService will now handle formatting for bot messages
-  sendSuggestion, // sendSuggestion in useChatService will also handle formatting
-  scrollToBottom,
-} = useChatService(farmDataMode, contextType, messages, lastProductId)
+  sendMessage,
+  sendSuggestion,
+  scrollToBottom, // Keep scrollToBottom available for direct calls if needed elsewhere
+} = useChatService(farmDataMode, contextType, messages, lastProductId, scrollPanelComponentRef)
 
-// Component-specific state
-const isLocationSelectionActive = ref(false)
+// Watch for changes in messages and scroll to bottom after DOM updates
+watch(messages, () => {
+  scrollToBottom();
+}, { deep: true, flush: 'post' });
 
 onMounted(() => {
-  // Initial position adjustment is handled by useDraggableResizable
-
-  const targetLocation = locationStore.targetLocation
+  const targetLocation = locationStore.targetLocation;
   if (targetLocation) {
-    farmDataMode.value = true
-    contextType.value = ContextTypeEnum.FARM_SELECTED
+    farmDataMode.value = true;
+    contextType.value = ContextTypeEnum.FARM_SELECTED;
     messages.value.push({
       text: "I see you've selected a farm location. How can I help you with your farm today?",
       isSent: false,
       model: 'AgriBot',
-    })
+    });
+    initialInteractionMade.value = true;
   } else {
     messages.value.push({
-      text: "Hello! I'm AgriBot. To get personalized farming advice, please select your farm location on the map.",
+      text: "Hello! I'm AgriBot. Please use the toolbar to select a farm or start a general chat.",
       isSent: false,
       model: 'AgriBot',
-    })
+    });
   }
 
   window.addEventListener(
     'location-selected',
-    handleLocationSelected as EventListener,
-  )
+    handleLocationSelectedEvent as EventListener, // Renamed for clarity
+  );
+  window.addEventListener('start-general-chat', handleStartGeneralChatEvent as EventListener);
 
   if (productStore.selectedProduct && productStore.selectedProduct.product_id) {
-    lastProductId.value = productStore.selectedProduct.product_id
+    lastProductId.value = productStore.selectedProduct.product_id;
   }
+  scrollToBottom(); // Initial scroll
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener(
     'location-selected',
-    handleLocationSelected as EventListener,
-  )
+    handleLocationSelectedEvent as EventListener,
+  );
+  window.removeEventListener('start-general-chat', handleStartGeneralChatEvent as EventListener);
 })
 
-function activateLocationSelection(): void {
-  isLocationSelectionActive.value = true
+function handleLocationSelectedEvent(): void { // Renamed for clarity
+  farmDataMode.value = true;
+  contextType.value = ContextTypeEnum.FARM_SELECTED;
+  initialInteractionMade.value = true;
   messages.value.push({
-    text: 'Please click on the map to select your farm location.',
+    text: "Farm location selected! How can I assist you with this area?",
     isSent: false,
     model: 'AgriBot',
-  })
-  window.dispatchEvent(new CustomEvent('activate-location-selection'))
+  });
+  scrollToBottom();
 }
 
-function handleLocationSelected(): void {
-  if (isLocationSelectionActive.value) {
-    isLocationSelectionActive.value = false
-    // Optionally, add a message confirming location selection was processed
-    // messages.value.push({ text: "Location selection mode deactivated.", isSent: false, model: "AgriBot" });
-  }
-}
-
-function startGeneralChat(): void {
-  farmDataMode.value = false
-  contextType.value = ContextTypeEnum.GENERAL
+function handleStartGeneralChatEvent() { // Renamed for clarity
+  farmDataMode.value = false;
+  contextType.value = ContextTypeEnum.GENERAL;
+  initialInteractionMade.value = true;
   messages.value.push({
     text: "I'll be happy to help with general farming questions. Keep in mind that selecting a specific location will allow me to provide more tailored advice.",
     isSent: false,
     model: 'AgriBot',
-  })
-  scrollToBottom() // Ensure chat scrolls after this interaction
+  });
+  scrollToBottom();
 }
 
-// Watch for the clicked point value to be loaded to proactively inform the user
 watch(
   () => productStore.clickedPoint,
-  (newPoint, oldPoint) => {
-  },
+  () => { /* Placeholder for future logic if needed */ },
   { deep: true },
 )
+
 </script>
+
+<style scoped>
+.chat-body-scroll-panel {
+  flex: 1 1 auto; 
+  min-height: 0; 
+}
+
+/* .chat-body-scroll-panel :deep(.p-scrollpanel-content) is now handled by pt.content */
+/* .chat-body-scroll-panel :deep(.p-scrollpanel-wrapper) is now handled by pt.wrapper */
+
+.chat-body {
+  /* Padding is now applied via pt.content on ScrollPanel, so remove from here if it was for the scrollable area */
+  /* padding: 1rem; */ 
+  height: auto; 
+}
+
+.token-usage-indicator {
+  flex-shrink: 0; 
+  padding: 0.5rem 1rem; 
+  background-color: var(--widget-background); 
+  border-top: 1px solid var(--surface-border); 
+  color: var(--text-color-secondary); 
+}
+.token-warning {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.token-warning .icon {
+  margin-right: 0.5rem;
+}
+
+.chat-footer {
+  flex-shrink: 0; /* Prevents the footer from shrinking */
+  padding: 0.5rem 1rem; 
+  /* border-top: 1px solid var(--surface-border); Removed as ScrollPanel wrapper now has a border-bottom */
+  background-color: var(--widget-background); 
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.chat-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.message {
+  display: flex; 
+  margin-bottom: 0.75rem;
+}
+
+.message-bubble {
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-lg);
+  max-width: 85%;
+  word-wrap: break-word;
+}
+
+.sent {
+  justify-content: flex-end; 
+}
+.sent .message-bubble {
+  background-color: var(--primary-color);
+  color: var(--primary-color-text);
+}
+
+.received {
+ justify-content: flex-start; 
+}
+.received .message-bubble {
+  background-color: var(--surface-c); 
+  color: var(--text-color); 
+}
+
+.p-input-icon-right.w-full {
+    width: 100%;
+}
+.p-input-icon-right .p-inputtext.w-full {
+    width: 100%;
+}
+
+.p-input-icon-right > .pi-send {
+    right: 0.75rem; 
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--primary-color); 
+}
+.p-input-icon-right > .pi-send:hover {
+    color: var(--primary-color-hover);
+}
+</style>

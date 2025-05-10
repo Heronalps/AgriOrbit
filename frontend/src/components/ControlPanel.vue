@@ -8,6 +8,9 @@ import { useMapStore } from '../stores/mapStore'
 import { watch, ref, computed, Ref } from 'vue'
 import { useDraggableResizable } from '../composables/useDraggableResizable'
 import PDropdown from 'primevue/dropdown'
+import PPanel from 'primevue/panel'
+import PButton from 'primevue/button'
+import PCalendar from 'primevue/calendar'
 
 // Initialize stores
 const availableDataStore = useAvailableDataStore()
@@ -21,14 +24,44 @@ const controlPanelRef = ref<HTMLElement | null>(null)
 const initialWidth = 384
 const initialHeight = 480 // Or your preferred initial height
 
-const { position, dimensions, startDrag, startResize } = useDraggableResizable(
+const { position, dimensions, startDrag } = useDraggableResizable(
   controlPanelRef,
   {
-    x: window.innerWidth - initialWidth - 10, // Consistent 10px buffer from the right edge
+    x: window.innerWidth - initialWidth - 10, // Positioned to the right by default
     y: window.innerHeight - initialHeight - 10, // Consistent 10px buffer from the bottom edge
   },
-  { width: initialWidth, height: initialHeight },
+  { width: initialWidth, height: initialHeight }
 )
+
+// Computed style for PPanel positioning and dimensions
+const panelStyle = computed(() => ({
+  left: position.value.x + 'px',
+  top: position.value.y + 'px',
+  width: dimensions.value.width + 'px',
+  height: dimensions.value.height + 'px',
+  position: 'fixed',
+  overflow: 'hidden',
+  display: 'flex', // Added from ChatWidget.vue
+  flexDirection: 'column', // Added from ChatWidget.vue
+  zIndex: 1040, // Added zIndex, slightly different from ChatWidget's 1050
+  willChange: 'transform', // Hint for drag optimization
+  backfaceVisibility: 'hidden', // May improve rendering during transforms
+}))
+
+const panelControlPt = computed(() => ({
+  header: {
+    onmousedown: startDrag,
+    style: 'cursor: move; width: 100%; user-select: none; flex-shrink: 0;',
+  },
+  toggleablecontent: {
+    style:
+      'flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column;',
+  },
+  content: {
+    style:
+      'display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0; height: 100%;',
+  },
+}))
 
 /**
  * Represents an item in the basemap selection dropdown.
@@ -195,162 +228,170 @@ const cropmasksForSelect = computed<CropmaskResultItem[]>(() => {
 const allowedDatesForPicker = computed<string[]>(() => {
   return (productStore.getProductDates || []).map((dateStr) => dateStr.replace(/-/g, '/'))
 })
+
+const selectedProductForDropdown = ref<string | undefined>(productStore.getSelectedProduct.product_id);
+const selectedCropmaskForDropdown = ref<string | undefined>(
+  typeof productStore.getSelectedProduct.cropmask === 'string' ? productStore.getSelectedProduct.cropmask : undefined
+);
+const selectedBasemapForDropdown = ref<string | undefined>(mapStore.selectedBasemap);
+
+watch(() => productStore.getSelectedProduct.product_id, (newId) => {
+  selectedProductForDropdown.value = newId;
+});
+
+watch(() => productStore.getSelectedProduct.cropmask, (newCropmask) => {
+  selectedCropmaskForDropdown.value = typeof newCropmask === 'string' ? newCropmask : undefined;
+});
+
+watch(() => mapStore.selectedBasemap, (newBasemap) => {
+  selectedBasemapForDropdown.value = newBasemap;
+});
+
+const disabledDates = ref<Date[]>([]); // Placeholder for specific disabled dates
+const disabledDays = ref<number[]>([]); // Placeholder for disabled days of the week (0=Sun, 6=Sat)
+const minSelectableDate = ref<Date | undefined>(undefined); // Placeholder
+const maxSelectableDate = ref<Date | undefined>(undefined); // Placeholder
+
+// const handlePanelResize = (event: { width: number, height: number }) => {
+//   dimensions.value = { width: event.width, height: event.height };
+// };
 </script>
 
 <template>
-  <div
+  <PPanel
     ref="controlPanelRef"
-    class="control-panel-widget widget-dark-theme"
-    :style="{
-      left: position.x + 'px',
-      top: position.y + 'px',
-      width: dimensions.width + 'px',
-      height: dimensions.height + 'px',
-    }"
+    header="Map Controls"
+    class="widget-dark-theme"
+    :style="panelStyle"
+    :pt="panelControlPt"
+    :toggleable="false"
+    :resizable="false"
   >
-    <div class="control-panel-header" @mousedown="startDrag">
-      <h2>Map Controls</h2>
-    </div>
-    <div class="resize-handle resize-handle-br" @mousedown="startResize"></div>
-    
-    <div class="control-panel-body">
-      <!-- Product Selection Section -->
+    <div class="control-panel-content-wrapper">
+      <!-- Product Selection -->
       <div class="control-section">
-        <p class="section-title">Product</p>
+        <label for="product-select" class="section-title">Product:</label>
         <PDropdown
-          :modelValue="productStore.getSelectedProduct.product_id"
+          id="product-select"
+          v-model="selectedProductForDropdown"
           :options="productsForSelect"
+          optionLabel="display_name"
           optionValue="product_id"
-          optionLabel="display_name"
-          placeholder="Select Product"
+          placeholder="Select a Product"
           @change="handleProductSelectionEvent"
-          class="w-full" 
-        />
-      </div>
-      
-      <!-- Date Selection Section -->
-      <div class="control-section">
-        <p class="section-title">Date</p>
-        <div class="date-controls">
-          <PButton
-            icon="pi pi-chevron-left"
-            class="p-button-rounded p-button-secondary"
-            :disabled="!canGoPrevious"
-            aria-label="Previous Date"
-            @click="goToPreviousDate"
-          />
-          <PCalendar
-            v-model="selectedDate"
-            :dateFormat="dateFormat"
-            :showButtonBar="true"
-            :showIcon="true"
-            :selectionMode="'single'"
-            placeholder="Select Date"
-            class="w-full"
-            @change="handleDateSelection"
-          />
-          <PButton
-            icon="pi pi-chevron-right"
-            class="p-button-rounded p-button-secondary"
-            :disabled="!canGoNext"
-            aria-label="Next Date"
-            @click="goToNextDate"
-          />
-        </div>
-      </div>
-      
-      <!-- Cropmask Selection Section -->
-      <div class="control-section">
-        <p class="section-title">Cropmask</p>
-        <PDropdown
-          :modelValue="productStore.getSelectedProduct.cropmask_id"
-          :options="cropmasksForSelect"
-          optionValue="cropmask_id"
-          optionLabel="display_name"
-          placeholder="Select Cropmask (Optional)"
-          @change="handleCropmaskSelectionEvent"
           class="w-full"
         />
       </div>
-      
-      <!-- Basemap Selection Section -->
+
+      <!-- Date Selection -->
       <div class="control-section">
-        <p class="section-title">Basemap</p>
+        <label class="section-title">Date:</label>
+        <div class="date-controls" style="padding: 0.62rem 2rem;">
+          <PButton
+        icon="pi pi-chevron-left"
+        class="p-button-rounded p-button-secondary"
+        :disabled="!canGoPrevious"
+        aria-label="Previous Date"
+        @click="goToPreviousDate"
+          />
+          <PCalendar
+        v-model="selectedDate"
+        :dateFormat="dateFormat"
+        :showButtonBar="true"
+        :showIcon="true"
+        :selectionMode="'single'"
+        placeholder="Select Date"
+        class="w-full"
+        @change="handleDateSelection"
+        :disabledDates="disabledDates"
+        :disabledDays="disabledDays"
+        :minDate="minSelectableDate"
+        :maxDate="maxSelectableDate"
+          />
+          <PButton
+        icon="pi pi-chevron-right"
+        class="p-button-rounded p-button-secondary"
+        :disabled="!canGoNext"
+        aria-label="Next Date"
+        @click="goToNextDate"
+          />
+        </div>
+      </div>
+
+      <!-- Cropmask Selection -->
+      <div class="control-section">
+        <label for="cropmask-select" class="section-title">Crop Mask:</label>
         <PDropdown
-          :modelValue="mapStore.selectedBasemap"
+          id="cropmask-select"
+          v-model="selectedCropmaskForDropdown"
+          :options="cropmasksForSelect"
+          optionLabel="display_name"
+          optionValue="cropmask_id"
+          placeholder="Select Crop Mask"
+          @change="handleCropmaskSelectionEvent"
+          class="w-full"
+          showClear
+        />
+      </div>
+
+      <!-- Basemap Selection -->
+      <div class="control-section">
+        <label for="basemap-select" class="section-title">Basemap:</label>
+        <PDropdown
+          id="basemap-select"
+          v-model="selectedBasemapForDropdown"
           :options="availableBasemaps"
-          optionValue="id"
           optionLabel="name"
+          optionValue="id"
           placeholder="Select Basemap"
-          data-basemap-selector="true"
           @change="handleBasemapSelectionEvent"
           class="w-full"
         />
       </div>
     </div>
-  </div>
+  </PPanel>
 </template>
 
 <style scoped>
-/* Styling to match the Agribot chat widget */
-.control-panel-widget {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  background: #231f1fc8;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-  position: fixed;
-  z-index: 1000;
-  color: white;
-}
-
-.control-panel-header {
-  background: #368535;
-  color: white;
-  padding: 10px;
-  text-align: center;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
-  position: relative;
-  cursor: move;
-  user-select: none;
-}
-
-.control-panel-header h2 {
-  margin: 0;
-  font-size: 1.5em;
-  font-weight: 600;
-  font-family: var(--font-family);
-}
-
-.control-panel-body {
-  flex: 1;
-  padding: 10px;
+.control-panel-content-wrapper {
+  padding: 1rem;
+  height: 100%;
   overflow-y: auto;
+  /* Ensure it fills the flex container from PPanel's content style */
+  flex: 1 1 auto; 
   display: flex;
   flex-direction: column;
-  gap: 1rem;
 }
 
 .control-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  margin-bottom: 1rem; /* PrimeVue form elements often have their own margins, adjust if needed */
 }
 
 .section-title {
-  font-size: 1rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
-  margin: 0;
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem; /* Consistent spacing for section titles */
+  color: var(--p-text-color); /* Ensure text color matches theme */
 }
 
 .date-controls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  width: 100%;
+  gap: 0.5rem; /* Spacing between date control elements */
+}
+
+.date-controls .p-calendar {
+  flex-grow: 1; /* Calendar takes available space */
+}
+
+/* Additional styling for PDropdown if needed, though theme.css should cover most */
+:deep(.p-dropdown) {
+  width: 100%; /* Ensure dropdowns take full width of their container if not already */
+}
+
+/* Style for PButtons in date controls if not covered by global button styles or theme */
+.date-controls .p-button {
+  min-width: auto; /* Allow buttons to be compact */
 }
 </style>
+``` 

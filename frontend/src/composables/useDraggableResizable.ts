@@ -19,10 +19,8 @@ export function useDraggableResizable(
   const dimensions = ref<Dimensions>({ ...initialDimensions })
 
   const isDragging = ref(false)
-  const isResizing = ref(false)
   const initialMousePos = ref<Position>({ x: 0, y: 0 })
   const initialWidgetPos = ref<Position>({ x: 0, y: 0 })
-  const initialWidgetDim = ref<Dimensions>({ width: 0, height: 0 })
 
   const startDrag = (event: MouseEvent) => {
     event.preventDefault()
@@ -54,46 +52,6 @@ export function useDraggableResizable(
     isDragging.value = false
     document.removeEventListener('mousemove', onDrag)
     document.removeEventListener('mouseup', stopDrag)
-  }
-
-  const startResize = (event: MouseEvent) => {
-    event.preventDefault()
-    isResizing.value = true
-    initialMousePos.value = { x: event.clientX, y: event.clientY }
-    if (elementRef.value) {
-      initialWidgetDim.value = {
-        width: dimensions.value.width,
-        height: dimensions.value.height,
-      }
-    }
-    document.addEventListener('mousemove', onResize)
-    document.addEventListener('mouseup', stopResize)
-  }
-
-  const onResize = (event: MouseEvent) => {
-    if (!isResizing.value || !elementRef.value) return
-
-    const dx = event.clientX - initialMousePos.value.x
-    const dy = event.clientY - initialMousePos.value.y
-
-    const minWidth = 300
-    const minHeight = 200
-
-    dimensions.value.width = Math.max(
-      minWidth,
-      initialWidgetDim.value.width + dx,
-    )
-    dimensions.value.height = Math.max(
-      minHeight,
-      initialWidgetDim.value.height + dy,
-    )
-    adjustBounds()
-  }
-
-  const stopResize = () => {
-    isResizing.value = false
-    document.removeEventListener('mousemove', onResize)
-    document.removeEventListener('mouseup', stopResize)
   }
 
   const adjustBounds = () => {
@@ -130,8 +88,6 @@ export function useDraggableResizable(
   onBeforeUnmount(() => {
     document.removeEventListener('mousemove', onDrag)
     document.removeEventListener('mouseup', stopDrag)
-    document.removeEventListener('mousemove', onResize)
-    document.removeEventListener('mouseup', stopResize)
     window.removeEventListener('resize', onWindowResize)
   })
 
@@ -139,6 +95,5 @@ export function useDraggableResizable(
     position,
     dimensions,
     startDrag,
-    startResize,
   }
 }

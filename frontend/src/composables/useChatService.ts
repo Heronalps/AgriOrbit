@@ -1,12 +1,11 @@
-import { ref, computed, watch } from 'vue'
-import type { Ref } from 'vue'
+import { ref, computed, watch, type Ref, nextTick } from 'vue' // Added nextTick
 import { marked } from 'marked'
 import type { MarkedOptions } from 'marked'
 import DOMPurify from 'dompurify'
-import { useLocationStore } from '@/stores/locationStore'
-import type { TargetLocationType } from '@/stores/locationStore'
+import { useLocationStore, type TargetLocationType } from '@/stores/locationStore'
 import { useProductStore } from '@/stores/productStore'
 import type { selectedProductType } from '@/stores/productStore'
+import type ScrollPanel from 'primevue/scrollpanel'; // Import ScrollPanel type
 
 // Define interfaces for component state
 export interface Message {
@@ -34,6 +33,7 @@ export function useChatService(
   contextType: Ref<ContextTypeEnum>,
   messages: Ref<Message[]>,
   lastProductId: Ref<string>,
+  scrollPanelRef?: Ref<InstanceType<typeof ScrollPanel> | null>, // Updated to accept ScrollPanel instance ref
 ) {
   const locationStore = useLocationStore()
   const productStore = useProductStore()
@@ -132,14 +132,19 @@ export function useChatService(
    * Scrolls the chat body to the bottom to show the latest messages.
    */
   function scrollToBottom(): void {
-    import('vue').then((vue) => {
-      vue.nextTick(() => {
-        const chatBody = document.querySelector('.chat-body') // Consider passing chatBody ref if needed
-        if (chatBody) {
-          chatBody.scrollTop = chatBody.scrollHeight
+    if (scrollPanelRef?.value) {
+      const scrollPanelElement = (scrollPanelRef.value as any).$el as HTMLElement | undefined;
+
+      if (scrollPanelElement) {
+        const scrollableContentElement = scrollPanelElement.querySelector('.p-scrollpanel-content') as HTMLElement | null;
+        
+        if (scrollableContentElement) {
+          nextTick(() => { 
+            scrollableContentElement.scrollTop = scrollableContentElement.scrollHeight;
+          });
         }
-      })
-    })
+      }
+    }
   }
 
   /**
@@ -174,12 +179,9 @@ export function useChatService(
 
   /**
    * Sends a message text to the chat API and handles the streamed response.
-   * @param {string} text - The message text to send.
+   * @param {string} text - The message text to send (this is the original user text).
    */
   async function sendToChat(text: string): Promise<void> {
-    messages.value.push({ text: await formatMessage(text, true), isSent: true })
-    scrollToBottom()
-
     let context = ''
     const { selectedProduct, clickedPoint } = productStore
 
@@ -263,7 +265,6 @@ export function useChatService(
 
     const contextualizedText = context ? `${text} ${context}`.trim() : text
 
-    // Create and add the message object that will be updated
     const thinkingMessageText = 'AgriBot is thinking...'
     const formattedThinkingMessage = await formatMessage(
       thinkingMessageText,
@@ -275,7 +276,9 @@ export function useChatService(
       model: 'AgriBot',
     }
     messages.value.push(botResponseInProgressMessage)
-    scrollToBottom()
+    // scrollToBottom() // Removed: Watch in ChatWidget.vue will handle this
+
+    inputDisabled.value = true;
 
     try {
       const response = await fetch('http://127.0.0.1:8157/chat', {
@@ -290,7 +293,7 @@ export function useChatService(
       })
 
       if (!response.ok) {
-        await handleErrorResponse(response, botResponseInProgressMessage) // Pass message to update
+        await handleErrorResponse(response, botResponseInProgressMessage)
         return
       }
 
@@ -300,7 +303,7 @@ export function useChatService(
           false,
         )
         botResponseInProgressMessage.model = 'System'
-        scrollToBottom()
+        scrollToBottom(); // Kept: Specific case, watch might not be ideal if message object itself isn't changing structure
         return
       }
 
@@ -309,8 +312,7 @@ export function useChatService(
       let streamDone = false
       let currentStreamedText = ''
 
-      // Update botResponseInProgressMessage directly with streamed content
-      botResponseInProgressMessage.text = '' // Clear "Thinking..." text before streaming starts
+      botResponseInProgressMessage.text = '' // Initial clear for streaming
 
       while (!streamDone) {
         const { value, done } = await reader.read()
@@ -350,25 +352,34 @@ export function useChatService(
             currentStreamedText,
             false,
           )
-          scrollToBottom()
+          // scrollToBottom(); // Removed: Watch in ChatWidget.vue will handle this
         }
       }
-      // Ensure final text is set
+      // Final update to the message text after stream is done
       botResponseInProgressMessage.text = await formatMessage(
         currentStreamedText,
         false,
       )
-      scrollToBottom()
+      // scrollToBottom(); // Removed: Watch in ChatWidget.vue will handle this
     } catch (error) {
       console.error('Chat API request failed:', error)
       const errorMessageText = `Sorry, I encountered an error: ${
         (error as Error).message || 'Unknown chat connection error'
       }.`
-      botResponseInProgressMessage.text = await formatMessage(
-        errorMessageText,
-        false,
-      )
-      botResponseInProgressMessage.model = 'System'
+      if (botResponseInProgressMessage) {
+        botResponseInProgressMessage.text = await formatMessage(
+          errorMessageText,
+          false,
+        )
+        botResponseInProgressMessage.model = 'System'
+      } else {
+        messages.value.push({
+          text: await formatMessage(errorMessageText, false),
+          isSent: false,
+          model: 'System'
+        });
+      }
+      scrollToBottom();
     } finally {
       inputDisabled.value = false
       scrollToBottom()
@@ -382,10 +393,11 @@ export function useChatService(
     const currentMessageText = messageInput.value.trim()
     if (!currentMessageText) return
 
-    inputDisabled.value = true
-    await sendToChat(currentMessageText) // sendToChat will add the user message
+    const userMessage: Message = { text: await formatMessage(currentMessageText, true), isSent: true };
+    messages.value.push(userMessage);
+
+    await sendToChat(currentMessageText)
     messageInput.value = ''
-    inputDisabled.value = false
   }
 
   /**
@@ -395,9 +407,10 @@ export function useChatService(
   async function sendSuggestion(suggestion: string): Promise<void> {
     if (!suggestion) return
 
-    inputDisabled.value = true
-    await sendToChat(suggestion) // sendToChat will add the user message
-    inputDisabled.value = false
+    const userMessage: Message = { text: await formatMessage(suggestion, true), isSent: true };
+    messages.value.push(userMessage);
+
+    await sendToChat(suggestion)
   }
 
   watch(
@@ -499,6 +512,10 @@ export function useChatService(
     },
     { deep: true },
   )
+
+  watch(messages, () => {
+    scrollToBottom();
+  }, { deep: true, flush: 'post' });
 
   return {
     messageInput,

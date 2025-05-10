@@ -6,6 +6,7 @@
 <script setup lang="ts">
 import MapView from '@/components/MapView.vue'
 import ChatWidget from '@/components/Chat/ChatWidget.vue'
+import ActionToolbar from '@/components/ActionToolbar.vue'
 import { useAvailableDataStore } from '@/stores/availableDataStore'
 import { onMounted } from 'vue'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -21,7 +22,6 @@ useReactiveMapDataManager()
  * This includes setting the document title and loading available map products and cropmasks.
  */
 onMounted(async () => {
-  document.title = 'AgriOrbit'
   try {
     await Promise.all([
       availableDataStore.loadAvailableProducts(),
@@ -36,9 +36,10 @@ onMounted(async () => {
 
 <template>
   <!-- Main application container -->
-  <div class="app-container">
+  <div id="app-container">
     <MapView />
     <ChatWidget />
+    <ActionToolbar />
   </div>
 </template>
 
