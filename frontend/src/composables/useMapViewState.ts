@@ -37,7 +37,7 @@ export function useMapViewState(initialState?: Partial<viewStateType>) {
   function resetView(resetState?: Partial<viewStateType>): void {
     Object.assign(viewState, {
       ...DEFAULT_VIEW_STATE,
-      ...resetState
+      ...resetState,
     })
   }
 
@@ -45,22 +45,22 @@ export function useMapViewState(initialState?: Partial<viewStateType>) {
    * Zoom to specific coordinates with optional zoom level
    */
   function zoomToLocation(
-    longitude: number, 
-    latitude: number, 
-    zoom?: number
+    longitude: number,
+    latitude: number,
+    zoom?: number,
   ): void {
     updateViewState({
       longitude,
       latitude,
-      ...(zoom !== undefined ? { zoom } : {})
+      ...(zoom !== undefined ? { zoom } : {}),
     })
   }
 
   return {
-    ...toRefs(viewState),  // Make individual properties reactive 
-    viewState,             // Provide mutable version to components that need it
+    ...toRefs(viewState), // Make individual properties reactive
+    viewState, // Provide mutable version to components that need it
     updateViewState,
     resetView,
-    zoomToLocation
+    zoomToLocation,
   }
 }

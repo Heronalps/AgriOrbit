@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useProductStore } from '@/stores/productStore'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 
 const productStore = useProductStore()
 
@@ -40,15 +40,15 @@ const displayContent = computed<string>(() => {
 /**
  * Computed property to determine if a loading indicator should be shown.
  */
-const isLoading = computed<boolean>(() => 
-  productStore.clickedPoint && productStore.clickedPoint.isLoading
+const isLoading = computed<boolean>(
+  () => productStore.clickedPoint && productStore.clickedPoint.isLoading,
 )
 
 /**
  * Computed property to determine if an error indicator should be shown.
  */
-const hasError = computed<boolean>(() => 
-  productStore.clickedPoint && !!productStore.clickedPoint.errorMessage
+const hasError = computed<boolean>(
+  () => productStore.clickedPoint && !!productStore.clickedPoint.errorMessage,
 )
 
 /**
@@ -59,22 +59,28 @@ function hidePopup(): void {
 }
 </script>
 
-<template>  <POverlayPanel
+<template>
+  <POverlayPanel
     v-if="productStore.clickedPoint && productStore.clickedPoint.show"
     :showCloseIcon="true"
-    @hide="hidePopup"
     :class="['map-popup']"
     :style="{ left: absX, top: absY }"
     :dismissable="true"
     :autoZIndex="true"
     :baseZIndex="1001"
     appendTo="self"
+    @hide="hidePopup"
   >
     <template #content>
       <div class="popup-content">
         <i v-if="isLoading" class="pi pi-spin pi-spinner mr-2" />
-        <i v-else-if="hasError" class="pi pi-exclamation-triangle text-red-500 mr-2" />
-        <span :class="{'font-bold': !isLoading && !hasError}">{{ displayContent }}</span>
+        <i
+          v-else-if="hasError"
+          class="pi pi-exclamation-triangle text-red-500 mr-2"
+        />
+        <span :class="{ 'font-bold': !isLoading && !hasError }">{{
+          displayContent
+        }}</span>
       </div>
     </template>
   </POverlayPanel>

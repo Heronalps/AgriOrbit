@@ -6,13 +6,7 @@ import { viewStateType } from '@/shared'
 import { DECKGL_SETTINGS } from '@/utils/defaultSettings'
 // Import necessary types from Deck.gl
 import { Deck, type PickingInfo, type Layer } from '@deck.gl/core'
-import {
-  onMounted,
-  onBeforeUnmount,
-  provide,
-  useAttrs,
-  watch,
-} from 'vue'
+import { onMounted, onBeforeUnmount, provide, useAttrs, watch } from 'vue'
 import { useMapViewState } from '@/composables/useMapViewState'
 
 /**

@@ -30,7 +30,7 @@ const { position, dimensions, startDrag } = useDraggableResizable(
     x: window.innerWidth - initialWidth - 10, // Positioned to the right by default
     y: window.innerHeight - initialHeight - 10, // Consistent 10px buffer from the bottom edge
   },
-  { width: initialWidth, height: initialHeight }
+  { width: initialWidth, height: initialHeight },
 )
 
 // Computed style for PPanel positioning and dimensions
@@ -131,15 +131,21 @@ watch(
   { immediate: true },
 )
 
-const handleProductSelectionEvent = (event: { originalEvent: Event, value: unknown }) => {
-  const value = event.value;
+const handleProductSelectionEvent = (event: {
+  originalEvent: Event
+  value: unknown
+}) => {
+  const value = event.value
   if (typeof value === 'string' && value) {
     productStore.setProduct(value)
   }
 }
 
-const handleCropmaskSelectionEvent = (event: { originalEvent: Event, value: unknown }) => {
-  const value = event.value;
+const handleCropmaskSelectionEvent = (event: {
+  originalEvent: Event
+  value: unknown
+}) => {
+  const value = event.value
   if (typeof value === 'string') {
     // Allow empty string for "no cropmask"
     productStore.setCropmask(value)
@@ -148,15 +154,20 @@ const handleCropmaskSelectionEvent = (event: { originalEvent: Event, value: unkn
   }
 }
 
-const handleBasemapSelectionEvent = (event: { originalEvent: Event, value: unknown }) => {
-  const value = event.value;
+const handleBasemapSelectionEvent = (event: {
+  originalEvent: Event
+  value: unknown
+}) => {
+  const value = event.value
   if (typeof value === 'string' && value) {
     mapStore.setBasemap(value)
   }
 }
 
 // Date handling logic
-const handleDateSelection = async (dateFromPicker: Date | null): Promise<void> => {
+const handleDateSelection = async (
+  dateFromPicker: Date | null,
+): Promise<void> => {
   if (dateFromPicker instanceof Date && !isNaN(dateFromPicker.getTime())) {
     const day = dateFromPicker.getDate().toString().padStart(2, '0')
     const month = (dateFromPicker.getMonth() + 1).toString().padStart(2, '0')
@@ -173,21 +184,33 @@ const handleDateSelection = async (dateFromPicker: Date | null): Promise<void> =
   }
 }
 
-const dateFormat = "yy-mm-dd" // PrimeVue Calendar format string - note: 'yy' is 4-digit year in PrimeVue
+const dateFormat = 'yy-mm-dd' // PrimeVue Calendar format string - note: 'yy' is 4-digit year in PrimeVue
 
 // Date navigation computed properties and functions
-const availableDates = computed<string[]>(() => productStore.getProductDates || [])
-const currentDateStr = computed<string | undefined>(() => productStore.getSelectedProduct.date)
+const availableDates = computed<string[]>(
+  () => productStore.getProductDates || [],
+)
+const currentDateStr = computed<string | undefined>(
+  () => productStore.getSelectedProduct.date,
+)
 const currentIndex = computed<number>(() => {
-  if (!currentDateStr.value || !availableDates.value || availableDates.value.length === 0) {
+  if (
+    !currentDateStr.value ||
+    !availableDates.value ||
+    availableDates.value.length === 0
+  ) {
     return -1
   }
   const normalizedCurrentDate = currentDateStr.value.replace(/-/g, '/')
-  return availableDates.value.findIndex((d) => d.replace(/-/g, '/') === normalizedCurrentDate)
+  return availableDates.value.findIndex(
+    (d) => d.replace(/-/g, '/') === normalizedCurrentDate,
+  )
 })
 const canGoPrevious = computed<boolean>(() => currentIndex.value > 0)
-const canGoNext = computed<boolean>(() => 
-  currentIndex.value !== -1 && currentIndex.value < availableDates.value.length - 1
+const canGoNext = computed<boolean>(
+  () =>
+    currentIndex.value !== -1 &&
+    currentIndex.value < availableDates.value.length - 1,
 )
 
 const goToPreviousDate = async (): Promise<void> => {
@@ -211,10 +234,10 @@ const goToNextDate = async (): Promise<void> => {
 /**
  * Filter function for PCalendar to only allow dates available in the product
  */
-const isDateSelectable = (date: Date) => {
-  const formattedDate = new Date(date).toLocaleDateString('en-CA') // Format as YYYY-MM-DD
-  return allowedDatesForPicker.value.includes(formattedDate.replace(/-/g, '/'))
-}
+// const isDateSelectable = (date: Date) => {
+//   const formattedDate = new Date(date).toLocaleDateString('en-CA') // Format as YYYY-MM-DD
+//   return allowedDatesForPicker.value.includes(formattedDate.replace(/-/g, '/'))
+// }
 
 // Computed properties for select components
 const productsForSelect = computed<Array<Record<string, unknown>>>(() => {
@@ -225,32 +248,48 @@ const cropmasksForSelect = computed<CropmaskResultItem[]>(() => {
   return availableDataStore.getCropmasks || []
 })
 
-const allowedDatesForPicker = computed<string[]>(() => {
-  return (productStore.getProductDates || []).map((dateStr) => dateStr.replace(/-/g, '/'))
-})
+// const allowedDatesForPicker = computed<string[]>(() => {
+//   return (productStore.getProductDates || []).map((dateStr) => dateStr.replace(/-/g, '/'))
+// })
 
-const selectedProductForDropdown = ref<string | undefined>(productStore.getSelectedProduct.product_id);
+const selectedProductForDropdown = ref<string | undefined>(
+  productStore.getSelectedProduct.product_id,
+)
 const selectedCropmaskForDropdown = ref<string | undefined>(
-  typeof productStore.getSelectedProduct.cropmask === 'string' ? productStore.getSelectedProduct.cropmask : undefined
-);
-const selectedBasemapForDropdown = ref<string | undefined>(mapStore.selectedBasemap);
+  typeof productStore.getSelectedProduct.cropmask === 'string'
+    ? productStore.getSelectedProduct.cropmask
+    : undefined,
+)
+const selectedBasemapForDropdown = ref<string | undefined>(
+  mapStore.selectedBasemap,
+)
 
-watch(() => productStore.getSelectedProduct.product_id, (newId) => {
-  selectedProductForDropdown.value = newId;
-});
+watch(
+  () => productStore.getSelectedProduct.product_id,
+  (newId) => {
+    selectedProductForDropdown.value = newId
+  },
+)
 
-watch(() => productStore.getSelectedProduct.cropmask, (newCropmask) => {
-  selectedCropmaskForDropdown.value = typeof newCropmask === 'string' ? newCropmask : undefined;
-});
+watch(
+  () => productStore.getSelectedProduct.cropmask,
+  (newCropmask) => {
+    selectedCropmaskForDropdown.value =
+      typeof newCropmask === 'string' ? newCropmask : undefined
+  },
+)
 
-watch(() => mapStore.selectedBasemap, (newBasemap) => {
-  selectedBasemapForDropdown.value = newBasemap;
-});
+watch(
+  () => mapStore.selectedBasemap,
+  (newBasemap) => {
+    selectedBasemapForDropdown.value = newBasemap
+  },
+)
 
-const disabledDates = ref<Date[]>([]); // Placeholder for specific disabled dates
-const disabledDays = ref<number[]>([]); // Placeholder for disabled days of the week (0=Sun, 6=Sat)
-const minSelectableDate = ref<Date | undefined>(undefined); // Placeholder
-const maxSelectableDate = ref<Date | undefined>(undefined); // Placeholder
+const disabledDates = ref<Date[]>([]) // Placeholder for specific disabled dates
+const disabledDays = ref<number[]>([]) // Placeholder for disabled days of the week (0=Sun, 6=Sat)
+const minSelectableDate = ref<Date | undefined>(undefined) // Placeholder
+const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
 
 // const handlePanelResize = (event: { width: number, height: number }) => {
 //   dimensions.value = { width: event.width, height: event.height };
@@ -278,42 +317,42 @@ const maxSelectableDate = ref<Date | undefined>(undefined); // Placeholder
           optionLabel="display_name"
           optionValue="product_id"
           placeholder="Select a Product"
-          @change="handleProductSelectionEvent"
           class="w-full"
+          @change="handleProductSelectionEvent"
         />
       </div>
 
       <!-- Date Selection -->
       <div class="control-section">
         <label class="section-title">Date:</label>
-        <div class="date-controls" style="padding: 0.62rem 2rem;">
+        <div class="date-controls" style="padding: 0.62rem 2rem">
           <PButton
-        icon="pi pi-chevron-left"
-        class="p-button-rounded p-button-secondary"
-        :disabled="!canGoPrevious"
-        aria-label="Previous Date"
-        @click="goToPreviousDate"
+            icon="pi pi-chevron-left"
+            class="p-button-rounded p-button-secondary"
+            :disabled="!canGoPrevious"
+            aria-label="Previous Date"
+            @click="goToPreviousDate"
           />
           <PCalendar
-        v-model="selectedDate"
-        :dateFormat="dateFormat"
-        :showButtonBar="true"
-        :showIcon="true"
-        :selectionMode="'single'"
-        placeholder="Select Date"
-        class="w-full"
-        @change="handleDateSelection"
-        :disabledDates="disabledDates"
-        :disabledDays="disabledDays"
-        :minDate="minSelectableDate"
-        :maxDate="maxSelectableDate"
+            v-model="selectedDate"
+            :dateFormat="dateFormat"
+            :showButtonBar="true"
+            :showIcon="true"
+            :selectionMode="'single'"
+            placeholder="Select Date"
+            class="w-full"
+            :disabledDates="disabledDates"
+            :disabledDays="disabledDays"
+            :minDate="minSelectableDate"
+            :maxDate="maxSelectableDate"
+            @change="handleDateSelection"
           />
           <PButton
-        icon="pi pi-chevron-right"
-        class="p-button-rounded p-button-secondary"
-        :disabled="!canGoNext"
-        aria-label="Next Date"
-        @click="goToNextDate"
+            icon="pi pi-chevron-right"
+            class="p-button-rounded p-button-secondary"
+            :disabled="!canGoNext"
+            aria-label="Next Date"
+            @click="goToNextDate"
           />
         </div>
       </div>
@@ -328,9 +367,9 @@ const maxSelectableDate = ref<Date | undefined>(undefined); // Placeholder
           optionLabel="display_name"
           optionValue="cropmask_id"
           placeholder="Select Crop Mask"
-          @change="handleCropmaskSelectionEvent"
           class="w-full"
           showClear
+          @change="handleCropmaskSelectionEvent"
         />
       </div>
 
@@ -344,8 +383,8 @@ const maxSelectableDate = ref<Date | undefined>(undefined); // Placeholder
           optionLabel="name"
           optionValue="id"
           placeholder="Select Basemap"
-          @change="handleBasemapSelectionEvent"
           class="w-full"
+          @change="handleBasemapSelectionEvent"
         />
       </div>
     </div>
@@ -358,7 +397,7 @@ const maxSelectableDate = ref<Date | undefined>(undefined); // Placeholder
   height: 100%;
   overflow-y: auto;
   /* Ensure it fills the flex container from PPanel's content style */
-  flex: 1 1 auto; 
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
 }
@@ -394,4 +433,3 @@ const maxSelectableDate = ref<Date | undefined>(undefined); // Placeholder
   min-width: auto; /* Allow buttons to be compact */
 }
 </style>
-``` 

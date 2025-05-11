@@ -2,10 +2,13 @@ import { ref, computed, watch, type Ref, nextTick } from 'vue' // Added nextTick
 import { marked } from 'marked'
 import type { MarkedOptions } from 'marked'
 import DOMPurify from 'dompurify'
-import { useLocationStore, type TargetLocationType } from '@/stores/locationStore'
+import {
+  useLocationStore,
+  type TargetLocationType,
+} from '@/stores/locationStore'
 import { useProductStore } from '@/stores/productStore'
 import type { selectedProductType } from '@/stores/productStore'
-import type ScrollPanel from 'primevue/scrollpanel'; // Import ScrollPanel type
+import type ScrollPanel from 'primevue/scrollpanel' // Import ScrollPanel type
 
 // Define interfaces for component state
 export interface Message {
@@ -133,15 +136,19 @@ export function useChatService(
    */
   function scrollToBottom(): void {
     if (scrollPanelRef?.value) {
-      const scrollPanelElement = (scrollPanelRef.value as any).$el as HTMLElement | undefined;
+      const scrollPanelElement = (scrollPanelRef.value as ScrollPanelInstance)
+        .$el as HTMLElement | undefined
 
       if (scrollPanelElement) {
-        const scrollableContentElement = scrollPanelElement.querySelector('.p-scrollpanel-content') as HTMLElement | null;
-        
+        const scrollableContentElement = scrollPanelElement.querySelector(
+          '.p-scrollpanel-content',
+        ) as HTMLElement | null
+
         if (scrollableContentElement) {
-          nextTick(() => { 
-            scrollableContentElement.scrollTop = scrollableContentElement.scrollHeight;
-          });
+          nextTick(() => {
+            scrollableContentElement.scrollTop =
+              scrollableContentElement.scrollHeight
+          })
         }
       }
     }
@@ -278,7 +285,7 @@ export function useChatService(
     messages.value.push(botResponseInProgressMessage)
     // scrollToBottom() // Removed: Watch in ChatWidget.vue will handle this
 
-    inputDisabled.value = true;
+    inputDisabled.value = true
 
     try {
       const response = await fetch('http://127.0.0.1:8157/chat', {
@@ -303,7 +310,7 @@ export function useChatService(
           false,
         )
         botResponseInProgressMessage.model = 'System'
-        scrollToBottom(); // Kept: Specific case, watch might not be ideal if message object itself isn't changing structure
+        scrollToBottom() // Kept: Specific case, watch might not be ideal if message object itself isn't changing structure
         return
       }
 
@@ -376,10 +383,10 @@ export function useChatService(
         messages.value.push({
           text: await formatMessage(errorMessageText, false),
           isSent: false,
-          model: 'System'
-        });
+          model: 'System',
+        })
       }
-      scrollToBottom();
+      scrollToBottom()
     } finally {
       inputDisabled.value = false
       scrollToBottom()
@@ -393,8 +400,11 @@ export function useChatService(
     const currentMessageText = messageInput.value.trim()
     if (!currentMessageText) return
 
-    const userMessage: Message = { text: await formatMessage(currentMessageText, true), isSent: true };
-    messages.value.push(userMessage);
+    const userMessage: Message = {
+      text: await formatMessage(currentMessageText, true),
+      isSent: true,
+    }
+    messages.value.push(userMessage)
 
     await sendToChat(currentMessageText)
     messageInput.value = ''
@@ -407,8 +417,11 @@ export function useChatService(
   async function sendSuggestion(suggestion: string): Promise<void> {
     if (!suggestion) return
 
-    const userMessage: Message = { text: await formatMessage(suggestion, true), isSent: true };
-    messages.value.push(userMessage);
+    const userMessage: Message = {
+      text: await formatMessage(suggestion, true),
+      isSent: true,
+    }
+    messages.value.push(userMessage)
 
     await sendToChat(suggestion)
   }
@@ -513,9 +526,13 @@ export function useChatService(
     { deep: true },
   )
 
-  watch(messages, () => {
-    scrollToBottom();
-  }, { deep: true, flush: 'post' });
+  watch(
+    messages,
+    () => {
+      scrollToBottom()
+    },
+    { deep: true, flush: 'post' },
+  )
 
   return {
     messageInput,

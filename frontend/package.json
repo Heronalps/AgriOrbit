@@ -15,7 +15,6 @@
     "primevue": "3.48.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.6",
-    "eslint-define-config": "^2.1.0"
+    "@tailwindcss/postcss": "^4.1.6"
   }
 }
