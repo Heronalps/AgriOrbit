@@ -154,14 +154,29 @@
 
 /* Widget dark theme styling for PDropdown */
 .widget-dark-theme .p-dropdown {
-  background-color: var(--input-background); /* Use theme variable */
-  color: var(--input-text-color); /* Use theme variable */
-  border: var(--input-border); /* Use theme variable */
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border: var(--input-border);
+  border-radius: var(--border-radius); /* Added for consistency */
 }
 
-.widget-dark-theme .p-dropdown:hover,
-.widget-dark-theme .p-dropdown:focus {
-  border-color: var(--primary-color); /* Use theme variable */
+.widget-dark-theme .p-dropdown .p-dropdown-label {
+  /* Style for the selected item text */
+  color: var(--input-text-color); /* Ensure text color matches */
+  padding: 0.75rem; /* Match .p-inputtext padding */
+}
+.widget-dark-theme .p-dropdown .p-dropdown-trigger {
+  /* Dropdown arrow icon */
+  color: var(--input-text-color);
+}
+
+.widget-dark-theme .p-dropdown:not(.p-disabled):hover {
+  border-color: var(--primary-color);
+}
+
+.widget-dark-theme .p-dropdown:not(.p-disabled).p-focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest); /* Or a dark-theme appropriate shadow */
 }
 
 .widget-dark-theme .p-dropdown-panel {
@@ -225,8 +240,103 @@
 
 .widget-dark-theme .p-calendar .p-inputtext {
   background-color: var(--input-background);
+  border: var(--input-border);
+  color: var(--input-text-color);
+  padding: 0.75rem; /* Consistent padding */
+  border-radius: var(--border-radius); /* Consistent border radius */
+}
+
+.widget-dark-theme .p-calendar .p-inputtext::placeholder {
+  color: var(--input-placeholder-color);
+  opacity: 1;
+}
+
+.widget-dark-theme .p-calendar .p-inputtext:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+
+.widget-dark-theme .p-calendar .p-datepicker-trigger {
+  /* Calendar button/icon */
+  background-color: var(--input-background);
   color: var(--input-text-color);
   border: var(--input-border);
+  border-left: none;
+  border-top-right-radius: var(--border-radius);
+  border-bottom-right-radius: var(--border-radius);
+}
+.widget-dark-theme .p-calendar .p-datepicker-trigger:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.1);
+  color: var(--primary-color);
+  border-color: var(--input-border); /* Or var(--primary-color) if preferred */
+}
+
+/* Datepicker panel styling for dark theme */
+.widget-dark-theme .p-datepicker {
+  background-color: var(--neutral-800);
+  border: 1px solid var(--neutral-700);
+  color: var(--widget-text-color);
+}
+
+.widget-dark-theme .p-datepicker .p-datepicker-header {
+  background-color: var(--neutral-900);
+  color: var(--widget-text-color);
+  border-bottom: 1px solid var(--neutral-700);
+}
+.widget-dark-theme
+  .p-datepicker
+  .p-datepicker-header
+  .p-datepicker-title
+  select {
+  background-color: var(--neutral-700);
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .p-datepicker .p-datepicker-header .p-datepicker-prev,
+.widget-dark-theme .p-datepicker .p-datepicker-header .p-datepicker-next {
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .p-datepicker .p-datepicker-header .p-datepicker-prev:hover,
+.widget-dark-theme .p-datepicker .p-datepicker-header .p-datepicker-next:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.2);
+}
+
+.widget-dark-theme .p-datepicker table th {
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .p-datepicker table td > span {
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .p-datepicker table td > span:focus {
+  box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+.widget-dark-theme .p-datepicker table td > span:not(.p-disabled):hover {
+  background-color: rgba(var(--primary-color-rgb), 0.2);
+}
+.widget-dark-theme .p-datepicker table td.p-datepicker-today > span {
+  background-color: rgba(var(--primary-color-rgb), 0.3);
+  border-color: transparent;
+  color: var(--widget-text-color);
+}
+.widget-dark-theme
+  .p-datepicker
+  table
+  td.p-datepicker-today
+  > span.p-highlight {
+  background-color: var(--primary-color);
+  color: var(--primary-color-text);
+}
+.widget-dark-theme .p-datepicker table td > span.p-highlight {
+  background-color: var(--primary-color);
+  color: var(--primary-color-text);
+}
+.widget-dark-theme .p-datepicker .p-datepicker-buttonbar .p-button {
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border: 1px solid var(--input-border);
+}
+.widget-dark-theme .p-datepicker .p-datepicker-buttonbar .p-button:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.2);
+  border-color: var(--primary-color);
 }
 
 /* Datepicker panel */
@@ -321,21 +431,28 @@
 
 /* Input styling in dark panels */
 .widget-dark-theme .p-inputtext,
-.widget-dark-theme .p-dropdown, /* This selector is already handled above, but ensure consistency */
+.widget-dark-theme .p-dropdown .p-inputtext, /* Ensure dropdowns with actual input fields are covered */
 .widget-dark-theme .p-calendar input {
-  /* More specific selector for calendar input */
+  /* Target actual input inside calendar if .p-inputtext class is not on the root */
   background-color: var(--input-background);
-  color: var(--input-text-color);
   border: var(--input-border);
+  color: var(--input-text-color);
+  padding: 0.75rem;
+  border-radius: var(--border-radius);
 }
 
-.widget-dark-theme .p-inputtext::placeholder {
+.widget-dark-theme .p-inputtext::placeholder,
+.widget-dark-theme .p-dropdown .p-inputtext::placeholder,
+.widget-dark-theme .p-calendar input::placeholder {
   color: var(--input-placeholder-color);
+  opacity: 1;
 }
 
-.widget-dark-theme .p-inputtext:focus {
-  box-shadow: 0 0 0 1px var(--primary-color);
+.widget-dark-theme .p-inputtext:focus,
+.widget-dark-theme .p-dropdown .p-inputtext:focus,
+.widget-dark-theme .p-calendar input:focus {
   border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest);
 }
 
 .p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
@@ -421,12 +538,9 @@
 
 /* Widget Dark Theme Specific Styling */
 .widget-dark-theme {
-  background-color: #231f1fc8;
-  color: white;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
+  background-color: var(--widget-background);
+  color: var(--widget-text-color);
+  border-radius: var(--widget-border-radius);
 }
 
 .widget-dark-theme .chat-header {
@@ -491,19 +605,18 @@
   border-color: #297029;
 }
 
+.widget-dark-theme .p-button.p-button-secondary:enabled:hover,
+.widget-dark-theme .p-button.p-button-secondary:enabled:focus {
+  background-color: var(--neutral-500);
+  border-color: var(--neutral-500);
+  box-shadow: 0 0 0 1px var(--neutral-400); /* Example focus shadow */
+}
+
 .widget-dark-theme .p-button.p-button-secondary:disabled {
-  background-color: rgba(
-    var(--surface-d-rgb),
-    0.1
-  ); /* Use theme variable with opacity */
-  border-color: rgba(
-    var(--surface-d-rgb),
-    0.2
-  ); /* Use theme variable with opacity */
-  color: rgba(
-    var(--text-color-secondary-rgb),
-    0.5
-  ); /* Use theme variable with opacity */
+  background-color: var(--neutral-800);
+  border-color: var(--neutral-800);
+  color: var(--neutral-500);
+  opacity: 0.6;
 }
 
 /* Consistent resize handle */
@@ -545,6 +658,26 @@
   /* Consider using a more generic variable like --widget-text-color or --input-placeholder-color if --p-primary-500 isn't suitable for all dark widgets */
 }
 
+/* General styles for control sections within dark widgets */
+.widget-dark-theme .control-section {
+  margin-bottom: 1rem;
+}
+.widget-dark-theme .control-section label {
+  /* Applied to labels like "Product:", "Date:" */
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .date-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.widget-dark-theme .date-controls .p-calendar {
+  flex-grow: 1;
+}
+
 /* ChatWidget.vue specific styles */
 .chat-widget {
   display: flex;
@@ -552,15 +685,7 @@
   overflow: hidden;
 }
 
-/* Ensure the .chat-body (our custom div inside ScrollPanel) behaves correctly */
-.chat-widget .p-scrollpanel .p-scrollpanel-content .chat-body {
-  /* This is our message container */
-  /* It should naturally expand with its content. */
-  /* Height should be 'auto' or not set, to be determined by messages. */
-  /* min-height might be useful if you want a minimum chat area even if empty, but usually not needed for scrolling issues. */
-}
-
-/* .chat-header is defined in .widget-dark-theme .p-panel-header, so this might be redundant or for non-PPanel headers */
+/* Styling for the message input area within the chat widget */
 .chat-header {
   padding: 10px;
   text-align: center;

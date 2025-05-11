@@ -1,5 +1,5 @@
 <template>
-  <PToolbar class="action-toolbar">
+  <PToolbar class="action-toolbar widget-dark-theme">
     <template #start>
       <div class="toolbar-title">AgriOrbit</div>
       <PButton
@@ -68,7 +68,6 @@ onMounted(() => {
   top: 10px; /* Add some padding from the top */
   left: 10px; /* Add some padding from the left */
   z-index: 1050; /* Ensure it's above map elements but below potential modals */
-  background-color: var(--surface-overlay); /* Give it a background */
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-2); /* Add a subtle shadow */
   padding: 0.5rem;

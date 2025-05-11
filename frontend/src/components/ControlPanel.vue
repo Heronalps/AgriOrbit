@@ -21,8 +21,8 @@ const mapStore = useMapStore()
 const controlPanelRef = ref<HTMLElement | null>(null)
 
 // Initial dimensions - keep these consistent
-const initialWidth = 384
-const initialHeight = 480 // Or your preferred initial height
+const initialWidth = 350
+const initialHeight = 480
 
 const { position, dimensions, startDrag } = useDraggableResizable(
   controlPanelRef,
@@ -309,7 +309,7 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
     <div class="control-panel-content-wrapper">
       <!-- Product Selection -->
       <div class="control-section">
-        <label for="product-select" class="section-title">Product:</label>
+        <label for="product-select">Product:</label>
         <PDropdown
           id="product-select"
           v-model="selectedProductForDropdown"
@@ -324,8 +324,8 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
 
       <!-- Date Selection -->
       <div class="control-section">
-        <label class="section-title">Date:</label>
-        <div class="date-controls" style="padding: 0.62rem 2rem">
+        <label>Date:</label>
+        <div class="date-controls">
           <PButton
             icon="pi pi-chevron-left"
             class="p-button-rounded p-button-secondary"
@@ -345,6 +345,7 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
             :disabledDays="disabledDays"
             :minDate="minSelectableDate"
             :maxDate="maxSelectableDate"
+            :pt="{ input: { class: 'p-inputtext' } }"
             @change="handleDateSelection"
           />
           <PButton
@@ -359,7 +360,7 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
 
       <!-- Cropmask Selection -->
       <div class="control-section">
-        <label for="cropmask-select" class="section-title">Crop Mask:</label>
+        <label for="cropmask-select">Crop Mask:</label>
         <PDropdown
           id="cropmask-select"
           v-model="selectedCropmaskForDropdown"
@@ -375,7 +376,7 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
 
       <!-- Basemap Selection -->
       <div class="control-section">
-        <label for="basemap-select" class="section-title">Basemap:</label>
+        <label for="basemap-select">Basemap:</label>
         <PDropdown
           id="basemap-select"
           v-model="selectedBasemapForDropdown"
@@ -396,40 +397,16 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
   padding: 1rem;
   height: 100%;
   overflow-y: auto;
-  /* Ensure it fills the flex container from PPanel's content style */
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  gap: 0.25rem;
 }
 
-.control-section {
-  margin-bottom: 1rem; /* PrimeVue form elements often have their own margins, adjust if needed */
-}
-
-.section-title {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.5rem; /* Consistent spacing for section titles */
-  color: var(--p-text-color); /* Ensure text color matches theme */
-}
-
-.date-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem; /* Spacing between date control elements */
-}
-
-.date-controls .p-calendar {
-  flex-grow: 1; /* Calendar takes available space */
-}
-
-/* Additional styling for PDropdown if needed, though theme.css should cover most */
-:deep(.p-dropdown) {
-  width: 100%; /* Ensure dropdowns take full width of their container if not already */
-}
-
-/* Style for PButtons in date controls if not covered by global button styles or theme */
-.date-controls .p-button {
-  min-width: auto; /* Allow buttons to be compact */
+/* Styles for the main display area of PDropdown */
+.control-section .p-dropdown {
+  background-color: #424242; /* Dark background for the dropdown box */
+  border: 1px solid #616161;
+  /* w-full class on the component handles its overall width */
 }
 </style>
