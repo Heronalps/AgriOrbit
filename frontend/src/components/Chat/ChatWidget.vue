@@ -93,7 +93,7 @@
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
 import { useLocationStore } from '../../stores/locationStore'
 import { useProductStore } from '../../stores/productStore'
-import { useDraggableResizable } from '../../composables/useDraggableResizable'
+import { useDraggable } from '../../composables/useDraggable'
 import {
   useChatService,
   ContextTypeEnum,
@@ -119,7 +119,7 @@ const scrollPanelComponentRef = ref<InstanceType<typeof ScrollPanel> | null>(
 // Draggable and Resizable Composable
 const initialWidth = 400
 const initialHeight = 600
-const { position, dimensions, startDrag } = useDraggableResizable(
+const { position, dimensions, startDrag } = useDraggable(
   chatWidgetRef,
   { x: 10, y: window.innerHeight - initialHeight - 10 }, // Positioned to the bottom-left
   { width: initialWidth, height: initialHeight },

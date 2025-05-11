@@ -1,3 +1,4 @@
+// filepath: c:\Repository\ag-advisor-map\frontend\src\composables\useDraggable.ts
 import { ref, onMounted, onBeforeUnmount, type Ref } from 'vue'
 
 interface Position {
@@ -10,7 +11,7 @@ interface Dimensions {
   height: number
 }
 
-export function useDraggableResizable(
+export function useDraggable(
   elementRef: Ref<HTMLElement | null>,
   initialPosition: Position,
   initialDimensions: Dimensions,

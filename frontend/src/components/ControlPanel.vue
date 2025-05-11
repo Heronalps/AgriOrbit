@@ -6,7 +6,7 @@ import {
 import { useProductStore } from '../stores/productStore'
 import { useMapStore } from '../stores/mapStore'
 import { watch, ref, computed, Ref } from 'vue'
-import { useDraggableResizable } from '../composables/useDraggableResizable'
+import { useDraggable } from '../composables/useDraggable'
 import PDropdown from 'primevue/dropdown'
 import PPanel from 'primevue/panel'
 import PButton from 'primevue/button'
@@ -24,7 +24,7 @@ const controlPanelRef = ref<HTMLElement | null>(null)
 const initialWidth = 350
 const initialHeight = 480
 
-const { position, dimensions, startDrag } = useDraggableResizable(
+const { position, dimensions, startDrag } = useDraggable(
   controlPanelRef,
   {
     x: window.innerWidth - initialWidth - 10, // Positioned to the right by default
