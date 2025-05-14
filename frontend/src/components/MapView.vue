@@ -160,19 +160,25 @@ function handleClick(event: {
     console.warn(
       'MapView: No product selected. Skipping data load for clicked point popup.',
     )
-    pointDataStore.setClickedPointCoordinates(info.x, info.y, longitude, latitude);
+    pointDataStore.setClickedPointCoordinates(
+      info.x,
+      info.y,
+      longitude,
+      latitude,
+    )
     // Update pointDataStore state for the popup when no product is selected
-    pointDataStore.clickedPoint.value = null;
-    pointDataStore.clickedPoint.show = true;
-    pointDataStore.clickedPoint.isLoading = false;
-    pointDataStore.clickedPoint.errorMessage = 'Please select a product layer to get data for a point.';
+    pointDataStore.clickedPoint.value = null
+    pointDataStore.clickedPoint.show = true
+    pointDataStore.clickedPoint.isLoading = false
+    pointDataStore.clickedPoint.errorMessage =
+      'Please select a product layer to get data for a point.'
     return
   }
 
   // Set screen coordinates and geo-coordinates in pointDataStore for the popup
-  pointDataStore.setClickedPointCoordinates(info.x, info.y, longitude, latitude);
+  pointDataStore.setClickedPointCoordinates(info.x, info.y, longitude, latitude)
   // Trigger data loading for the clicked point via pointDataStore
-  pointDataStore.loadDataForClickedPoint(longitude, latitude);
+  pointDataStore.loadDataForClickedPoint(longitude, latitude)
 }
 
 /**

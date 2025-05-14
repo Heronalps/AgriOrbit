@@ -1,12 +1,12 @@
-import { defineStore } from 'pinia';
-import { queryValueByGeometry } from '@/api/query';
-import type { ApiGeomType } from '@/api/query';
-import type { ClickedPointType } from '@/shared.d.ts'; // Assuming shared.d.ts is updated
-import { useProductStore } from './productStore'; // To access selected product details
+import { defineStore } from 'pinia'
+import { queryValueByGeometry } from '@/api/query'
+import type { ApiGeomType } from '@/api/query'
+import type { ClickedPointType } from '@/shared.d.ts' // Assuming shared.d.ts is updated
+import { useProductStore } from './productStore' // To access selected product details
 
 export interface PointDataState {
-  clickedPoint: ClickedPointType;
-  currentMapSelectionCoordinates: { longitude: number; latitude: number } | null;
+  clickedPoint: ClickedPointType
+  currentMapSelectionCoordinates: { longitude: number; latitude: number } | null
 }
 
 export const usePointDataStore = defineStore('pointDataStore', {
@@ -29,7 +29,12 @@ export const usePointDataStore = defineStore('pointDataStore', {
      * @param longitude - Geographical longitude.
      * @param latitude - Geographical latitude.
      */
-    setClickedPointCoordinates(x: number, y: number, longitude: number, latitude: number) {
+    setClickedPointCoordinates(
+      x: number,
+      y: number,
+      longitude: number,
+      latitude: number,
+    ) {
       this.clickedPoint = {
         ...this.clickedPoint, // Preserve existing properties like value, isLoading, errorMessage
         x,
@@ -37,7 +42,7 @@ export const usePointDataStore = defineStore('pointDataStore', {
         longitude,
         latitude,
         show: true, // Initially show, data loading will update this
-      };
+      }
     },
 
     /**
@@ -47,7 +52,7 @@ export const usePointDataStore = defineStore('pointDataStore', {
      * @param latitude - Geographical latitude.
      */
     setCurrentMapSelectionCoordinates(longitude: number, latitude: number) {
-      this.currentMapSelectionCoordinates = { longitude, latitude };
+      this.currentMapSelectionCoordinates = { longitude, latitude }
       // console.log('[pointDataStore] currentMapSelectionCoordinates updated:', JSON.parse(JSON.stringify(this.currentMapSelectionCoordinates)));
     },
 
@@ -61,7 +66,7 @@ export const usePointDataStore = defineStore('pointDataStore', {
         isLoading: false,
         errorMessage: null,
         // x, y, longitude, latitude can be left as is or cleared depending on desired behavior
-      };
+      }
     },
 
     /**
@@ -71,8 +76,8 @@ export const usePointDataStore = defineStore('pointDataStore', {
      * @param latitude - Geographical latitude of the point of interest.
      */
     async loadDataForClickedPoint(longitude: number, latitude: number) {
-      const productStore = useProductStore();
-      const selectedProduct = productStore.getSelectedProduct;
+      const productStore = useProductStore()
+      const selectedProduct = productStore.getSelectedProduct
 
       // console.log(`[pointDataStore] loadDataForClickedPoint called for Lon: ${longitude}, Lat: ${latitude}. Current product: ${selectedProduct.product_id}, Date: ${selectedProduct.date}`);
 
@@ -85,9 +90,10 @@ export const usePointDataStore = defineStore('pointDataStore', {
           value: null,
           show: true,
           isLoading: false,
-          errorMessage: 'Please select a product and date to get data for a point.',
-        };
-        return;
+          errorMessage:
+            'Please select a product and date to get data for a point.',
+        }
+        return
       }
 
       this.clickedPoint = {
@@ -98,10 +104,11 @@ export const usePointDataStore = defineStore('pointDataStore', {
         show: true, // Show popup during loading
         isLoading: true,
         errorMessage: null,
-      };
+      }
 
       try {
-        const { product_id, date, cropmask_id, ...otherProductParams } = selectedProduct;
+        const { product_id, date, cropmask_id, ...otherProductParams } =
+          selectedProduct
         const polygon: ApiGeomType = {
           type: 'Feature',
           properties: {},
@@ -117,7 +124,7 @@ export const usePointDataStore = defineStore('pointDataStore', {
               ],
             ],
           },
-        };
+        }
 
         const response = await queryValueByGeometry(
           {
@@ -127,36 +134,46 @@ export const usePointDataStore = defineStore('pointDataStore', {
             ...otherProductParams,
           },
           polygon,
-        );
+        )
 
-        let extractedValue: number | null = null;
-        let friendlyMessage: string | null = null;
+        let extractedValue: number | null = null
+        let friendlyMessage: string | null = null
 
         if (typeof response === 'number') {
-          extractedValue = response;
+          extractedValue = response
         } else if (response && typeof response === 'object') {
           // Attempt to extract value from common structures
           if (typeof (response as any).mean === 'number') {
-            extractedValue = (response as any).mean;
+            extractedValue = (response as any).mean
           } else if (typeof (response as any).value === 'number') {
-            extractedValue = (response as any).value;
-          } else if ((response as any).features && (response as any).features[0]?.properties) {
-            const props = (response as any).features[0].properties;
-            if (typeof props.mean === 'number') extractedValue = props.mean;
-            else if (typeof props.value === 'number') extractedValue = props.value;
+            extractedValue = (response as any).value
+          } else if (
+            (response as any).features &&
+            (response as any).features[0]?.properties
+          ) {
+            const props = (response as any).features[0].properties
+            if (typeof props.mean === 'number') extractedValue = props.mean
+            else if (typeof props.value === 'number')
+              extractedValue = props.value
             else {
               const numericProps = Object.values(props).filter(
                 (v) => typeof v === 'number',
-              );
-              if (numericProps.length === 1) extractedValue = numericProps[0] as number;
-              else if (numericProps.length > 1) friendlyMessage = 'Multiple numeric properties found; unable to determine primary value.';
-              else friendlyMessage = 'No numeric value found in feature properties.';
+              )
+              if (numericProps.length === 1)
+                extractedValue = numericProps[0] as number
+              else if (numericProps.length > 1)
+                friendlyMessage =
+                  'Multiple numeric properties found; unable to determine primary value.'
+              else
+                friendlyMessage =
+                  'No numeric value found in feature properties.'
             }
           } else {
-            friendlyMessage = 'Response format not recognized or no value found.';
+            friendlyMessage =
+              'Response format not recognized or no value found.'
           }
         } else {
-          friendlyMessage = 'Received unexpected data type from API.';
+          friendlyMessage = 'Received unexpected data type from API.'
         }
 
         if (extractedValue !== null) {
@@ -165,37 +182,39 @@ export const usePointDataStore = defineStore('pointDataStore', {
             value: extractedValue,
             isLoading: false,
             errorMessage: null,
-          };
+          }
         } else {
           this.clickedPoint = {
             ...this.clickedPoint,
             value: null,
             isLoading: false,
-            errorMessage: friendlyMessage || 'Failed to extract a valid number from the response.',
-          };
+            errorMessage:
+              friendlyMessage ||
+              'Failed to extract a valid number from the response.',
+          }
         }
       } catch (caughtError: unknown) {
         // console.error('[pointDataStore] Error loading value at point:', caughtError);
-        let errorMessage = 'Failed to load data for the point.';
+        let errorMessage = 'Failed to load data for the point.'
         const errorDetails = caughtError as {
-          response?: { data?: { detail?: string } };
-          message?: string;
-        };
+          response?: { data?: { detail?: string } }
+          message?: string
+        }
         if (errorDetails.response?.data?.detail) {
-          errorMessage = errorDetails.response.data.detail;
+          errorMessage = errorDetails.response.data.detail
         } else if (errorDetails.message) {
-          errorMessage = errorDetails.message;
+          errorMessage = errorDetails.message
         }
         this.clickedPoint = {
           ...this.clickedPoint,
           value: null,
           isLoading: false,
           errorMessage: errorMessage,
-        };
+        }
       }
     },
   },
-});
+})
 
 // Export the type of the store instance
-export type PointDataStore = ReturnType<typeof usePointDataStore>;
+export type PointDataStore = ReturnType<typeof usePointDataStore>
