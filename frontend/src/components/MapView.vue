@@ -8,6 +8,7 @@ import { ref, onMounted, watch, provide, onBeforeUnmount } from 'vue'
 import mapboxgl from 'mapbox-gl'
 import { useProductStore } from '@/stores/productStore'
 import { useLocationStore } from '@/stores/locationStore'
+import { usePointDataStore } from '@/stores/pointDataStore'
 import { useMapViewState } from '@/composables/useMapViewState'
 import { MAP_STYLES } from '@/utils/defaultSettings'
 import ControlPanel from './ControlPanel.vue'
@@ -25,6 +26,7 @@ const mapboxAccessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
 // Component Stores
 const productStore = useProductStore()
 const locationStore = useLocationStore()
+const pointDataStore = usePointDataStore()
 
 /**
  * Indicates if the map is currently in "set location" mode.
@@ -135,68 +137,42 @@ function handleClick(event: {
   // Scenario 1: Explicitly in "set location mode" (e.g., triggered from chat)
   if (isSetLocationMode.value) {
     locationStore.setTargetLocation({ longitude, latitude })
-    // Also set this as the current map selection for immediate data loading if a product is selected
-    productStore.setCurrentMapSelectionCoordinates(longitude, latitude)
-    isSetLocationMode.value = false // Exit explicit set location mode
+    pointDataStore.setCurrentMapSelectionCoordinates(longitude, latitude)
+    isSetLocationMode.value = false
     renderTargetMarker()
     window.dispatchEvent(
       new CustomEvent('location-selected', { detail: { longitude, latitude } }),
     )
-    // Data loading for this point will be handled by the reactive watcher for currentMapSelectionCoordinates
-    // and the explicit call for the popup below.
   } else if (!locationStore.targetLocation) {
     // Scenario 2: Not in explicit "set location mode", AND no farm location is set yet.
-    // This click sets the farm location AND the current map selection.
     locationStore.setTargetLocation({ longitude, latitude })
-    productStore.setCurrentMapSelectionCoordinates(longitude, latitude)
+    pointDataStore.setCurrentMapSelectionCoordinates(longitude, latitude)
     renderTargetMarker()
     window.dispatchEvent(
       new CustomEvent('location-selected', { detail: { longitude, latitude } }),
     )
-    // Data loading for this point will be handled by the reactive watcher and explicit call below.
   } else {
-    // Scenario 3: Farm location is already set. This click updates the current map selection for data fetching.
-    productStore.setCurrentMapSelectionCoordinates(longitude, latitude)
-    // Data loading for this point will be handled by the reactive watcher and explicit call below.
+    // Scenario 3: Farm location is already set.
+    pointDataStore.setCurrentMapSelectionCoordinates(longitude, latitude)
   }
-
-  // Common logic for all click scenarios (after location handling):
-  // Update `clickedPoint` for the popup and explicitly trigger its data load.
-  // The `useReactiveMapDataManager` will handle data loading for the `currentMapSelectionCoordinates` (the "pinned" point)
-  // if the product/date is also set.
 
   if (!productStore.isProductSelected) {
     console.warn(
       'MapView: No product selected. Skipping data load for clicked point popup.',
     )
-    productStore.clickedPoint = {
-      value: null,
-      x: info.x,
-      y: info.y,
-      show: true,
-      longitude,
-      latitude,
-      isLoading: false,
-      errorMessage: 'Please select a product layer to get data for a point.',
-    }
+    pointDataStore.setClickedPointCoordinates(info.x, info.y, longitude, latitude);
+    // Update pointDataStore state for the popup when no product is selected
+    pointDataStore.clickedPoint.value = null;
+    pointDataStore.clickedPoint.show = true;
+    pointDataStore.clickedPoint.isLoading = false;
+    pointDataStore.clickedPoint.errorMessage = 'Please select a product layer to get data for a point.';
     return
   }
 
-  // Update clickedPoint for immediate popup display. This is for the *specific* click.
-  productStore.clickedPoint = {
-    value: null,
-    x: info.x,
-    y: info.y,
-    show: false, // Will be set to true by loadDataForClickedPointViaPolygon upon completion/error
-    longitude,
-    latitude,
-    isLoading: true,
-    errorMessage: null,
-  }
-  // Explicitly load data for the *clicked point* for the popup.
-  // This ensures the popup always reflects the most recent click,
-  // even if `currentMapSelectionCoordinates` (pinned point) is the same.
-  productStore.loadDataForClickedPointViaPolygon(longitude, latitude)
+  // Set screen coordinates and geo-coordinates in pointDataStore for the popup
+  pointDataStore.setClickedPointCoordinates(info.x, info.y, longitude, latitude);
+  // Trigger data loading for the clicked point via pointDataStore
+  pointDataStore.loadDataForClickedPoint(longitude, latitude);
 }
 
 /**
@@ -303,7 +279,7 @@ watch(
       <MapboxView
         :access-token="mapboxAccessToken"
         :map-style="MAP_STYLES.DARK"
-        @map-loaded="(map) => onMapLoaded(map as mapboxgl.Map)"
+        @map-loaded="(map: mapboxgl.Map) => onMapLoaded(map)"
       />
       <!-- Tile Layer for Product Data -->
       <TileLayer

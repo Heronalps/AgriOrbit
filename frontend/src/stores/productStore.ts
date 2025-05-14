@@ -4,8 +4,6 @@ import { computeTileLayerURL } from '@/api/tile'
 import { defineStore } from 'pinia'
 import type { ProductMeta } from '@/api.d.ts'
 import { useAvailableDataStore } from './availableDataStore'
-import { queryValueByGeometry } from '../api/query'
-import type { ApiGeomType } from '../api/query'
 
 // Interface for entries in the productEntries.results array
 export interface ProductListEntry {
@@ -30,25 +28,11 @@ export interface selectedProductType {
   [key: string]: unknown // Replaced [key: string]: any;
 }
 
-export interface clickedPointType {
-  value?: number | null
-  x?: number
-  y?: number
-  show?: boolean
-  longitude?: number
-  latitude?: number
-  isLoading?: boolean
-  errorMessage?: string | null
-  [key: string]: unknown // Replaced [key: string]: any;
-}
-
 export interface productState {
   selectedProduct: selectedProductType
   productEntries: { results: ProductListEntry[] } // Uses ProductListEntry
-  clickedPoint: clickedPointType
-  isLoading: boolean
-  error: string | null
-  currentMapSelectionCoordinates: { longitude: number; latitude: number } | null // New state for pinned point
+  isLoading: boolean // For loading product entries, not point data
+  error: string | null // For errors related to loading product entries
 }
 
 export const useProductStore = defineStore('productStore', {
@@ -56,10 +40,8 @@ export const useProductStore = defineStore('productStore', {
     ({
       selectedProduct: {} as selectedProductType,
       productEntries: { results: [] } as { results: ProductListEntry[] },
-      clickedPoint: { show: false, value: null } as clickedPointType,
-      isLoading: false,
+      isLoading: false, // This isLoading is for product entries
       error: null,
-      currentMapSelectionCoordinates: null, // Initialize new state
     }) as productState,
 
   getters: {
@@ -95,6 +77,14 @@ export const useProductStore = defineStore('productStore', {
         ? dates[dates.length - 1].replaceAll('-', '/')
         : undefined
     },
+    // Getter for isLoading state specific to product entries
+    isProductEntriesLoading(state): boolean {
+      return state.isLoading
+    },
+    // Getter for error state specific to product entries
+    getProductEntriesError(state): string | null {
+      return state.error
+    },
   },
 
   actions: {
@@ -106,7 +96,6 @@ export const useProductStore = defineStore('productStore', {
      */
     async setProduct(newProductId: string) {
       const currentProductId = this.selectedProduct.product_id
-      this.clickedPoint.show = false // Hide clicked point info on product change
 
       if (currentProductId !== newProductId) {
         // --- Genuine Product Switch ---
@@ -203,8 +192,8 @@ export const useProductStore = defineStore('productStore', {
       const currentCropmaskId = this.selectedProduct.cropmask_id
       const initialDateInStateOnEntry = this.selectedProduct.date
 
-      this.isLoading = true
-      this.error = null
+      this.isLoading = true // isLoading for product entries
+      this.error = null // error for product entries
 
       try {
         if (!currentProductId) {
@@ -271,200 +260,19 @@ export const useProductStore = defineStore('productStore', {
         this.productEntries = { results: [] }
         this.selectedProduct.date = undefined
       } finally {
-        this.isLoading = false
-      }
-    },
-
-    /**
-     * Sets the current map selection coordinates, used for the "pinned" point.
-     * The reactive loader will pick up this change to fetch data.
-     */
-    setCurrentMapSelectionCoordinates(longitude: number, latitude: number) {
-      this.currentMapSelectionCoordinates = { longitude, latitude }
-      console.log(
-        '[productStore] currentMapSelectionCoordinates updated:',
-        JSON.parse(JSON.stringify(this.currentMapSelectionCoordinates)),
-      )
-    },
-
-    /**
-     * Fetches the data value for the selected product at a given map coordinate using a polygon.
-     */
-    async loadDataForClickedPointViaPolygon(
-      longitude: number,
-      latitude: number,
-    ) {
-      console.log(
-        `[productStore] loadDataForClickedPointViaPolygon called for Lon: ${longitude}, Lat: ${latitude}. Current product: ${this.selectedProduct.product_id}, Date: ${this.selectedProduct.date}`,
-      )
-      if (!this.selectedProduct.product_id) {
-        console.warn(
-          '[productStore] loadDataForClickedPointViaPolygon: No product selected.',
-        )
-        this.clickedPoint = {
-          ...this.clickedPoint,
-          value: null,
-          show: true, // Show popup to display the message
-          isLoading: false,
-          errorMessage:
-            'Please select a product layer to get data for a point.',
-          longitude,
-          latitude,
-        }
-        console.log(
-          '[productStore] clickedPoint updated (no product):',
-          JSON.parse(JSON.stringify(this.clickedPoint)),
-        )
-        return
-      }
-
-      this.clickedPoint = {
-        ...this.clickedPoint, // Preserve x, y screen coords if already set
-        value: null,
-        show: false, // Initially false, will be true when data arrives or error occurs
-        isLoading: true,
-        errorMessage: null,
-        longitude,
-        latitude,
-      }
-      // console.log('[productStore] clickedPoint set for loading:', JSON.parse(JSON.stringify(this.clickedPoint))); // Optional: log initial set for loading
-
-      try {
-        const { product_id, date, cropmask_id, ...otherProductParams } =
-          this.selectedProduct
-        const polygon: ApiGeomType = {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'Polygon',
-            coordinates: [
-              [
-                [longitude - 0.0001, latitude - 0.0001],
-                [longitude + 0.0001, latitude - 0.0001],
-                [longitude + 0.0001, latitude + 0.0001],
-                [longitude - 0.0001, latitude + 0.0001],
-                [longitude - 0.0001, latitude - 0.0001],
-              ],
-            ],
-          },
-        }
-
-        const response = await queryValueByGeometry(
-          {
-            product_id,
-            date,
-            cropmask_id: cropmask_id || 'no-mask', // Ensure cropmask_id defaults to 'no-mask' if undefined
-            ...otherProductParams, // Include any other relevant parameters from selectedProduct
-          },
-          polygon,
-        )
-
-        let extractedValue: number | null = null
-        let friendlyMessage: string | null = null
-
-        if (typeof response === 'number') {
-          extractedValue = response
-        } else if (response && typeof response === 'object') {
-          if (typeof response.mean === 'number') {
-            extractedValue = response.mean
-          } else if (typeof response.value === 'number') {
-            extractedValue = response.value
-          } else if (response.features && response.features[0]?.properties) {
-            const props = response.features[0].properties
-            if (typeof props.mean === 'number') extractedValue = props.mean
-            else if (typeof props.value === 'number')
-              extractedValue = props.value
-            else {
-              const numericProps = Object.values(props).filter(
-                (v) => typeof v === 'number',
-              )
-              if (numericProps.length === 1)
-                extractedValue = numericProps[0] as number
-              else if (numericProps.length > 1)
-                friendlyMessage =
-                  'Multiple numeric properties found; unable to determine primary value.'
-              else
-                friendlyMessage =
-                  'No numeric value found in feature properties.'
-            }
-          } else {
-            friendlyMessage =
-              'Response format not recognized or no value found.'
-          }
-        } else {
-          friendlyMessage = 'Received unexpected data type from API.'
-        }
-
-        if (extractedValue !== null) {
-          this.clickedPoint = {
-            ...this.clickedPoint,
-            value: extractedValue,
-            show: true,
-            isLoading: false,
-            errorMessage: null,
-          }
-          console.log(
-            '[productStore] clickedPoint updated (success):',
-            JSON.parse(JSON.stringify(this.clickedPoint)),
-          )
-        } else {
-          this.clickedPoint = {
-            ...this.clickedPoint,
-            value: null,
-            show: true,
-            isLoading: false,
-            errorMessage:
-              friendlyMessage ||
-              'Failed to extract a valid number from the response.',
-          }
-          console.log(
-            '[productStore] clickedPoint updated (error/no value):',
-            JSON.parse(JSON.stringify(this.clickedPoint)),
-          )
-        }
-      } catch (caughtError: unknown) {
-        console.error('Error loading value at point:', caughtError)
-        let errorMessage = 'Failed to load data for the point.'
-
-        // Asserting the type of caughtError to allow property access
-        // This assumes the error object might have 'response.data.detail' or 'message'
-        const errorDetails = caughtError as {
-          response?: { data?: { detail?: string } }
-          message?: string
-        }
-
-        if (
-          errorDetails.response &&
-          errorDetails.response.data &&
-          typeof errorDetails.response.data.detail === 'string'
-        ) {
-          errorMessage = errorDetails.response.data.detail
-        } else if (typeof errorDetails.message === 'string') {
-          errorMessage = errorDetails.message
-        }
-        this.clickedPoint = {
-          ...this.clickedPoint,
-          value: null,
-          show: true,
-          isLoading: false,
-          errorMessage: errorMessage,
-        }
-        console.log(
-          '[productStore] clickedPoint updated (exception):',
-          JSON.parse(JSON.stringify(this.clickedPoint)),
-        )
+        this.isLoading = false // isLoading for product entries
       }
     },
 
     /**
      * Computes the TileLayer URL for the current product and date.
-     * Returns an empty string if essential parameters are missing.
+     * Returns null if essential parameters are missing.
      */
-    getTileLayerURL(): string {
+    getTileLayerURL(): string | null {
       if (!this.selectedProduct.product_id || !this.selectedProduct.date) {
-        return '' // Essential parameters missing
+        return null // Essential parameters missing
       }
-      return computeTileLayerURL(this.selectedProduct)
+      return computeTileLayerURL(this.selectedProduct as any) // Cast to any for now if type mismatch, ideally ensure types align
     },
 
     /**
@@ -474,12 +282,7 @@ export const useProductStore = defineStore('productStore', {
      */
     renderTileLayer(): string | null {
       if (this.selectedProduct.product_id && this.selectedProduct.date) {
-        const tileLayerUrl = computeTileLayerURL(
-          this.selectedProduct.product_id,
-          this.selectedProduct.date,
-          this.selectedProduct.cropmask_id, // Pass cropmask_id if available
-        )
-        return tileLayerUrl
+        return computeTileLayerURL(this.selectedProduct as any) // Pass the whole selectedProduct object, cast if needed
       }
       return null
     },
