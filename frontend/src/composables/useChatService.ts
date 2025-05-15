@@ -1,12 +1,13 @@
 import { ref, computed, watch, type Ref, nextTick } from 'vue' // Added nextTick
-import { marked } from 'marked'
-import type { MarkedOptions } from 'marked'
-import DOMPurify from 'dompurify'
+import { useMessageFormatter } from './useMessageFormatter'
+import { useChatContext } from './useChatContext' // Added
+import { useChatStreamHandler } from './useChatStreamHandler' // Added
 import {
   useLocationStore,
   type TargetLocationType,
 } from '@/stores/locationStore'
 import { useProductStore } from '@/stores/productStore'
+import { usePointDataStore } from '@/stores/pointDataStore' // Added
 import type { selectedProductType } from '@/stores/productStore'
 import type ScrollPanel from 'primevue/scrollpanel' // Import ScrollPanel type
 
@@ -24,13 +25,6 @@ export enum ContextTypeEnum {
   DATA_LOADED = 'data_loaded',
 }
 
-// Configure marked for safe HTML
-const markedOptions: MarkedOptions = {
-  breaks: true, // Convert GFM line breaks to <br>
-  gfm: true, // Use GitHub Flavored Markdown
-}
-marked.setOptions(markedOptions)
-
 export function useChatService(
   farmDataMode: Ref<boolean>,
   contextType: Ref<ContextTypeEnum>,
@@ -40,70 +34,12 @@ export function useChatService(
 ) {
   const locationStore = useLocationStore()
   const productStore = useProductStore()
+  const pointDataStore = usePointDataStore() // Added
   const messageInput = ref('')
   const inputDisabled = ref(false)
-
-  /**
-   * Formats a message string using marked and DOMPurify.
-   * Ensures that the input to marked() is always a string.
-   * @param {string | unknown} textInput - The raw message text.
-   * @param {boolean} isUserInput - Flag to determine if the input is from the user.
-   * @returns {Promise<string>} The formatted and sanitized HTML string.
-   */
-  async function formatMessage(
-    textInput: string | unknown,
-    isUserInput = false,
-  ): Promise<string> {
-    let textToProcess: string
-
-    if (Array.isArray(textInput)) {
-      textToProcess = textInput.join(' ')
-    } else if (typeof textInput === 'string') {
-      textToProcess = textInput
-    } else if (textInput === null || textInput === undefined) {
-      textToProcess = ''
-    } else {
-      try {
-        textToProcess = String(textInput)
-      } catch {
-        return '[Error: Invalid message format]'
-      }
-    }
-
-    if (isUserInput) {
-      const escapedText = textToProcess
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;')
-      return DOMPurify.sanitize(escapedText, {
-        USE_PROFILES: { html: false },
-        ALLOWED_TAGS: [],
-        ALLOWED_ATTR: [],
-      })
-    }
-
-    // Ensure newlines are just \n for marked processing for bot messages
-    textToProcess = textToProcess.replace(/\r\n/g, '\n')
-
-    if (!textToProcess.trim()) {
-      return ''
-    }
-
-    try {
-      const rawHtml = await Promise.resolve(marked(textToProcess))
-      return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } })
-    } catch (error) {
-      console.error('Error during message formatting:', error)
-      return textToProcess
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;')
-    }
-  }
+  const { formatMessage } = useMessageFormatter()
+  const { generateChatContext } = useChatContext() // Added
+  const { handleStream } = useChatStreamHandler() // Added
 
   const generalSuggestions: string[] = [
     'What are best practices for crop rotation?',
@@ -136,8 +72,9 @@ export function useChatService(
    */
   function scrollToBottom(): void {
     if (scrollPanelRef?.value) {
-      const scrollPanelElement = (scrollPanelRef.value as ScrollPanelInstance)
-        .$el as HTMLElement | undefined
+      const scrollPanelElement = (scrollPanelRef.value as any).$el as
+        | HTMLElement
+        | undefined
 
       if (scrollPanelElement) {
         const scrollableContentElement = scrollPanelElement.querySelector(
@@ -189,87 +126,7 @@ export function useChatService(
    * @param {string} text - The message text to send (this is the original user text).
    */
   async function sendToChat(text: string): Promise<void> {
-    let context = ''
-    const { selectedProduct, clickedPoint } = productStore
-
-    if (selectedProduct && selectedProduct.product_id) {
-      const productName =
-        selectedProduct.display_name ||
-        selectedProduct.product_id ||
-        'selected data layer'
-      context += `(Dataset: ${productName}`
-      if (selectedProduct.date) {
-        context += `, Date: ${selectedProduct.date}`
-      }
-      if (selectedProduct.meta) {
-        const metaParts: string[] = []
-        if (selectedProduct.meta.type)
-          metaParts.push(`Type: ${selectedProduct.meta.type}`)
-        if (selectedProduct.meta.source)
-          metaParts.push(`Source: ${selectedProduct.meta.source}`)
-        if (metaParts.length > 0) {
-          context += `, Meta: { ${metaParts.join(', ')} }`
-        }
-      }
-      context += ') '
-    }
-
-    if (clickedPoint && clickedPoint.show) {
-      if (
-        typeof clickedPoint.value === 'number' &&
-        !isNaN(clickedPoint.value)
-      ) {
-        const productNameForPoint =
-          selectedProduct?.display_name ||
-          selectedProduct?.product_id ||
-          'the current data layer'
-        let pointContext = `(Selected map data: Value ${clickedPoint.value.toFixed(
-          2,
-        )} for ${productNameForPoint}`
-        if (selectedProduct?.date) {
-          pointContext += ` on ${selectedProduct.date}`
-        }
-        if (
-          clickedPoint.longitude !== undefined &&
-          clickedPoint.latitude !== undefined
-        ) {
-          pointContext += ` at Lon: ${clickedPoint.longitude.toFixed(
-            4,
-          )}, Lat: ${clickedPoint.latitude.toFixed(4)}`
-        }
-        pointContext += '.) '
-        context += pointContext
-      } else if (clickedPoint.errorMessage) {
-        context += `(Note: Issue fetching data for clicked point: ${clickedPoint.errorMessage}) `
-      }
-    }
-
-    if (locationStore.targetLocation) {
-      const { latitude, longitude } = locationStore.targetLocation
-      context += `(Farm location: Lat ${latitude.toFixed(
-        4,
-      )}, Lon ${longitude.toFixed(4)}. `
-      const currentDate = new Date()
-      const month = currentDate.getMonth()
-      const hemisphere = latitude > 0 ? 'Northern' : 'Southern'
-      let season = ''
-      if (hemisphere === 'Northern') {
-        if (month >= 2 && month <= 4) season = 'Spring'
-        else if (month >= 5 && month <= 7) season = 'Summer'
-        else if (month >= 8 && month <= 10) season = 'Autumn'
-        else season = 'Winter'
-      } else {
-        if (month >= 2 && month <= 4) season = 'Autumn'
-        else if (month >= 5 && month <= 7) season = 'Winter'
-        else if (month >= 8 && month <= 10) season = 'Spring'
-        else season = 'Summer'
-      }
-      context += `Current season: ${season}. Current Date: ${
-        currentDate.toISOString().split('T')[0]
-      }.`
-      context += ')'
-    }
-
+    const context = generateChatContext()
     const contextualizedText = context ? `${text} ${context}`.trim() : text
 
     const thinkingMessageText = 'AgriBot is thinking...'
@@ -283,7 +140,7 @@ export function useChatService(
       model: 'AgriBot',
     }
     messages.value.push(botResponseInProgressMessage)
-    // scrollToBottom() // Removed: Watch in ChatWidget.vue will handle this
+    // scrollToBottom() // Watch in ChatWidget.vue will handle this
 
     inputDisabled.value = true
 
@@ -304,70 +161,10 @@ export function useChatService(
         return
       }
 
-      if (!response.body) {
-        botResponseInProgressMessage.text = await formatMessage(
-          'Received an empty response from the server.',
-          false,
-        )
-        botResponseInProgressMessage.model = 'System'
-        scrollToBottom() // Kept: Specific case, watch might not be ideal if message object itself isn't changing structure
-        return
-      }
+      // Use the new stream handler
+      await handleStream(response, botResponseInProgressMessage, formatMessage)
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let streamDone = false
-      let currentStreamedText = ''
-
-      botResponseInProgressMessage.text = '' // Initial clear for streaming
-
-      while (!streamDone) {
-        const { value, done } = await reader.read()
-        streamDone = done
-        if (value) {
-          const chunk = decoder.decode(value, { stream: !done })
-          const lines = chunk.split('\n')
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const eventData = line.substring(5).trim()
-              if (eventData === '[DONE]') {
-                streamDone = true
-                break
-              }
-              try {
-                const parsedData = JSON.parse(eventData)
-                if (
-                  parsedData.choices &&
-                  parsedData.choices[0].delta?.content
-                ) {
-                  currentStreamedText += parsedData.choices[0].delta.content
-                } else if (typeof parsedData.content === 'string') {
-                  currentStreamedText += parsedData.content
-                }
-                if (parsedData.model) {
-                  botResponseInProgressMessage.model = parsedData.model
-                }
-              } catch {
-                if (eventData && eventData !== '[DONE]') {
-                  currentStreamedText +=
-                    eventData + (eventData.endsWith('\n') ? '' : '\n')
-                }
-              }
-            }
-          }
-          botResponseInProgressMessage.text = await formatMessage(
-            currentStreamedText,
-            false,
-          )
-          // scrollToBottom(); // Removed: Watch in ChatWidget.vue will handle this
-        }
-      }
-      // Final update to the message text after stream is done
-      botResponseInProgressMessage.text = await formatMessage(
-        currentStreamedText,
-        false,
-      )
-      // scrollToBottom(); // Removed: Watch in ChatWidget.vue will handle this
+      // scrollToBottom(); // Watch in ChatWidget.vue will handle this
     } catch (error) {
       console.error('Chat API request failed:', error)
       const errorMessageText = `Sorry, I encountered an error: ${
