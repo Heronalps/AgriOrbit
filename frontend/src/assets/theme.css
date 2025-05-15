@@ -1,11 +1,10 @@
-/* filepath: c:\\Repository\\ag-advisor-map\\frontend\\src\\assets\\theme.css */
 /* Unified Theme for Agriculture Advisor Map Application */
 
 /* Import theme partials */
-@import url('./css/_variables.css');
-@import url('./css/_base.css');
-@import url('./css/_components.css');
-@import url('./css/_utilities.css');
+@import './css/_variables.css';
+@import './css/_base.css';
+@import './css/_components.css';
+@import './css/_utilities.css';
 
 /* 
   This file serves as an aggregator for the theme partials.
