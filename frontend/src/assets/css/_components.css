@@ -1,0 +1,707 @@
+/* c:\Repository\ag-advisor-map\frontend\src\assets\css\_components.css */
+
+/* Button styling */
+.p-button.p-component {
+  border-radius: var(--border-radius);
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+/* Primary button styling */
+.p-button.p-component.p-button-success,
+.p-button.p-component.p-button-primary {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.p-button.p-component.p-button-success:hover,
+.p-button.p-component.p-button-primary:hover {
+  background: var(--primary-color-hover);
+  border-color: var(--primary-color-hover);
+}
+
+/* Form elements styling */
+.p-inputtext {
+  font-family: var(--font-family);
+  border-radius: var(--border-radius);
+  padding: 0.75rem;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+.p-inputtext:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+
+/* Dropdown styling */
+.p-dropdown {
+  border-radius: var(--border-radius);
+  width: 100%;
+  max-width: 20rem;
+}
+
+.p-dropdown-label {
+  font-weight: 500;
+}
+
+.p-dropdown:not(.p-disabled).p-focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+
+/* Widget dark theme styling for PDropdown */
+.widget-dark-theme .p-dropdown {
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border: var(--input-border);
+  border-radius: var(--border-radius); /* Added for consistency */
+}
+
+.widget-dark-theme .p-dropdown .p-dropdown-label {
+  /* Style for the selected item text */
+  color: var(--input-text-color); /* Ensure text color matches */
+  padding: 0.75rem; /* Match .p-inputtext padding */
+}
+.widget-dark-theme .p-dropdown .p-dropdown-trigger {
+  /* Dropdown arrow icon */
+  color: var(--input-text-color);
+}
+
+.widget-dark-theme .p-dropdown:not(.p-disabled):hover {
+  border-color: var(--primary-color);
+}
+
+.widget-dark-theme .p-dropdown:not(.p-disabled).p-focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest); /* Or a dark-theme appropriate shadow */
+}
+
+.widget-dark-theme .p-dropdown-panel {
+  background-color: var(
+    --neutral-900
+  ); /* Use theme variable for dark background */
+  border: var(--input-border); /* Use theme variable */
+}
+
+.widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item {
+  color: var(--input-text-color); /* Use theme variable */
+  padding: 0.75rem 1rem;
+}
+
+.widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover {
+  background-color: rgba(
+    var(--primary-color-rgb),
+    0.2
+  ); /* Use theme variable with opacity */
+}
+
+.widget-dark-theme
+  .p-dropdown-panel
+  .p-dropdown-items
+  .p-dropdown-item.p-highlight {
+  background-color: rgba(
+    var(--primary-color-rgb),
+    0.5
+  ); /* Use theme variable with opacity */
+  color: var(--primary-color-text); /* Use theme variable */
+}
+
+/* Light theme styling for PDropdown (default) */
+.p-dropdown.p-component {
+  background-color: white;
+  border-color: var(--neutral-300);
+}
+
+.p-dropdown.p-component:hover {
+  border-color: var(--primary-light);
+}
+
+/* Calendar styling */
+.p-calendar {
+  width: 100%;
+}
+
+.p-calendar .p-inputtext {
+  width: 100%;
+}
+
+.p-calendar.p-calendar-w-btn .p-datepicker-trigger {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.p-calendar.p-calendar-w-btn .p-datepicker-trigger:hover {
+  background-color: var(--primary-color-hover);
+  border-color: var(--primary-color-hover);
+}
+
+.widget-dark-theme .p-calendar .p-inputtext {
+  background-color: var(--input-background);
+  border: var(--input-border);
+  color: var(--input-text-color);
+  padding: 0.75rem; /* Consistent padding */
+  border-radius: var(--border-radius); /* Consistent border radius */
+}
+
+.widget-dark-theme .p-calendar .p-inputtext::placeholder {
+  color: var(--input-placeholder-color);
+  opacity: 1;
+}
+
+.widget-dark-theme .p-calendar .p-inputtext:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+
+.widget-dark-theme .p-calendar .p-datepicker-trigger {
+  /* Calendar button/icon */
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border: var(--input-border);
+  border-left: none;
+  border-top-right-radius: var(--border-radius);
+  border-bottom-right-radius: var(--border-radius);
+}
+.widget-dark-theme .p-calendar .p-datepicker-trigger:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.1);
+  color: var(--primary-color);
+  border-color: var(--input-border); /* Or var(--primary-color) if preferred */
+}
+
+/* Datepicker panel styling for dark theme */
+.widget-dark-theme .p-datepicker {
+  background-color: var(--neutral-800);
+  border: 1px solid var(--neutral-700);
+  color: var(--widget-text-color);
+}
+
+.widget-dark-theme .p-datepicker .p-datepicker-header {
+  background-color: var(--neutral-900);
+  color: var(--widget-text-color);
+  border-bottom: 1px solid var(--neutral-700);
+}
+.widget-dark-theme
+  .p-datepicker
+  .p-datepicker-header
+  .p-datepicker-title
+  select {
+  background-color: var(--neutral-700);
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .p-datepicker .p-datepicker-header .p-datepicker-prev,
+.widget-dark-theme .p-datepicker .p-datepicker-header .p-datepicker-next {
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .p-datepicker .p-datepicker-header .p-datepicker-prev:hover,
+.widget-dark-theme .p-datepicker .p-datepicker-header .p-datepicker-next:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.2);
+}
+
+.widget-dark-theme .p-datepicker table th {
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .p-datepicker table td > span {
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .p-datepicker table td > span:focus {
+  box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+.widget-dark-theme .p-datepicker table td > span:not(.p-disabled):hover {
+  background-color: rgba(var(--primary-color-rgb), 0.2);
+}
+.widget-dark-theme .p-datepicker table td.p-datepicker-today > span {
+  background-color: rgba(var(--primary-color-rgb), 0.3);
+  border-color: transparent;
+  color: var(--widget-text-color);
+}
+.widget-dark-theme
+  .p-datepicker
+  table
+  td.p-datepicker-today
+  > span.p-highlight {
+  background-color: var(--primary-color);
+  color: var(--primary-color-text);
+}
+.widget-dark-theme .p-datepicker table td > span.p-highlight {
+  background-color: var(--primary-color);
+  color: var(--primary-color-text);
+}
+.widget-dark-theme .p-datepicker .p-datepicker-buttonbar .p-button {
+  background-color: var(--input-background);
+  color: var(--input-text-color);
+  border: 1px solid var(--input-border);
+}
+.widget-dark-theme .p-datepicker .p-datepicker-buttonbar .p-button:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.2);
+  border-color: var(--primary-color);
+}
+
+/* Datepicker panel */
+.p-datepicker {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+}
+
+.p-datepicker table td.p-datepicker-today > span {
+  border-color: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.p-datepicker table td > span.p-highlight {
+  background: var(--primary-color);
+}
+
+.p-datepicker:not(.p-disabled)
+  table
+  td
+  span:not(.p-highlight):not(.p-disabled):hover {
+  background: var(--primary-lightest);
+}
+
+.widget-dark-theme .p-datepicker {
+  background-color: var(--neutral-800); /* Darker shade for datepicker */
+  border-color: var(--neutral-700); /* Slightly lighter border */
+}
+
+.widget-dark-theme .p-datepicker .p-datepicker-header {
+  background-color: var(--neutral-900); /* Even darker for header */
+  color: var(--widget-text-color); /* Use theme variable */
+}
+
+/* Panel styling for PPanel with .widget-dark-theme (e.g., ControlPanel, ChatWidget) */
+.widget-dark-theme.p-panel {
+  background-color: var(--widget-background);
+  color: var(--widget-text-color);
+  border-radius: var(--widget-border-radius); /* Apply border radius */
+  box-shadow: var(--widget-box-shadow); /* Apply box shadow for depth */
+  border: none !important; /* Ensure no default border from PPanel itself */
+  overflow: hidden !important; /* Ensure content is clipped to border-radius, added !important */
+}
+
+.widget-dark-theme.p-panel .p-panel-header {
+  background-color: var(--widget-header-background);
+  color: var(--widget-header-text-color);
+  border-bottom: 1px solid var(--primary-dark); /* Keep a separator for the header */
+  border-top-left-radius: var(--widget-border-radius);
+  border-top-right-radius: var(--widget-border-radius);
+}
+
+.widget-dark-theme.p-panel .p-panel-content {
+  background-color: transparent; /* Content background should be the widget background */
+  color: var(--widget-text-color);
+  border-bottom-left-radius: var(--widget-border-radius);
+  border-bottom-right-radius: var(--widget-border-radius);
+}
+
+/* Panel styling (Default Light Theme for PPanel) */
+.p-panel .p-panel-header {
+  background: var(
+    --surface-ground
+  ); /* Light, neutral background (e.g., #f8f9fa) */
+  color: var(--text-color); /* Standard dark text color */
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  border: 1px solid var(--surface-border); /* Standard border color (e.g., #dee2e6) */
+  border-top-left-radius: var(--widget-border-radius);
+  border-top-right-radius: var(--widget-border-radius);
+}
+
+.p-panel .p-panel-content {
+  background: var(--surface-card); /* White background (e.g., #ffffff) */
+  color: var(--text-color); /* Standard dark text color */
+  padding: 1rem;
+  border: 1px solid var(--surface-border);
+  border-top: none; /* Usually content top border is omitted if header has one or panel has global border */
+  border-bottom-right-radius: var(--widget-border-radius);
+  border-bottom-left-radius: var(--widget-border-radius);
+}
+
+.p-panel .p-panel-header-icon {
+  color: var(--widget-header-text-color);
+  margin-right: 0.5rem;
+}
+
+.p-panel .p-panel-header-icon:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+/* Input styling in dark panels */
+.widget-dark-theme .p-inputtext,
+.widget-dark-theme .p-dropdown .p-inputtext, /* Ensure dropdowns with actual input fields are covered */
+.widget-dark-theme .p-calendar input {
+  /* Target actual input inside calendar if .p-inputtext class is not on the root */
+  background-color: var(--input-background);
+  border: var(--input-border);
+  color: var(--input-text-color);
+  padding: 0.75rem;
+  border-radius: var(--border-radius);
+}
+
+.widget-dark-theme .p-inputtext::placeholder,
+.widget-dark-theme .p-dropdown .p-inputtext::placeholder,
+.widget-dark-theme .p-calendar input::placeholder {
+  color: var(--input-placeholder-color);
+  opacity: 1;
+}
+
+.widget-dark-theme .p-inputtext:focus,
+.widget-dark-theme .p-dropdown .p-inputtext:focus,
+.widget-dark-theme .p-calendar input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
+  background: var(--primary-lightest);
+  color: var(--primary-color);
+}
+
+/* Calendar styling */
+.p-calendar .p-datepicker {
+  border-radius: var(--border-radius);
+}
+
+.p-datepicker:not(.p-datepicker-inline) {
+  box-shadow: var(--shadow-lg);
+}
+
+.p-datepicker .p-datepicker-header {
+  background: var(--primary-lightest);
+}
+
+.p-datepicker table td.p-datepicker-today > span {
+  background: var(--neutral-200);
+  border-color: var(--neutral-300);
+  color: var(--text-color);
+}
+
+.p-datepicker table td > span.p-highlight {
+  background: var(--primary-color);
+}
+
+/* Card styling */
+.p-card {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.p-card .p-card-title {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* Toast styling */
+.p-toast {
+  font-family: var(--font-family);
+}
+
+/* OverlayPanel styling */
+.p-overlaypanel {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Dialog styling */
+.p-dialog {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.p-dialog .p-dialog-header {
+  padding: 1.25rem;
+  background: var(--primary-lightest);
+}
+
+/* Ensure PrimeVue modals appear above other elements */
+.p-dialog-mask {
+  z-index: 1100;
+}
+
+/* Tooltip styling */
+.p-tooltip .p-tooltip-text {
+  background: var(--neutral-900);
+  color: white;
+  border-radius: var(--border-radius);
+  padding: 0.5rem 0.75rem;
+}
+
+/* Map-specific component styling */
+.ag-map-component .p-card {
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(5px);
+}
+
+/* Widget Dark Theme Specific Styling */
+.widget-dark-theme {
+  background-color: var(--widget-background);
+  color: var(--widget-text-color);
+  border-radius: var(--widget-border-radius);
+}
+
+.widget-dark-theme .chat-header {
+  background-color: var(--primary-color); /* Use theme variable */
+  color: var(--primary-color-text); /* Use theme variable */
+  padding: 10px;
+  text-align: center;
+  position: relative;
+  cursor: move;
+  user-select: none;
+  border-top-left-radius: var(--border-radius); /* Use theme variable */
+  border-top-right-radius: var(--border-radius); /* Use theme variable */
+  border-bottom: 1px solid var(--primary-dark); /* Add a subtle border */
+}
+
+/* Consistent font size across widgets */
+.widget-dark-theme h2,
+.widget-dark-theme h4 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0;
+  padding: 0;
+}
+
+/* Consistent input styling */
+.widget-dark-theme .p-inputtext::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Dropdown panel styling */
+.widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item {
+  color: var(--input-text-color); /* Use theme variable */
+}
+
+.widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover {
+  background-color: rgba(
+    var(--primary-color-rgb),
+    0.2
+  ); /* Use theme variable with opacity */
+}
+
+.widget-dark-theme
+  .p-dropdown-panel
+  .p-dropdown-items
+  .p-dropdown-item.p-highlight {
+  background-color: rgba(
+    var(--primary-color-rgb),
+    0.5
+  ); /* Use theme variable with opacity */
+  color: var(--primary-color-text); /* Use theme variable */
+}
+
+/* Button styling consistency */
+.widget-dark-theme .p-button.p-button-secondary {
+  background-color: #368535;
+  border-color: #368535;
+  color: white;
+}
+
+.widget-dark-theme .p-button.p-button-secondary:enabled:hover {
+  background-color: #297029;
+  border-color: #297029;
+}
+
+.widget-dark-theme .p-button.p-button-secondary:enabled:hover,
+.widget-dark-theme .p-button.p-button-secondary:enabled:focus {
+  background-color: var(--neutral-500);
+  border-color: var(--neutral-500);
+  box-shadow: 0 0 0 1px var(--neutral-400); /* Example focus shadow */
+}
+
+.widget-dark-theme .p-button.p-button-secondary:disabled {
+  background-color: var(--neutral-800);
+  border-color: var(--neutral-800);
+  color: var(--neutral-500);
+  opacity: 0.6;
+}
+
+/* General styles for control sections within dark widgets */
+.widget-dark-theme .control-section {
+  margin-bottom: 1rem;
+}
+.widget-dark-theme .control-section label {
+  /* Applied to labels like "Product:", "Date:" */
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--widget-text-color);
+}
+.widget-dark-theme .date-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.widget-dark-theme .date-controls .p-calendar {
+  flex-grow: 1;
+}
+
+/* ChatWidget.vue specific styles */
+.chat-widget {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Styling for the message input area within the chat widget */
+.chat-header {
+  padding: 10px;
+  text-align: center;
+  position: relative;
+  cursor: move; /* Indicate draggable */
+  user-select: none; /* Prevent text selection while dragging */
+  /* Background and text color should come from .widget-dark-theme or similar */
+}
+
+.chat-header h2 {
+  margin: 0;
+  font-size: 1.5em;
+  font-weight: 700;
+  font-family:
+    'Montserrat', sans-serif; /* Consider moving to --font-family-headings if used elsewhere */
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  /* Color should come from .widget-dark-theme or similar */
+}
+
+.farm-setup-container {
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto; /* Added to ensure scrolling if content overflows */
+  flex-shrink: 0; /* Ensure it doesn't shrink */
+}
+
+.chat-body {
+  flex: 1 1 auto; /* Allow chat body to grow and shrink, but also have a base size (auto from content) */
+  overflow-y: auto; /* This is the primary rule for scrolling messages */
+  padding: 10px; /* Add some padding inside the scrollable area */
+}
+
+.chat-footer {
+  border-top: 1px solid var(--surface-d); /* Use theme variable */
+  flex-shrink: 0; /* Ensure footer does not shrink */
+  padding: 10px; /* Added padding for consistency */
+}
+
+.message {
+  margin: 5px 0;
+}
+
+.chat-input {
+  display: flex;
+  border-top: 1px solid var(--surface-d); /* Use theme variable */
+  align-items: center;
+  gap: 10px;
+}
+
+/* Styling for sent messages within .widget-dark-theme */
+.widget-dark-theme .sent .message-bubble {
+  background: var(--primary-dark); /* Use theme variable */
+  color: var(--primary-color-text); /* Use theme variable */
+  margin-left: auto;
+}
+
+/* Styling for received messages within .widget-dark-theme */
+.widget-dark-theme .received .message-bubble {
+  background: var(--neutral-700); /* Darker background for received messages */
+  color: var(--widget-text-color);
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* Markdown styling within received messages in .widget-dark-theme */
+.widget-dark-theme .received .message-bubble p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  white-space: normal;
+}
+
+.widget-dark-theme .received .message-bubble ul,
+.widget-dark-theme .received .message-bubble ol {
+  padding-left: 1.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.widget-dark-theme .received .message-bubble li {
+  margin-bottom: 0.25em;
+}
+
+.widget-dark-theme .received .message-bubble strong,
+.widget-dark-theme .received .message-bubble b {
+  font-weight: bold;
+}
+
+.widget-dark-theme .received .message-bubble em,
+.widget-dark-theme .received .message-bubble i {
+  font-style: italic;
+}
+
+.widget-dark-theme .received .message-bubble code {
+  background-color: rgba(
+    var(--surface-d-rgb),
+    0.1
+  ); /* Use theme variable with opacity */
+  padding: 0.2em 0.4em;
+  border-radius: var(--border-radius-sm);
+  font-family: var(
+    --font-family-monospace
+  ); /* Assuming a --font-family-monospace is defined */
+}
+
+.widget-dark-theme .received .message-bubble pre {
+  background-color: rgba(
+    var(--surface-d-rgb),
+    0.1
+  ); /* Use theme variable with opacity */
+  padding: 0.5em;
+  border-radius: var(--border-radius-sm);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.widget-dark-theme .received .message-bubble pre code {
+  padding: 0;
+  background-color: transparent;
+  white-space: pre-wrap;
+}
+
+.widget-dark-theme .received .message-bubble a {
+  color: var(--link-color); /* Assuming a --link-color is defined */
+  text-decoration: underline;
+}
+
+.widget-dark-theme .received .message-bubble a:hover {
+  color: var(--link-hover-color); /* Assuming a --link-hover-color is defined */
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 5px;
+  gap: 5px; /* Consider a theme variable for spacing */
+}
+
+/* Consistent resize handle in dark theme */
+.widget-dark-theme .resize-handle:after {
+  border-right: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Specific styling for resize handle indicator in widget-dark-theme */
+.widget-dark-theme .resize-handle-br:after {
+  border-right-color: var(
+    --p-primary-500
+      /* PrimeVue variable, ensure this is defined or use a theme variable */
+  );
+  border-bottom-color: var(--p-primary-500);
+  /* Consider using a more generic variable like --widget-text-color or --input-placeholder-color if --p-primary-500 isn't suitable for all dark widgets */
+}
