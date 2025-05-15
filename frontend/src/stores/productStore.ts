@@ -272,7 +272,7 @@ export const useProductStore = defineStore('productStore', {
       if (!this.selectedProduct.product_id || !this.selectedProduct.date) {
         return null // Essential parameters missing
       }
-      return computeTileLayerURL(this.selectedProduct as any) // Cast to any for now if type mismatch, ideally ensure types align
+      return computeTileLayerURL(this.selectedProduct as SelectedProductParams) // Cast to any for now if type mismatch, ideally ensure types align
     },
 
     /**
@@ -282,7 +282,9 @@ export const useProductStore = defineStore('productStore', {
      */
     renderTileLayer(): string | null {
       if (this.selectedProduct.product_id && this.selectedProduct.date) {
-        return computeTileLayerURL(this.selectedProduct as any) // Pass the whole selectedProduct object, cast if needed
+        return computeTileLayerURL(
+          this.selectedProduct as SelectedProductParams,
+        ) // Pass the whole selectedProduct object, cast if needed
       }
       return null
     },

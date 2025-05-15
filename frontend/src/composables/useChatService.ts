@@ -7,7 +7,7 @@ import {
   type TargetLocationType,
 } from '@/stores/locationStore'
 import { useProductStore } from '@/stores/productStore'
-import { usePointDataStore } from '@/stores/pointDataStore' // Added
+// import { usePointDataStore } from '@/stores/pointDataStore'; // Commented out unused import
 import type { selectedProductType } from '@/stores/productStore'
 import type ScrollPanel from 'primevue/scrollpanel' // Import ScrollPanel type
 
@@ -34,7 +34,7 @@ export function useChatService(
 ) {
   const locationStore = useLocationStore()
   const productStore = useProductStore()
-  const pointDataStore = usePointDataStore() // Added
+  // const pointDataStore = usePointDataStore() // Added
   const messageInput = ref('')
   const inputDisabled = ref(false)
   const { formatMessage } = useMessageFormatter()
@@ -72,9 +72,9 @@ export function useChatService(
    */
   function scrollToBottom(): void {
     if (scrollPanelRef?.value) {
-      const scrollPanelElement = (scrollPanelRef.value as any).$el as
-        | HTMLElement
-        | undefined
+      const scrollPanelElement = (
+        scrollPanelRef.value as unknown as { $el: HTMLElement | undefined }
+      ).$el
 
       if (scrollPanelElement) {
         const scrollableContentElement = scrollPanelElement.querySelector(

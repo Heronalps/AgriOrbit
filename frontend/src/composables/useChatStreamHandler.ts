@@ -55,7 +55,7 @@ export function useChatStreamHandler() {
               if (parsedData.model) {
                 messageToUpdate.model = parsedData.model
               }
-            } catch (e) {
+            } catch {
               // If parsing fails, and it's not a DONE marker, append as raw text.
               // This handles plain text chunks or malformed JSON if the stream isn't strictly SSE JSON.
               if (eventData && eventData !== '[DONE]') {

@@ -143,15 +143,31 @@ export const usePointDataStore = defineStore('pointDataStore', {
           extractedValue = response
         } else if (response && typeof response === 'object') {
           // Attempt to extract value from common structures
-          if (typeof (response as any).mean === 'number') {
-            extractedValue = (response as any).mean
-          } else if (typeof (response as any).value === 'number') {
-            extractedValue = (response as any).value
-          } else if (
-            (response as any).features &&
-            (response as any).features[0]?.properties
+          if (
+            typeof (response as unknown as { mean: number }).mean === 'number'
           ) {
-            const props = (response as any).features[0].properties
+            extractedValue = (response as unknown as { mean: number }).mean
+          } else if (
+            typeof (response as unknown as { value: number }).value === 'number'
+          ) {
+            extractedValue = (response as unknown as { value: number }).value
+          } else if (
+            (
+              response as unknown as {
+                features: { properties: Record<string, unknown> }[]
+              }
+            ).features &&
+            (
+              response as unknown as {
+                features: { properties: Record<string, unknown> }[]
+              }
+            ).features[0]?.properties
+          ) {
+            const props = (
+              response as unknown as {
+                features: { properties: Record<string, unknown> }[]
+              }
+            ).features[0].properties
             if (typeof props.mean === 'number') extractedValue = props.mean
             else if (typeof props.value === 'number')
               extractedValue = props.value
