@@ -52,8 +52,19 @@ export function useMessageFormatter() {
       })
     }
 
-    // Ensure newlines are just \n for marked processing for bot messages
-    textToProcess = textToProcess.replace(/\r\n/g, '\n')
+    // Comprehensive newline normalization for bot messages
+    // 1. Replace literal \r\n (e.g., "\\r\\n") with a single newline character \n
+    textToProcess = textToProcess.replace(/\\r\\n/g, '\n');
+    // 2. Replace literal \n (e.g., "\\n") with a single newline character \n
+    textToProcess = textToProcess.replace(/\\n/g, '\n');
+    // 3. Normalize actual CRLF (carriage return + line feed) to LF
+    textToProcess = textToProcess.replace(/\r\n/g, '\n');
+    // 4. Normalize remaining CR (carriage return) to LF
+    textToProcess = textToProcess.replace(/\r/g, '\n');
+    // 5. Collapse sequences of two or more newlines into exactly two newlines (for Markdown paragraphs)
+    //    Ensuring that we don't create more than two newlines if some were already \n\n.
+    textToProcess = textToProcess.replace(/\n{2,}/g, '\n\n');
+
 
     if (!textToProcess.trim()) {
       return '' // Return empty string if input is effectively empty after trim

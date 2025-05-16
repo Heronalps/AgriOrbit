@@ -284,39 +284,34 @@ export function useChatService(
           contextType.value = ContextTypeEnum.DATA_LOADED
           const productName =
             newProduct.display_name || newProduct.product_id || 'selected data'
-          let messageText = `Now viewing data for: ${productName}.`
+          
+          let messageText = `Now viewing data for: **${productName}**.\n\n`
 
           if (newProduct.desc) {
-            const normalizedDesc = newProduct.desc.replace(/\r\n/g, '\n')
-            messageText += ` Description: ${normalizedDesc}.`
+            // Pass the description directly, newline normalization will be handled by formatMessage
+            messageText += `**Description:** ${newProduct.desc}\n\n` 
           }
           if (newProduct.date) {
-            messageText += ` Date: ${newProduct.date}.`
+            // Assuming date is a string. Adjust formatting if it's a Date object.
+            messageText += `**Date:** ${newProduct.date}\n\n`
           }
-          if (newProduct.meta) {
-            const metaArray: string[] = []
+          if (newProduct.meta && Object.keys(newProduct.meta).length > 0) {
+            messageText += `**Details:**\n`
             for (const [key, value] of Object.entries(newProduct.meta)) {
-              if (
-                typeof value === 'string' ||
-                typeof value === 'number' ||
-                typeof value === 'boolean'
-              ) {
-                metaArray.push(`${key}: ${value}`)
-              }
+              messageText += `  - ${key.replace(/_/g, ' ')}: ${value}\n` // Indent list items
             }
-            if (metaArray.length > 0) {
-              messageText += ` Meta: { ${metaArray.join(', ')} }.`
-            }
+            messageText += `\n`
           }
-          messageText += ' How can I help you analyze this?'
+          messageText += 'How can I help you analyze this?'
+          
+          lastProductId.value = newProduct.product_id // Ensure lastProductId is updated here
 
           messages.value.push({
-            text: await formatMessage(messageText, false),
+            text: await formatMessage(messageText, false), // formatMessage will handle markdown
             isSent: false,
             model: 'AgriBot',
           })
-          lastProductId.value = newProduct.product_id
-          scrollToBottom()
+          // scrollToBottom(); // Watch in ChatWidget.vue or the messages watcher here will handle this
         }
       }
     },
