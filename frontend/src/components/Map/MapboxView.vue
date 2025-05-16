@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MAPBOX_SETTINGS } from '@/utils/defaultSettings'
+import { MAPBOX_SETTINGS, MAP_STYLES } from '@/utils/defaultSettings'
 import mapboxgl, { Map } from 'mapbox-gl'
 import {
   inject,
@@ -72,12 +72,8 @@ const mapStore = useMapStore()
  */
 let darkModeMediaQuery: MediaQueryList | null = null
 
-/**
- * Handles changes in the system's color scheme preference (dark/light mode).
- * Updates the map's basemap style accordingly.
- * @param event - The MediaQueryListEvent indicating the change.
- */
-const handleSystemColorSchemeChange = (event: MediaQueryListEvent) => {
+// Renamed and adjusted to be the direct event listener
+const systemThemeListener = (event: MediaQueryListEvent | MediaQueryList) => {
   const newBasemapId = event.matches ? 'dark' : 'light'
   // Check if the current basemap is already the one preferred by system, to avoid unnecessary setBasemap calls
   if (mapStore.selectedBasemap !== newBasemapId) {
@@ -93,121 +89,76 @@ const handleSystemColorSchemeChange = (event: MediaQueryListEvent) => {
 onMounted(() => {
   const mapContainer = document.getElementById('map')
   if (!mapContainer) {
-    console.error(
-      "[MapboxView.vue] Map container element with ID 'map' not found in the DOM.",
-    )
+    console.error('MapboxView: Map container element not found.')
     return
   }
 
   if (!props.accessToken) {
-    console.error(
-      '[MapboxView.vue] Mapbox access token is required but was not provided.',
-    )
+    console.error('MapboxView: Mapbox access token is not provided.')
     return
   }
   mapboxgl.accessToken = props.accessToken
 
   if (!viewState) {
-    console.error(
-      '[MapboxView.vue] ViewState was not injected. Map cannot be initialized without it.',
-    )
+    console.error('MapboxView: ViewState is not injected.')
     return
+  }
+
+  let initialStyleUrl: string | mapboxgl.Style | undefined
+
+  if (props.mapStyle) {
+    initialStyleUrl = props.mapStyle
+    // If props.mapStyle is provided, mapStore.selectedBasemap might be initially out of sync.
+    // The systemThemeListener called on 'load' will align it.
+  } else {
+    // No props.mapStyle: Determine style from system theme and update store *before* map creation.
+    const prefersDark = window.matchMedia(
+      '(prefers-color-scheme: dark)',
+    ).matches
+    const systemThemeBasemapId = prefersDark ? 'dark' : 'light'
+
+    if (mapStore.selectedBasemap !== systemThemeBasemapId) {
+      mapStore.setBasemap(systemThemeBasemapId)
+    }
+    // Now mapStore.selectedBasemap reflects the system theme.
+    initialStyleUrl =
+      MAP_STYLES?.[mapStore.selectedBasemap as keyof typeof MAP_STYLES]
+
+    if (!initialStyleUrl) {
+      console.warn(
+        `MapboxView: No MAP_STYLE found for basemap ID '${mapStore.selectedBasemap}'. Ensure MAP_STYLES is correctly defined in defaultSettings.ts. Falling back to Mapbox Streets.`,
+      )
+      initialStyleUrl = 'mapbox://styles/mapbox/streets-v12' // Default fallback
+    }
   }
 
   // Create the Mapbox map instance
   const initialMapInstance = new mapboxgl.Map({
-    ...MAPBOX_SETTINGS, // Default settings
-    ...attrs, // Pass down any non-prop attributes
-    container: mapContainer, // Use the actual DOM element
-    style: props.mapStyle, // Use provided map style; no default fallback here
+    ...MAPBOX_SETTINGS, // IMPORTANT: Ensure MAPBOX_SETTINGS in defaultSettings.ts promotes 2D (e.g., projection: {name: 'mercator'}, terrain: null)
+    ...attrs,
+    container: mapContainer,
+    style: initialStyleUrl, // Use the determined initial style
     center: [viewState.longitude, viewState.latitude],
     zoom: viewState.zoom,
-    pitch: viewState.pitch,
-    bearing: viewState.bearing,
-    interactive: false, // Set to false as Deck.gl will handle interactions
+    pitch: viewState.pitch, // For a true 2D top-down view, these should be 0
+    bearing: viewState.bearing, // For a true 2D top-down view, these should be 0
+    interactive: false,
   })
   map.value = initialMapInstance
 
   initialMapInstance.on('load', () => {
     emit('map-loaded', initialMapInstance)
 
-    // Synchronize the initial basemap in the store based on the map's current style
-    const currentStyle = initialMapInstance.getStyle()
-    const initialStyleName = currentStyle?.name // No fallback, rely on the provided style's name
-    let initialBasemapId = '' // No default, will be determined from initialStyleName
-
-    if (initialStyleName) {
-      // Determine basemap ID from style name
-      switch (initialStyleName.toLowerCase()) {
-        case 'mapbox streets':
-        case 'streets-v11':
-        case 'streets-v12':
-          initialBasemapId = 'streets'
-          break
-        case 'mapbox outdoors':
-        case 'outdoors-v11':
-        case 'outdoors-v12':
-          initialBasemapId = 'outdoors'
-          break
-        case 'mapbox light':
-        case 'light-v10':
-        case 'light-v11':
-          initialBasemapId = 'light'
-          break
-        case 'mapbox dark':
-        case 'dark-v10':
-        case 'dark-v11':
-          initialBasemapId = 'dark'
-          break
-        case 'mapbox satellite':
-        case 'satellite-v9':
-          initialBasemapId = 'satellite'
-          break
-        case 'mapbox satellite streets':
-        case 'satellite-streets-v11':
-        case 'satellite-streets-v12':
-          initialBasemapId = 'satellite-streets'
-          break
-        case 'mapbox navigation day':
-        case 'navigation-day-v1':
-          initialBasemapId = 'navigation-day'
-          break
-        case 'mapbox navigation night':
-        case 'navigation-night-v1':
-          initialBasemapId = 'navigation-night'
-          break
-        default:
-          console.warn(
-            `[MapboxView.vue] Unrecognized initial map style name: '${initialStyleName}'. Could not map to a known basemapId. Style URL: ${
-              currentStyle?.url || 'N/A'
-            }`,
-          )
-      }
-      if (initialBasemapId) {
-        mapStore.selectedBasemap = initialBasemapId
-      } else {
-        console.warn(
-          `[MapboxView.vue] Could not determine a basemapId for style name: '${initialStyleName}'. Check style name to basemapId mappings.`,
-        )
-      }
-    } else {
-      console.warn(
-        '[MapboxView.vue] Initial map style name is undefined (props.mapStyle might be missing or style has no name). Basemap synchronization might be affected.',
-      )
-    }
-
     // Listen for system color scheme changes
     darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    darkModeMediaQuery.addEventListener('change', handleSystemColorSchemeChange)
-    // Set initial basemap based on current system preference
-    handleSystemColorSchemeChange(darkModeMediaQuery)
+    darkModeMediaQuery.addEventListener('change', systemThemeListener)
+    // Call listener once to ensure mapStore.selectedBasemap is aligned with the current system theme,
+    // especially if props.mapStyle was used initially and might differ from the system theme.
+    systemThemeListener(darkModeMediaQuery) // Pass the MediaQueryList to align with its current state
   })
 
   initialMapInstance.on('error', (errorEvent) => {
-    console.error(
-      '[MapboxView.vue] A Mapbox GL error occurred:',
-      errorEvent?.error,
-    )
+    console.error('Mapbox GL error:', errorEvent.error)
   })
 })
 
@@ -217,14 +168,10 @@ onMounted(() => {
  */
 onBeforeUnmount(() => {
   if (darkModeMediaQuery) {
-    darkModeMediaQuery.removeEventListener(
-      'change',
-      handleSystemColorSchemeChange,
-    )
-    darkModeMediaQuery = null
+    darkModeMediaQuery.removeEventListener('change', systemThemeListener)
   }
   if (map.value) {
-    map.value.remove() // Properly dispose of the Mapbox instance
+    map.value.remove()
     map.value = null
   }
 })
@@ -256,52 +203,14 @@ watch(
 watch(
   () => mapStore.selectedBasemap,
   (newBasemapId) => {
-    if (map.value && newBasemapId) {
-      let styleUrl: string | undefined // Initialize as undefined
-      switch (newBasemapId) {
-        case 'streets':
-          styleUrl = 'mapbox://styles/mapbox/streets-v12'
-          break
-        case 'outdoors':
-          styleUrl = 'mapbox://styles/mapbox/outdoors-v12'
-          break
-        case 'light':
-          styleUrl = 'mapbox://styles/mapbox/light-v11'
-          break
-        case 'dark':
-          styleUrl = 'mapbox://styles/mapbox/dark-v11'
-          break
-        case 'satellite':
-          styleUrl = 'mapbox://styles/mapbox/satellite-v9'
-          break
-        case 'satellite-streets':
-          styleUrl = 'mapbox://styles/mapbox/satellite-streets-v12'
-          break
-        case 'navigation-day':
-          styleUrl = 'mapbox://styles/mapbox/navigation-day-v1'
-          break
-        case 'navigation-night':
-          styleUrl = 'mapbox://styles/mapbox/navigation-night-v1'
-          break
-        default:
-          // Do not set a default styleUrl; let the map retain its current style.
-          console.warn(
-            `[MapboxView.vue] Unknown basemap ID: '${newBasemapId}'. Cannot set style. Ensure ControlPanel provides valid IDs.`,
-          )
-        // styleUrl remains undefined
-      }
-
+    if (map.value && newBasemapId && MAP_STYLES) {
+      const styleUrl = MAP_STYLES[newBasemapId as keyof typeof MAP_STYLES]
       if (styleUrl) {
-        // Only attempt to set style if a valid URL was determined
         map.value.setStyle(styleUrl)
-
-        // After style change, ensure projection remains Mercator if needed.
-        // This is important if some styles might default to Globe projection.
-        map.value.once('styledata', () => {
-          if (map.value && map.value.getProjection().name !== 'mercator') {
-            map.value.setProjection({ name: 'mercator' })
-          }
-        })
+      } else {
+        console.warn(
+          `MapboxView: No style URL found in MAP_STYLES for basemap ID '${newBasemapId}'`,
+        )
       }
     }
   },

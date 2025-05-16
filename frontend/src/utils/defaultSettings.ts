@@ -1,6 +1,7 @@
 export const MAP_STYLES = {
-  SATELLITE: 'mapbox://styles/mapbox/satellite-v9',
-  DARK: 'mapbox://styles/mapbox/dark-v10',
+  satellite: 'mapbox://styles/mapbox/satellite-v9',
+  dark: 'mapbox://styles/mapbox/dark-v10',
+  light: 'mapbox://styles/mapbox/light-v10',
 } as const
 
 export const INITIAL_VIEW_STATE: viewStateType = {
@@ -24,7 +25,7 @@ interface mapboxSettings {
 export const MAPBOX_SETTINGS: mapboxSettings = {
   container: 'map',
   width: '100%',
-  style: MAP_STYLES.DARK,
+  style: MAP_STYLES.dark,
   interactive: false,
   center: [INITIAL_VIEW_STATE.longitude, INITIAL_VIEW_STATE.latitude],
   zoom: INITIAL_VIEW_STATE.zoom,
