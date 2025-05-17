@@ -6,7 +6,7 @@
         ref="selectLocationButtonRef"
         icon="pi pi-map-marker"
         label="Select Farm Location"
-        class="p-button-success action-toolbar-button"
+        class="p-button-custom-grey action-toolbar-button"
         aria-label="Select Farm Location on Map"
         @click="triggerLocationSelection"
       />
@@ -14,7 +14,7 @@
         ref="generalChatButtonRef"
         icon="pi pi-comments"
         label="Start General Chat"
-        class="p-button-secondary action-toolbar-button"
+        class="p-button-custom-grey action-toolbar-button"
         aria-label="Start a General Chat"
         @click="triggerGeneralChat"
       />

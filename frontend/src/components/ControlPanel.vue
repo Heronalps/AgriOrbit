@@ -63,6 +63,15 @@ const panelControlPt = computed(() => ({
   },
 }))
 
+const calendarPt = computed(() => ({
+  input: {
+    class: 'custom-grey-input-text',
+  },
+  panel: {
+    class: 'custom-grey-panel',
+  },
+}))
+
 /**
  * Represents an item in the basemap selection dropdown.
  */
@@ -166,8 +175,20 @@ const handleBasemapSelectionEvent = (event: {
 
 // Date handling logic
 const handleDateSelection = async (
-  dateFromPicker: Date | null,
+  dateValue: string | Date | string[] | Date[] | undefined | null,
 ): Promise<void> => {
+  let dateFromPicker: Date | null = null
+
+  if (dateValue instanceof Date) {
+    dateFromPicker = dateValue
+  } else if (typeof dateValue === 'string') {
+    // Attempt to parse if it's a string (e.g., if manual input is allowed and returns string)
+    const parsedDate = new Date(dateValue.replace(/-/g, '/'))
+    if (!isNaN(parsedDate.getTime())) {
+      dateFromPicker = parsedDate
+    }
+  } // Array types (string[] | Date[]) are not typical for single date picker, handle if necessary
+
   if (dateFromPicker instanceof Date && !isNaN(dateFromPicker.getTime())) {
     const day = dateFromPicker.getDate().toString().padStart(2, '0')
     const month = (dateFromPicker.getMonth() + 1).toString().padStart(2, '0')
@@ -324,33 +345,32 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
 
       <!-- Date Selection -->
       <div class="control-section">
-        <label>Date:</label>
-        <div class="date-controls">
+        <label for="date-select">Date</label>
+        <div class="date-navigation">
           <PButton
             icon="pi pi-chevron-left"
-            class="p-button-rounded p-button-secondary"
+            class="p-button-custom-grey p-button-sm"
             :disabled="!canGoPrevious"
             aria-label="Previous Date"
             @click="goToPreviousDate"
           />
           <PCalendar
+            id="date-select"
             v-model="selectedDate"
-            :dateFormat="dateFormat"
-            :showButtonBar="true"
-            :showIcon="true"
-            :selectionMode="'single'"
-            placeholder="Select Date"
+            :date-format="dateFormat"
+            placeholder="Select a Date"
             class="w-full"
-            :disabledDates="disabledDates"
-            :disabledDays="disabledDays"
-            :minDate="minSelectableDate"
-            :maxDate="maxSelectableDate"
-            :pt="{ input: { class: 'p-inputtext' } }"
-            @change="handleDateSelection"
+            :show-icon="false"
+            :min-date="minSelectableDate"
+            :max-date="maxSelectableDate"
+            :disabled-dates="disabledDates"
+            :disabled-days="disabledDays"
+            :pt="calendarPt"
+            @update:model-value="handleDateSelection"
           />
           <PButton
             icon="pi pi-chevron-right"
-            class="p-button-rounded p-button-secondary"
+            class="p-button-custom-grey p-button-sm"
             :disabled="!canGoNext"
             aria-label="Next Date"
             @click="goToNextDate"
@@ -384,7 +404,8 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
           optionLabel="name"
           optionValue="id"
           placeholder="Select Basemap"
-          class="w-full"
+          class="w-full custom-grey-input-text"
+          :pt="{ panel: { class: 'custom-grey-panel' } }"
           @change="handleBasemapSelectionEvent"
         />
       </div>
@@ -403,10 +424,9 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
   gap: 0.25rem;
 }
 
-/* Styles for the main display area of PDropdown */
-.control-section .p-dropdown {
-  background-color: #424242; /* Dark background for the dropdown box */
-  border: 1px solid #616161;
-  /* w-full class on the component handles its overall width */
+.date-navigation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 </style>

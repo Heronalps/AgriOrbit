@@ -64,17 +64,11 @@
       </div>
       <div class="chat-input">
         <span class="p-input-icon-right w-full">
-          <i
-            v-if="!inputDisabled && messageInput"
-            class="pi pi-send"
-            style="cursor: pointer"
-            @click="sendMessage"
-          />
           <PInputText
             v-model="messageInput"
             placeholder="Type your message..."
             :disabled="inputDisabled"
-            class="w-full"
+            class="w-full custom-grey-input-text"
             @keyup.enter="sendMessage"
           />
         </span>
@@ -273,12 +267,7 @@ watch(
   min-height: 0;
 }
 
-/* .chat-body-scroll-panel :deep(.p-scrollpanel-content) is now handled by pt.content */
-/* .chat-body-scroll-panel :deep(.p-scrollpanel-wrapper) is now handled by pt.wrapper */
-
 .chat-body {
-  /* Padding is now applied via pt.content on ScrollPanel, so remove from here if it was for the scrollable area */
-  /* padding: 1rem; */
   height: auto;
 }
 
@@ -299,23 +288,42 @@ watch(
 }
 
 .chat-footer {
-  flex-shrink: 0; /* Prevents the footer from shrinking */
-  padding: 0.5rem 1rem;
-  /* border-top: 1px solid var(--surface-border); Removed as ScrollPanel wrapper now has a border-bottom */
+  flex-shrink: 0;
+  padding: 0.75rem 1rem; /* Increased top/bottom padding for more overall space */
   background-color: var(--widget-background);
 }
 
 .suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 0.5rem; /* Adds space between buttons if they wrap */
+  margin-bottom: 0.75rem; /* Adds space between suggestions and chat input */
+}
+
+/* Style for individual suggestion buttons */
+.suggestions > .p-button.p-button-sm {
+  padding-top: 0.2rem !important; /* Reduced vertical padding */
+  padding-bottom: 0.2rem !important; /* Reduced vertical padding */
+  height: auto !important; /* Allow height to conform to content */
+  line-height: 1.3 !important; /* Adjust line height for potentially wrapped/justified text */
+  text-align: left !important; /* Ensure button's own text-align doesn't interfere */
+}
+
+/* Style for the text label inside suggestion buttons */
+.suggestions > .p-button.p-button-sm .p-button-label {
+  text-align: justify;
+  display: block; /* Necessary for text-align: justify to work effectively on multiple lines */
+  width: 100%; /* Ensures the block takes the full width of the button's text area */
+  white-space: normal !important; /* Allows text to wrap */
+  overflow-wrap: break-word; /* Helps break long words to prevent overflow */
+  hyphens: auto; /* Optional: can improve justification appearance */
 }
 
 .chat-input {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  border-top: none !important; /* Explicitly remove any top border */
 }
 
 .message {

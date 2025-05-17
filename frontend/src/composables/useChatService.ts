@@ -43,20 +43,20 @@ export function useChatService(
 
   const generalSuggestions: string[] = [
     'What are best practices for crop rotation?',
-    'Tell me about sustainable farming',
-    'How to improve soil health?',
+    'Tell me about resource-efficient farming.',
+    'How to measure and improve soil health?',
   ]
 
   const farmSelectedSuggestions: string[] = [
-    'Analyze soil conditions for this location',
-    'Recommend crops for this region',
+    'Analyze the soil conditions for this location.',
+    'Recommend profitable crops for this region.',
     "What's the optimal irrigation strategy here?",
   ]
 
   const dataLoadedSuggestions: string[] = [
-    'Interpret this NDVI data',
-    'How does my farm compare to regional averages?',
-    'Identify areas needing attention',
+    'Quickly interpret this data product for me.',
+    'Compare this data to the regional averages.',
+    'What areas in this data need more attention?',
   ]
 
   const currentSuggestions = computed<string[]>(() => {
@@ -284,12 +284,12 @@ export function useChatService(
           contextType.value = ContextTypeEnum.DATA_LOADED
           const productName =
             newProduct.display_name || newProduct.product_id || 'selected data'
-          
+
           let messageText = `Now viewing data for: **${productName}**.\n\n`
 
           if (newProduct.desc) {
             // Pass the description directly, newline normalization will be handled by formatMessage
-            messageText += `**Description:** ${newProduct.desc}\n\n` 
+            messageText += `**Description:** ${newProduct.desc}\n\n`
           }
           if (newProduct.date) {
             // Assuming date is a string. Adjust formatting if it's a Date object.
@@ -303,7 +303,7 @@ export function useChatService(
             messageText += `\n`
           }
           messageText += 'How can I help you analyze this?'
-          
+
           lastProductId.value = newProduct.product_id // Ensure lastProductId is updated here
 
           messages.value.push({

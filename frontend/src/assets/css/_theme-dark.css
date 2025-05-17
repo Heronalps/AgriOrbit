@@ -8,51 +8,64 @@
 }
 
 /* PDropdown with .widget-dark-theme */
-.widget-dark-theme .p-dropdown {
-  background-color: var(--input-background);
-  color: var(--input-text-color);
-  border: var(--input-border);
-  border-radius: var(--border-radius); /* Added for consistency */
+.widget-dark-theme .p-dropdown.p-component {
+  /* Added .p-component for increased specificity */
+  background-color: var(--neutral-700); /* Changed from --input-background */
+  color: var(
+    --widget-text-color
+  ); /* Changed from --input-text-color for consistency, though likely same value */
+  border: 1px solid var(--neutral-700); /* Changed from --input-border */
+  border-radius: var(--border-radius);
 }
 
 .widget-dark-theme .p-dropdown .p-dropdown-label {
-  color: var(--input-text-color);
+  color: var(--widget-text-color); /* Ensured consistency */
   padding: 0.75rem; /* Match .p-inputtext padding */
 }
 
 .widget-dark-theme .p-dropdown .p-dropdown-trigger {
-  color: var(--input-text-color);
+  color: var(--widget-text-color); /* Ensured consistency */
 }
 
 .widget-dark-theme .p-dropdown:not(.p-disabled):hover {
-  border-color: var(--primary-color);
+  border-color: var(
+    --neutral-500
+  ); /* Lighter grey for hover, similar to custom button */
+  background-color: var(
+    --neutral-600
+  ); /* Slightly lighter grey for background on hover - assuming neutral-600 is between 500 and 700, if not, use 500 */
+  /* If --neutral-600 is not defined, consider var(--neutral-500) or a slightly lightened var(--neutral-700) */
 }
 
 .widget-dark-theme .p-dropdown:not(.p-disabled).p-focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 1px var(--primary-lightest);
+  border-color: var(--neutral-500); /* Consistent with hover */
+  box-shadow: 0 0 0 0.2rem var(--neutral-300); /* Focus ring like custom button */
+  background-color: var(
+    --neutral-700
+  ); /* Keep background same as non-focus, border and shadow indicate focus */
 }
 
 .widget-dark-theme .p-dropdown-panel {
-  background-color: var(--neutral-900);
-  border: var(--input-border);
+  background-color: var(--neutral-800); /* Darker panel background */
+  border: 1px solid var(--neutral-700); /* Border consistent with dropdown */
+  color: var(--widget-text-color); /* Ensure text color for items is white */
 }
 
 .widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item {
-  color: var(--input-text-color);
+  color: var(--widget-text-color); /* Ensure item text is white */
   padding: 0.75rem 1rem;
 }
 
 .widget-dark-theme .p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover {
-  background-color: rgba(var(--primary-color-rgb), 0.2);
+  background-color: var(--neutral-700); /* Hover matches dropdown base */
 }
 
 .widget-dark-theme
   .p-dropdown-panel
   .p-dropdown-items
   .p-dropdown-item.p-highlight {
-  background-color: rgba(var(--primary-color-rgb), 0.5);
-  color: var(--primary-color-text);
+  background-color: var(--neutral-500); /* Selected item lighter grey */
+  color: var(--widget-text-color); /* Text remains white */
 }
 
 /* PInputText, PCalendar input with .widget-dark-theme */
