@@ -1,15 +1,14 @@
-import { ref, computed, watch, type Ref, nextTick } from 'vue' // Added nextTick
+import { ref, computed, watch, type Ref, nextTick } from 'vue'
 import { useMessageFormatter } from './useMessageFormatter'
-import { useChatContext } from './useChatContext' // Added
-import { useChatStreamHandler } from './useChatStreamHandler' // Added
+import { useChatContext } from './useChatContext'
+import { useChatStreamHandler } from './useChatStreamHandler'
 import {
   useLocationStore,
   type TargetLocationType,
 } from '@/stores/locationStore'
 import { useProductStore } from '@/stores/productStore'
-// import { usePointDataStore } from '@/stores/pointDataStore'; // Commented out unused import
 import type { selectedProductType } from '@/stores/productStore'
-import type ScrollPanel from 'primevue/scrollpanel' // Import ScrollPanel type
+import type ScrollPanel from 'primevue/scrollpanel'
 
 // Define interfaces for component state
 export interface Message {
@@ -25,21 +24,62 @@ export enum ContextTypeEnum {
   DATA_LOADED = 'data_loaded',
 }
 
+/**
+ * Composable for managing chat service functionalities.
+ * @param farmDataMode - Ref to indicate if farm data mode is active.
+ * @param contextType - Ref to indicate the current chat context type.
+ * @param messages - Ref to the array of chat messages.
+ * @param lastProductId - Ref to store the ID of the last selected product.
+ * @param scrollPanelRef - Optional ref to the ScrollPanel component instance for scrolling.
+ */
 export function useChatService(
   farmDataMode: Ref<boolean>,
   contextType: Ref<ContextTypeEnum>,
   messages: Ref<Message[]>,
   lastProductId: Ref<string>,
-  scrollPanelRef?: Ref<InstanceType<typeof ScrollPanel> | null>, // Updated to accept ScrollPanel instance ref
+  scrollPanelRef?: Ref<InstanceType<typeof ScrollPanel> | null>,
 ) {
   const locationStore = useLocationStore()
   const productStore = useProductStore()
-  // const pointDataStore = usePointDataStore() // Added
   const messageInput = ref('')
   const inputDisabled = ref(false)
+  const initialInteractionMade = ref(false) // Manages if an initial user interaction or context setting has occurred
   const { formatMessage } = useMessageFormatter()
-  const { generateChatContext } = useChatContext() // Added
-  const { handleStream } = useChatStreamHandler() // Added
+  const { generateChatContext } = useChatContext()
+  const { handleStream } = useChatStreamHandler()
+
+  /**
+   * Internal helper to add a formatted message from the bot or system to the messages list.
+   * Relies on the messages watcher to scroll to bottom.
+   * @param rawText - The raw text of the message.
+   * @param model - The sender model, defaults to 'AgriBot'.
+   */
+  async function _addBotMessage(
+    rawText: string,
+    model: string = 'AgriBot',
+  ): Promise<void> {
+    messages.value.push({
+      text: await formatMessage(rawText, false),
+      isSent: false,
+      model: model,
+    })
+  }
+
+  /**
+   * Internal helper to add a user's message to the list and send it to the chat backend.
+   * @param originalText - The original, unformatted text from the user.
+   */
+  async function _addUserMessageAndSend(originalText: string): Promise<void> {
+    if (!originalText.trim()) return // Do nothing if the message is empty or whitespace
+
+    // User's message is formatted and pushed to the messages array
+    messages.value.push({
+      text: await formatMessage(originalText, true), // Format user message as sent
+      isSent: true,
+    })
+
+    await sendToChat(originalText) // Send original, unformatted text to backend
+  }
 
   const generalSuggestions: string[] = [
     'What are best practices for crop rotation?',
@@ -56,7 +96,7 @@ export function useChatService(
   const dataLoadedSuggestions: string[] = [
     'Quickly interpret this data product for me.',
     'Compare this data to the regional averages.',
-    'What areas in this data need more attention?',
+    'Where does this data need more attention?',
   ]
 
   const currentSuggestions = computed<string[]>(() => {
@@ -66,6 +106,54 @@ export function useChatService(
       return farmSelectedSuggestions
     return generalSuggestions
   })
+
+  /**
+   * Initializes the chat state, setting initial messages based on context.
+   */
+  async function initializeChat(): Promise<void> {
+    const targetLocation = locationStore.targetLocation
+    if (targetLocation) {
+      farmDataMode.value = true
+      contextType.value = ContextTypeEnum.FARM_SELECTED
+      await _addBotMessage(
+        "I see you've selected a farm location. How can I help you with your farm today?",
+      )
+      initialInteractionMade.value = true // Farm selected counts as initial interaction
+    } else {
+      await _addBotMessage(
+        "Hello! I'm AgriBot. Please use the toolbar to select a farm or start a general chat.",
+      )
+      // initialInteractionMade remains false until a specific action
+    }
+    // The watcher for productStore.selectedProduct will handle initial lastProductId and related messages.
+    // scrollToBottom() // Removed: Rely on messages watcher
+  }
+
+  /**
+   * Processes the 'location-selected' event.
+   * Updates chat context and adds a relevant message.
+   */
+  async function processLocationSelected(): Promise<void> {
+    farmDataMode.value = true
+    contextType.value = ContextTypeEnum.FARM_SELECTED
+    initialInteractionMade.value = true
+    await _addBotMessage(
+      'Farm location selected! How can I assist you with this area?',
+    )
+  }
+
+  /**
+   * Processes the 'start-general-chat' event.
+   * Updates chat context and adds a relevant message.
+   */
+  async function processStartGeneralChat(): Promise<void> {
+    farmDataMode.value = false
+    contextType.value = ContextTypeEnum.GENERAL
+    initialInteractionMade.value = true
+    await _addBotMessage(
+      "I'll be happy to help with general farming questions. Keep in mind that selecting a specific location will allow me to provide more tailored advice.",
+    )
+  }
 
   /**
    * Scrolls the chat body to the bottom to show the latest messages.
@@ -107,18 +195,13 @@ export function useChatService(
     } catch {
       console.warn('Could not parse error response JSON')
     }
-    const formattedError = await formatMessage(errorText, false)
+
     if (messageToUpdate) {
-      messageToUpdate.text = formattedError
+      messageToUpdate.text = await formatMessage(errorText, false) // Format here for direct update
       messageToUpdate.model = 'System'
     } else {
-      messages.value.push({
-        text: formattedError,
-        isSent: false,
-        model: 'System',
-      })
+      await _addBotMessage(errorText, 'System')
     }
-    scrollToBottom()
   }
 
   /**
@@ -130,17 +213,12 @@ export function useChatService(
     const contextualizedText = context ? `${text} ${context}`.trim() : text
 
     const thinkingMessageText = 'AgriBot is thinking...'
-    const formattedThinkingMessage = await formatMessage(
-      thinkingMessageText,
-      false,
-    )
     const botResponseInProgressMessage: Message = {
-      text: formattedThinkingMessage,
+      text: await formatMessage(thinkingMessageText, false), // Format directly here
       isSent: false,
       model: 'AgriBot',
     }
     messages.value.push(botResponseInProgressMessage)
-    // scrollToBottom() // Watch in ChatWidget.vue will handle this
 
     inputDisabled.value = true
 
@@ -163,8 +241,6 @@ export function useChatService(
 
       // Use the new stream handler
       await handleStream(response, botResponseInProgressMessage, formatMessage)
-
-      // scrollToBottom(); // Watch in ChatWidget.vue will handle this
     } catch (error) {
       console.error('Chat API request failed:', error)
       const errorMessageText = `Sorry, I encountered an error: ${
@@ -177,16 +253,12 @@ export function useChatService(
         )
         botResponseInProgressMessage.model = 'System'
       } else {
-        messages.value.push({
-          text: await formatMessage(errorMessageText, false),
-          isSent: false,
-          model: 'System',
-        })
+        // This case should ideally not be reached if botResponseInProgressMessage is always created.
+        // However, as a fallback, add a new system message.
+        await _addBotMessage(errorMessageText, 'System')
       }
-      scrollToBottom()
     } finally {
       inputDisabled.value = false
-      scrollToBottom()
     }
   }
 
@@ -195,16 +267,10 @@ export function useChatService(
    */
   async function sendMessage(): Promise<void> {
     const currentMessageText = messageInput.value.trim()
-    if (!currentMessageText) return
-
-    const userMessage: Message = {
-      text: await formatMessage(currentMessageText, true),
-      isSent: true,
+    if (currentMessageText) {
+      await _addUserMessageAndSend(currentMessageText)
+      messageInput.value = ''
     }
-    messages.value.push(userMessage)
-
-    await sendToChat(currentMessageText)
-    messageInput.value = ''
   }
 
   /**
@@ -214,13 +280,7 @@ export function useChatService(
   async function sendSuggestion(suggestion: string): Promise<void> {
     if (!suggestion) return
 
-    const userMessage: Message = {
-      text: await formatMessage(suggestion, true),
-      isSent: true,
-    }
-    messages.value.push(userMessage)
-
-    await sendToChat(suggestion)
+    await _addUserMessageAndSend(suggestion)
   }
 
   watch(
@@ -245,26 +305,29 @@ export function useChatService(
             ' Please select a product layer and then click on the map to get data for this location.'
         }
 
-        messages.value.push({
-          text: await formatMessage(messageText, false),
-          isSent: false,
-          model: 'AgriBot',
-        })
+        // messages.value.push({
+        //   text: await formatMessage(messageText, false),
+        //   isSent: false,
+        //   model: 'AgriBot',
+        // })
+        await _addBotMessage(messageText)
       } else {
         if (farmDataMode.value) {
           farmDataMode.value = false
           contextType.value = ContextTypeEnum.GENERAL
-          messages.value.push({
-            text: await formatMessage(
-              "Your farm location has been cleared. We're back to general chat.",
-              false,
-            ),
-            isSent: false,
-            model: 'AgriBot',
-          })
+          // messages.value.push({
+          //   text: await formatMessage(
+          //     "Your farm location has been cleared. We're back to general chat.",
+          //     false,
+          //   ),
+          //   isSent: false,
+          //   model: 'AgriBot',
+          // })
+          await _addBotMessage(
+            "Your farm location has been cleared. We're back to general chat.",
+          )
         }
       }
-      scrollToBottom()
     },
     { deep: true },
   )
@@ -288,7 +351,6 @@ export function useChatService(
           let messageText = `Now viewing data for: **${productName}**.\n\n`
 
           if (newProduct.desc) {
-            // Pass the description directly, newline normalization will be handled by formatMessage
             messageText += `**Description:** ${newProduct.desc}\n\n`
           }
           if (newProduct.date) {
@@ -306,12 +368,12 @@ export function useChatService(
 
           lastProductId.value = newProduct.product_id // Ensure lastProductId is updated here
 
-          messages.value.push({
-            text: await formatMessage(messageText, false), // formatMessage will handle markdown
-            isSent: false,
-            model: 'AgriBot',
-          })
-          // scrollToBottom(); // Watch in ChatWidget.vue or the messages watcher here will handle this
+          // messages.value.push({
+          //   text: await formatMessage(messageText, false), // formatMessage will handle markdown
+          //   isSent: false,
+          //   model: 'AgriBot',
+          // })
+          await _addBotMessage(messageText)
         }
       }
     },
@@ -329,11 +391,15 @@ export function useChatService(
   return {
     messageInput,
     inputDisabled,
-    messages,
+    messages, // This is the ref passed in, managed by the service
     currentSuggestions,
-    formatMessage,
+    formatMessage, // Expose if needed, though primarily internal now
     sendMessage,
     sendSuggestion,
     scrollToBottom,
+    initializeChat,
+    processLocationSelected,
+    processStartGeneralChat,
+    initialInteractionMade, // Expose the ref for UI binding
   }
 }

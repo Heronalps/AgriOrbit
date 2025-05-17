@@ -18,7 +18,7 @@
     "frontend:build": "vue-tsc --project frontend/tsconfig.json --noEmit && vite build frontend --config frontend/vite.config.ts",
     "frontend:serve": "vite preview frontend --config frontend/vite.config.ts",
     "frontend:format": "prettier --write \"**/*.{js,ts,vue,html,css,json,md,yaml,cjs,mjs}\"",
-    "frontend:lint": "eslint --config frontend/eslint.config.js --fix frontend/src/**/*.{js,ts,vue} frontend/*.{js,ts,cjs,mjs}",
+    "frontend:lint": "eslint --config frontend/eslint.config.js --fix frontend/src/**/*.{ts,vue} frontend/*.{js,ts,cjs}",
     "frontend:test": "echo \"Frontend tests not yet configured. Run 'pnpm --filter ag-advisor-frontend test' if defined locally.\"",
     "dev": "concurrently \"pnpm run backend:dev\" \"pnpm run frontend:dev\"",
     "build": "pnpm run frontend:build",

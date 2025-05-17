@@ -149,108 +149,75 @@ const panelStyle = computed(() => ({
   overflow: 'hidden', // Prevent PPanel itself from growing beyond its dimensions
 }))
 
-// Chat Service Composable State
-const farmDataMode = ref(false)
-const contextType = ref<ContextTypeEnum>(ContextTypeEnum.GENERAL)
-const messages = ref<Message[]>([])
-const lastProductId = ref('')
-const initialInteractionMade = ref(false)
+// --- Chat Service Integration ---
+// Refs for chat state, managed by useChatService
+const farmDataMode = ref(false) // This will be updated by useChatService
+const contextType = ref<ContextTypeEnum>(ContextTypeEnum.GENERAL) // This will be updated by useChatService
+const messages = ref<Message[]>([]) // This ref is passed to and managed by useChatService
+const lastProductId = ref('') // This will be updated by useChatService
 
-// Chat Service Composable
+// Instantiate Chat Service Composable
 const {
   messageInput,
   inputDisabled,
   currentSuggestions,
   sendMessage,
   sendSuggestion,
-  scrollToBottom, // Keep scrollToBottom available for direct calls if needed elsewhere
+  scrollToBottom,
+  initializeChat, // New function from useChatService
+  processLocationSelected, // New function from useChatService
+  processStartGeneralChat, // New function from useChatService
+  initialInteractionMade, // Ref from useChatService
 } = useChatService(
-  farmDataMode,
-  contextType,
-  messages,
-  lastProductId,
-  scrollPanelComponentRef,
+  farmDataMode, // Pass the ref
+  contextType, // Pass the ref
+  messages, // Pass the ref for messages array
+  lastProductId, // Pass the ref
+  scrollPanelComponentRef, // Pass the ScrollPanel ref
 )
+// --- End Chat Service Integration ---
 
 // Watch for changes in messages and scroll to bottom after DOM updates
 watch(
-  messages,
+  messages, // messages ref is now directly managed and updated by useChatService
   () => {
-    scrollToBottom()
+    scrollToBottom() // Call the scrollToBottom from useChatService
   },
   { deep: true, flush: 'post' },
 )
 
 onMounted(() => {
-  const targetLocation = locationStore.targetLocation
-  if (targetLocation) {
-    farmDataMode.value = true
-    contextType.value = ContextTypeEnum.FARM_SELECTED
-    messages.value.push({
-      text: "I see you've selected a farm location. How can I help you with your farm today?",
-      isSent: false,
-      model: 'AgriBot',
-    })
-    initialInteractionMade.value = true
-  } else {
-    messages.value.push({
-      text: "Hello! I'm AgriBot. Please use the toolbar to select a farm or start a general chat.",
-      isSent: false,
-      model: 'AgriBot',
-    })
-  }
+  initializeChat() // Call the new initialization function from useChatService
 
+  // Event listeners now call methods from useChatService
   window.addEventListener(
     'location-selected',
-    handleLocationSelectedEvent as EventListener, // Renamed for clarity
+    processLocationSelected as EventListener,
   )
   window.addEventListener(
     'start-general-chat',
-    handleStartGeneralChatEvent as EventListener,
+    processStartGeneralChat as EventListener,
   )
 
-  if (productStore.selectedProduct && productStore.selectedProduct.product_id) {
-    lastProductId.value = productStore.selectedProduct.product_id
-  }
-  scrollToBottom() // Initial scroll
+  // Initial product ID setup (if any) is handled within useChatService's initializeChat or watchers
+  // No need for direct productStore access here for this purpose anymore.
+
+  scrollToBottom() // Ensure initial scroll after setup
 })
 
 onBeforeUnmount(() => {
+  // Clean up event listeners
   window.removeEventListener(
     'location-selected',
-    handleLocationSelectedEvent as EventListener,
+    processLocationSelected as EventListener,
   )
   window.removeEventListener(
     'start-general-chat',
-    handleStartGeneralChatEvent as EventListener,
+    processStartGeneralChat as EventListener,
   )
 })
 
-function handleLocationSelectedEvent(): void {
-  // Renamed for clarity
-  farmDataMode.value = true
-  contextType.value = ContextTypeEnum.FARM_SELECTED
-  initialInteractionMade.value = true
-  messages.value.push({
-    text: 'Farm location selected! How can I assist you with this area?',
-    isSent: false,
-    model: 'AgriBot',
-  })
-  scrollToBottom()
-}
-
-function handleStartGeneralChatEvent() {
-  // Renamed for clarity
-  farmDataMode.value = false
-  contextType.value = ContextTypeEnum.GENERAL
-  initialInteractionMade.value = true
-  messages.value.push({
-    text: "I'll be happy to help with general farming questions. Keep in mind that selecting a specific location will allow me to provide more tailored advice.",
-    isSent: false,
-    model: 'AgriBot',
-  })
-  scrollToBottom()
-}
+// Removed handleLocationSelectedEvent and handleStartGeneralChatEvent as their logic is now in useChatService
 
 watch(
   () => productStore.clickedPoint,
