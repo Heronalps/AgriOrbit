@@ -1,7 +1,6 @@
 import vue from '@vitejs/plugin-vue'
-import { fileURLToPath, URL } from 'url' // Import for ES Module path resolution
+import { fileURLToPath, URL } from 'url'
 import { defineConfig } from 'vite'
-// import WindiCSS from 'vite-plugin-windicss' // WindiCSS is deprecated, consider Tailwind CSS JIT or UnoCSS
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -13,21 +12,19 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)), // ES Module way
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
   server: {
-    // Added server configuration
-    port: 3000, // Explicitly set frontend port, though often defaults to this or 5173
+    port: 3000,
     proxy: {
       '/api': {
-        // Proxy requests from /api
-        target: 'http://localhost:8157', // Your backend server address
-        changeOrigin: true, // Recommended for virtual hosted sites
-        rewrite: (path) => path.replace(/^\/api/, ''), // Rewrite /api/chat to /chat
+        target: 'http://localhost:8157',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
-  envDir: '../config', // Point to the config directory at root level
-  cacheDir: fileURLToPath(new URL('../node_modules/.vite', import.meta.url)), // ES Module way
+  envDir: '../config',
+  cacheDir: fileURLToPath(new URL('../node_modules/.vite', import.meta.url)),
 })

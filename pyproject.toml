@@ -40,8 +40,9 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["backend/tests"]
 python_files = ["test_*.py"]
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.black]
 line-length = 88

@@ -1,20 +1,5 @@
 {
   "name": "ag-advisor-frontend",
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
-    "serve": "vite preview",
-    "lint": "eslint --fix src",
-    "format": "prettier .  --write"
-  },
-  "dependencies": {
-    "dompurify": "^3.2.5",
-    "primeicons": "^7.0.0",
-    "primevue": "3.48.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.6"
-  }
+  "version": "0.1.0",
+  "type": "module"
 }

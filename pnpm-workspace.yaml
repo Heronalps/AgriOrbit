@@ -2,8 +2,8 @@ packages:
   - frontend
   - backend
 onlyBuiltDependencies:
-  - '@danmarshall/deckgl-typings'
-  - '@tailwindcss/oxide'
+  - "@danmarshall/deckgl-typings"
+  - "@tailwindcss/oxide"
   - esbuild
   - vue-demi
   - vue3-date-time-picker
