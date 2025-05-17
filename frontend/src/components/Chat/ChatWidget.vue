@@ -353,23 +353,4 @@ watch(
   background-color: var(--surface-c);
   color: var(--text-color);
 }
-
-.p-input-icon-right.w-full {
-  width: 100%;
-}
-.p-input-icon-right .p-inputtext.w-full {
-  width: 100%;
-}
-
-.p-input-icon-right > .pi-send {
-  right: 0.75rem;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: var(--primary-color);
-}
-.p-input-icon-right > .pi-send:hover {
-  color: var(--primary-color-hover);
-}
 </style>
