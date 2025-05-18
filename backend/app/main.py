@@ -1,3 +1,5 @@
+"""Main FastAPI application for AgriBot, providing chat and API functionalities."""
+
 import json
 import logging
 import os
@@ -20,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Load environment variables from .env file in config folder
 env_path = Path(__file__).parents[2] / "config" / ".env"
 load_dotenv(dotenv_path=env_path)
-logger.info(f"Loaded environment from {env_path}")
+logger.info("Loaded environment from %s", env_path)
 
 app = FastAPI()
 
@@ -55,6 +57,8 @@ TOKEN_SAFETY_MARGIN = 200  # Buffer to prevent hitting limits
 
 
 class Message(BaseModel):
+    """Represents a chat message from the user."""
+
     text: str
     context_type: str = "general"  # Can be "general", "farm_selected", or "data_loaded"
     use_streaming: bool = True  # Whether to use streaming responses
@@ -62,6 +66,7 @@ class Message(BaseModel):
 
 @app.options("/chat")
 async def options_chat():
+    """Handle OPTIONS requests for the /chat endpoint, typically for CORS preflight."""
     return {"message": "OK"}
 
 
@@ -106,14 +111,15 @@ async def generate_streaming_response(client, url, headers, json_data):
                                         yield f"data: {json_string}\n\n"
                             except json.JSONDecodeError as e:
                                 logger.warning(
-                                    f"Incomplete JSON chunk received: {line}. "
-                                    f"Error: {e}"
+                                    "Incomplete JSON chunk received: %s. Error: %s",
+                                    line,
+                                    e,
                                 )
                                 # Don't yield malformed data
                         elif line.strip() == "data: [DONE]":
                             yield "data: [DONE]\n\n"
-                except Exception as e:
-                    logger.error(f"Error processing chunk: {str(e)}")
+                except (ValueError, UnicodeDecodeError) as e:
+                    logger.error("Error processing chunk: %s", str(e))
                     continue
 
         # Clean up any remaining buffer and try to process it
@@ -136,15 +142,25 @@ async def generate_streaming_response(client, url, headers, json_data):
                             pass
                 elif buffer.strip() == "data: [DONE]":
                     yield "data: [DONE]\n\n"
-            except Exception as e:
-                logger.error(f"Error processing final buffer: {str(e)}")
+            except (ValueError, UnicodeDecodeError) as e:
+                logger.error("Error processing final buffer: %s", str(e))
 
         if not buffer.strip().endswith("[DONE]"):
             yield "data: [DONE]\n\n"
 
 
-def select_model(text, context_type):
-    """Select an appropriate model based on query complexity and context type."""
+def select_model(text: str, context_type: str) -> str:
+    """
+    Select an appropriate LLM model based on the query complexity and context type.
+
+    Args:
+        text: The user's input text.
+        context_type: The context of the conversation (e.g., "general",
+                      "farm_selected", "data_loaded").
+
+    Returns:
+        The string identifier of the selected model.
+    """
     text_length = len(text)
 
     # Use advanced model for data analysis or longer queries
@@ -157,6 +173,7 @@ def select_model(text, context_type):
 
 @app.post("/chat")
 async def chat(message: Message):
+    """Handle chat requests and interact with OpenRouter."""
     if not openrouter_api_key:
         error_message = (
             "OpenRouter API key is not set. "
@@ -199,7 +216,7 @@ async def chat(message: Message):
     # Select appropriate model based on the query
     selected_model = select_model(message.text, message.context_type)
     logger.info(
-        f"Selected model: {selected_model} for context type: {message.context_type}"
+        "Selected model: %s for context type: %s", selected_model, message.context_type
     )
 
     headers = {
@@ -228,7 +245,7 @@ async def chat(message: Message):
         if message.use_streaming:
             # Handle streaming response
             logger.info(
-                f"Sending streaming request to OpenRouter with models: {models_to_try}"
+                "Sending streaming request to OpenRouter with models: %s", models_to_try
             )
 
             async def stream_response():
@@ -245,8 +262,8 @@ async def chat(message: Message):
         else:
             # Handle non-streaming response
             logger.info(
-                "Sending non-streaming request to OpenRouter with models: "
-                f"{models_to_try}"
+                "Sending non-streaming request to OpenRouter with models: %s",
+                models_to_try,
             )
 
             async with httpx.AsyncClient() as client:
@@ -266,7 +283,7 @@ async def chat(message: Message):
                     error_msg = openrouter_response["error"].get(
                         "message", "Unknown error"
                     )
-                    logger.error(f"OpenRouter error: {error_msg}")
+                    logger.error("OpenRouter error: %s", error_msg)
                     raise HTTPException(status_code=400, detail=error_msg)
 
                 # Check for valid response format
@@ -274,30 +291,35 @@ async def chat(message: Message):
                     "choices" not in openrouter_response
                     or len(openrouter_response["choices"]) == 0
                 ):
-                    logger.error(f"Unexpected response format: {openrouter_response}")
+                    logger.error("Unexpected response format: %s", openrouter_response)
                     raise ValueError("Invalid response format from OpenRouter")
 
                 # Log which model was actually used
                 used_model = openrouter_response.get("model", selected_model)
                 if used_model != selected_model:
-                    logger.info(f"Fallback model used: {used_model}")
+                    logger.info("Fallback model used: %s", used_model)
 
                 reply_text = openrouter_response["choices"][0]["message"]["content"]
-                logger.info(f"Response length: {len(reply_text)} characters")
+                logger.info("Response length: %s characters", len(reply_text))
 
                 return {"response": reply_text}
     except httpx.HTTPStatusError as e:
-        logger.error(f"HTTP error: {e.response.status_code} - {e.response.text}")
+        logger.error("HTTP error: %s - %s", e.response.status_code, e.response.text)
         raise HTTPException(
             status_code=e.response.status_code,
             detail=f"OpenRouter API error: {e.response.text}",
         ) from e
     except httpx.RequestError as e:
-        logger.error(f"Request error: {str(e)}")
+        logger.error("Request error: %s", str(e))
         raise HTTPException(status_code=500, detail=f"Network error: {str(e)}") from e
-    except Exception as e:
-        logger.exception("Unexpected error in chat endpoint")
+    except ValueError as e:
+        logger.exception("Unexpected error in chat endpoint (ValueError): %s", str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Unexpected critical error in chat endpoint: %s", str(e))
+        raise HTTPException(
+            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
+        ) from e
 
 
 def main():
