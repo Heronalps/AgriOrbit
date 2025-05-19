@@ -176,7 +176,10 @@ function handleClick(event: {
   // Set screen coordinates and geo-coordinates in pointDataStore for the popup
   pointDataStore.setClickedPointCoordinates(info.x, info.y, longitude, latitude)
   // Trigger data loading for the *clicked* point for the popup
-  if (locationStore.targetLocation?.longitude !== longitude || locationStore.targetLocation?.latitude !== latitude) {
+  if (
+    locationStore.targetLocation?.longitude !== longitude ||
+    locationStore.targetLocation?.latitude !== latitude
+  ) {
     pointDataStore.loadDataForClickedPoint(longitude, latitude)
   }
 }
@@ -262,10 +265,14 @@ watch(
     () => productStore.getSelectedProduct.product_id,
     () => productStore.getSelectedProduct.date,
   ],
-  ([farmLocation, productId, date], [oldFarmLocation, oldProductId, oldDate]) => {
+  (
+    [farmLocation, productId, date],
+    [oldFarmLocation, oldProductId, oldDate],
+  ) => {
     if (farmLocation && productId && date) {
       // Check if any of the key properties have actually changed to avoid redundant queries
-      const farmLocationChanged = JSON.stringify(farmLocation) !== JSON.stringify(oldFarmLocation)
+      const farmLocationChanged =
+        JSON.stringify(farmLocation) !== JSON.stringify(oldFarmLocation)
       const productChanged = productId !== oldProductId
       const dateChanged = date !== oldDate
 

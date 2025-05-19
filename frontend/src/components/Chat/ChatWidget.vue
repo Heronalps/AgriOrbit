@@ -85,7 +85,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
-import { useLocationStore } from '../../stores/locationStore'
 import { useProductStore } from '../../stores/productStore'
 import { useDraggable } from '../../composables/useDraggable'
 import {
@@ -99,7 +98,6 @@ import PPanel from 'primevue/panel'
 import ScrollPanel from 'primevue/scrollpanel'
 
 // Store instances
-const locationStore = useLocationStore()
 const productStore = useProductStore()
 
 // Chat widget DOM element reference
@@ -290,14 +288,16 @@ watch(
   border-top: none !important; /* Kept from your original style */
 }
 
-.chat-input > .p-input-icon-right { /* Targets the span */
+.chat-input > .p-input-icon-right {
+  /* Targets the span */
   flex-grow: 1; /* This should make the span take available width */
 }
 
 /* PInputText has class 'w-full'. If Tailwind 'w-full' isn't working on the component
    or its internal input, this explicit style is needed.
    This targets the actual <input class="p-inputtext ..."> element rendered by PrimeVue. */
-.chat-input .p-inputtext { /* Targets any .p-inputtext within .chat-input */
+.chat-input .p-inputtext {
+  /* Targets any .p-inputtext within .chat-input */
   width: 100%;
 }
 

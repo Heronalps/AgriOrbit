@@ -90,14 +90,9 @@ const selectedDate: Ref<Date | null> = ref<Date | null>(null)
  * Available basemap options for the SelectMenu.
  */
 const availableBasemaps: Ref<BasemapOption[]> = ref<BasemapOption[]>([
-  { id: 'streets', name: 'Mapbox Streets' },
-  { id: 'outdoors', name: 'Mapbox Outdoors' },
-  { id: 'light', name: 'Mapbox Light' },
-  { id: 'dark', name: 'Mapbox Dark' },
   { id: 'satellite', name: 'Mapbox Satellite' },
-  { id: 'satellite-streets', name: 'Mapbox Satellite Streets' },
-  { id: 'navigation-day', name: 'Mapbox Navigation Day' },
-  { id: 'navigation-night', name: 'Mapbox Navigation Night' },
+  { id: 'dark', name: 'Mapbox Dark' },
+  { id: 'light', name: 'Mapbox Light' },
 ])
 
 // Watch for date changes in the store and sync with local state
