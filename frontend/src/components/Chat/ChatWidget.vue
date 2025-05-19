@@ -287,10 +287,18 @@ watch(
 }
 
 .chat-input {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-top: none !important; /* Explicitly remove any top border */
+  border-top: none !important; /* Kept from your original style */
+}
+
+.chat-input > .p-input-icon-right { /* Targets the span */
+  flex-grow: 1; /* This should make the span take available width */
+}
+
+/* PInputText has class 'w-full'. If Tailwind 'w-full' isn't working on the component
+   or its internal input, this explicit style is needed.
+   This targets the actual <input class="p-inputtext ..."> element rendered by PrimeVue. */
+.chat-input .p-inputtext { /* Targets any .p-inputtext within .chat-input */
+  width: 100%;
 }
 
 .message {
