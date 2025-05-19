@@ -137,7 +137,6 @@ function handleClick(event: {
   // Scenario 1: Explicitly in "set location mode" (e.g., triggered from chat)
   if (isSetLocationMode.value) {
     locationStore.setTargetLocation({ longitude, latitude })
-    pointDataStore.setCurrentMapSelectionCoordinates(longitude, latitude)
     isSetLocationMode.value = false
     renderTargetMarker()
     window.dispatchEvent(
@@ -146,16 +145,16 @@ function handleClick(event: {
   } else if (!locationStore.targetLocation) {
     // Scenario 2: Not in explicit "set location mode", AND no farm location is set yet.
     locationStore.setTargetLocation({ longitude, latitude })
-    pointDataStore.setCurrentMapSelectionCoordinates(longitude, latitude)
     renderTargetMarker()
     window.dispatchEvent(
       new CustomEvent('location-selected', { detail: { longitude, latitude } }),
     )
   } else {
     // Scenario 3: Farm location is already set.
-    pointDataStore.setCurrentMapSelectionCoordinates(longitude, latitude)
+    pointDataStore.setCurrentMapSelectionCoordinates(longitude, latitude) // For popup
   }
 
+  // Handle popup display and data loading for the *clicked* point (not necessarily the farm location)
   if (!productStore.isProductSelected) {
     console.warn(
       'MapView: No product selected. Skipping data load for clicked point popup.',
@@ -166,7 +165,6 @@ function handleClick(event: {
       longitude,
       latitude,
     )
-    // Update pointDataStore state for the popup when no product is selected
     pointDataStore.clickedPoint.value = null
     pointDataStore.clickedPoint.show = true
     pointDataStore.clickedPoint.isLoading = false
@@ -177,8 +175,10 @@ function handleClick(event: {
 
   // Set screen coordinates and geo-coordinates in pointDataStore for the popup
   pointDataStore.setClickedPointCoordinates(info.x, info.y, longitude, latitude)
-  // Trigger data loading for the clicked point via pointDataStore
-  pointDataStore.loadDataForClickedPoint(longitude, latitude)
+  // Trigger data loading for the *clicked* point for the popup
+  if (locationStore.targetLocation?.longitude !== longitude || locationStore.targetLocation?.latitude !== latitude) {
+    pointDataStore.loadDataForClickedPoint(longitude, latitude)
+  }
 }
 
 /**
@@ -217,11 +217,6 @@ function renderTargetMarker() {
           targetLocation.longitude,
           targetLocation.latitude,
         ])
-        // For Mapbox GL JS, if you need to update options like offset on an existing marker,
-        // you typically have to remove and re-add the marker, or manipulate its element directly.
-        // Setting LngLat updates position, but not other visual properties post-creation directly via a method.
-        // However, since our offset is static, it will be applied correctly when the marker is first created.
-        // If the marker were to change its offset dynamically, a remove/re-add strategy would be needed.
       } else {
         targetMarker.value = new mapboxgl.Marker(markerOptions)
           .setLngLat([targetLocation.longitude, targetLocation.latitude])
@@ -255,11 +250,41 @@ function bringMarkerToFront() {
 watch(
   () => locationStore.targetLocation,
   () => {
-    // Removed unused newLocation parameter
     renderTargetMarker()
   },
   { deep: true },
 ) // Deep watch for changes within the location object
+
+// Watch for changes in farm location, selected product, or date to query data for the farm location.
+watch(
+  [
+    () => locationStore.targetLocation,
+    () => productStore.getSelectedProduct.product_id,
+    () => productStore.getSelectedProduct.date,
+  ],
+  ([farmLocation, productId, date], [oldFarmLocation, oldProductId, oldDate]) => {
+    if (farmLocation && productId && date) {
+      // Check if any of the key properties have actually changed to avoid redundant queries
+      const farmLocationChanged = JSON.stringify(farmLocation) !== JSON.stringify(oldFarmLocation)
+      const productChanged = productId !== oldProductId
+      const dateChanged = date !== oldDate
+
+      if (farmLocationChanged || productChanged || dateChanged) {
+        console.log(
+          'Farm location, product, or date changed. Re-querying for farm location:',
+          { farmLocation, productId, date },
+        )
+        pointDataStore.loadDataForClickedPoint(
+          farmLocation.longitude,
+          farmLocation.latitude,
+        )
+      }
+    } else {
+      // console.log('MapView: Not all conditions met for farm location data query (location, product, or date missing).');
+    }
+  },
+  { deep: true, immediate: false }, // immediate: false to avoid query on initial undefined values if not desired
+)
 
 // Watch for changes in the selected product's tile layer URL to potentially re-render or adjust map view.
 watch(
