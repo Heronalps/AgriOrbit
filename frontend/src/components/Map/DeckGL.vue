@@ -5,7 +5,7 @@ typically provided as a child component. */
 import { viewStateType } from '@/shared'
 import { DECKGL_SETTINGS } from '@/utils/defaultSettings'
 // Import necessary types from Deck.gl
-import { Deck, type PickingInfo, type Layer } from '@deck.gl/core'
+import { Deck, type Layer } from '@deck.gl/core'
 import { onMounted, onBeforeUnmount, provide, useAttrs, watch } from 'vue'
 import { useMapViewState } from '@/composables/useMapViewState'
 
@@ -25,7 +25,7 @@ let deckInstance: Deck | null = null
  * @emits click - Emitted when the Deck.gl canvas is clicked, providing Deck.gl's `PickingInfo` and the original MouseEvent.
  */
 const emit = defineEmits<{
-  (e: 'click', payload: { info: PickingInfo; event: Event }): void
+  (e: 'click', payload: { info: any; event: Event }): void // Changed PickingInfo to any for now
 }>()
 
 // Define component props to accept isSelectingLocation for cursor management
@@ -49,14 +49,11 @@ const { viewState, updateViewState } = useMapViewState()
  */
 onMounted(() => {
   deckInstance = new Deck({
-    canvas: 'deck-canvas', // ID of the canvas element to render to
-    initialViewState: viewState, // Set the initial map view
-    controller: true, // Enable Deck.gl's built-in view controller (for pan, zoom, rotate)
     onViewStateChange: ({ viewState: newDeckViewState }) => {
       // Cast to viewStateType for type safety
       handleViewChange(newDeckViewState as viewStateType)
     },
-    onClick: (info: PickingInfo, event: Event) => {
+    onClick: (info: any, event: Event) => { // Changed PickingInfo to any for now
       // Emit a custom 'click' event with Deck.gl picking info and the original event
       emit('click', { info, event })
     },
@@ -97,9 +94,9 @@ function handleViewChange(newDeckViewState: viewStateType): void {
  * Updates the layers rendered by the Deck.gl instance.
  * This function is provided to child components (e.g., TileLayer),
  * enabling them to dynamically manage the data layers on the map.
- * @param {Layer[]} newLayers - An array of new Deck.gl layer instances to render.
+ * @param {Layer<any, any>[]} newLayers - An array of new Deck.gl layer instances to render.
  */
-function updateLayers(newLayers: Layer[]): void {
+function updateLayers(newLayers: Layer<any, any>[]): void { // Changed Layer[] to Layer<any, any>[]
   if (deckInstance) {
     deckInstance.setProps({ layers: newLayers })
   }

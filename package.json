@@ -4,7 +4,7 @@
   "description": "Agricultural advice application with interactive map",
   "private": true,
   "scripts": {
-    "prepare": "cd backend && poetry install",
+    "prepare": "node prepare.js",
     "backend:dev": "cd backend && poetry run uvicorn app.main:app --reload --port 8157",
     "backend:start": "cd backend && poetry run python -m app.main",
     "backend:format:black": "cd backend && poetry run black .",

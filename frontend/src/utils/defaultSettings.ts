@@ -1,3 +1,15 @@
+// Define viewStateType interface
+interface viewStateType {
+  latitude: number;
+  longitude: number;
+  zoom: number;
+  pitch: number;
+  bearing: number;
+}
+
+// Define mapStyles type
+type mapStyles = typeof MAP_STYLES[keyof typeof MAP_STYLES];
+
 export const MAP_STYLES = {
   satellite: 'mapbox://styles/mapbox/satellite-v9',
   dark: 'mapbox://styles/mapbox/dark-v10',
@@ -15,7 +27,7 @@ export const INITIAL_VIEW_STATE: viewStateType = {
 interface mapboxSettings {
   container: string
   width: string
-  style: mapStyles
+  style: mapStyles // Use the defined mapStyles type
   interactive: boolean
   center: [number, number]
   zoom: number

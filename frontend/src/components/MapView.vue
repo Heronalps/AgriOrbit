@@ -14,7 +14,6 @@ import { MAP_STYLES } from '@/utils/defaultSettings'
 import ControlPanel from './ControlPanel.vue'
 import DeckGL from './Map/DeckGL.vue'
 import MapboxView from './Map/MapboxView.vue'
-import MapPopup from './Map/MapPopup.vue'
 import TileLayer from './Map/TileLayer.vue'
 
 /**
@@ -215,6 +214,9 @@ function renderTargetMarker() {
         offset: [0, 5], // Offset in pixels: [x, y]. Positive y moves marker down.
       }
 
+      // Assert mapInstance.value as any to resolve complex type instantiation issues
+      const currentMap = mapInstance.value as any;
+
       if (targetMarker.value) {
         targetMarker.value.setLngLat([
           targetLocation.longitude,
@@ -223,7 +225,7 @@ function renderTargetMarker() {
       } else {
         targetMarker.value = new mapboxgl.Marker(markerOptions)
           .setLngLat([targetLocation.longitude, targetLocation.latitude])
-          .addTo(mapInstance.value)
+          .addTo(currentMap as any) // Use type assertion to any for addTo
       }
       bringMarkerToFront() // Ensure marker is on top
     } else if (targetMarker.value) {
@@ -316,7 +318,7 @@ watch(
       <!-- Mapbox Base Map -->
       <MapboxView
         :access-token="mapboxAccessToken"
-        :map-style="MAP_STYLES.DARK"
+        :map-style="MAP_STYLES.dark"
         @map-loaded="(map: mapboxgl.Map) => onMapLoaded(map)"
       />
       <!-- Tile Layer for Product Data -->

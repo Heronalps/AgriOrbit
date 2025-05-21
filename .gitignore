@@ -83,3 +83,5 @@ dist-ssr
 *.local
 .env
 .vercel
+/werkzeug
+/Werkzeug-1.0.1.dist-info

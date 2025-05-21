@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   TileLayer,
-  type TileLayerRenderSubLayerProps,
 } from '@deck.gl/geo-layers'
 import { BitmapLayer } from '@deck.gl/layers'
 import { inject, useAttrs, watch, onMounted } from 'vue'
@@ -26,7 +25,7 @@ const props = defineProps({
 
 const attrs = useAttrs()
 // Inject 'updateLayers' (plural) to match the provider in DeckGL.vue
-const updateLayers = inject<((layers: Layer | Layer[]) => void) | undefined>(
+const updateLayers = inject<((layers: Layer<any, any> | Layer<any, any>[]) => void) | undefined>(
   'updateLayers',
 )
 
@@ -38,9 +37,9 @@ if (!updateLayers) {
 
 /**
  * Creates a new Deck.gl TileLayer instance based on the current component attributes and props.
- * @returns {TileLayer | null} A new TileLayer instance or null if updateLayers is not available.
+ * @returns {TileLayer<any, any> | null} A new TileLayer instance or null if updateLayers is not available.
  */
-function createLayer(): TileLayer | null {
+function createLayer(): TileLayer<any, any> | null {
   if (!updateLayers) return null
 
   // Construct the TileLayer props, spreading current attributes
@@ -48,7 +47,7 @@ function createLayer(): TileLayer | null {
   return new TileLayer({
     // renderSubLayers is a function that defines how individual tiles are rendered.
     // Here, it uses a BitmapLayer to display raster tile data.
-    renderSubLayers: (renderProps: TileLayerRenderSubLayerProps) => {
+    renderSubLayers: (renderProps: any) => {
       const {
         bbox: { west, south, east, north },
       } = renderProps.tile

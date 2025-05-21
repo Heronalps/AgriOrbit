@@ -214,16 +214,6 @@ onBeforeUnmount(() => {
     processStartGeneralChat as EventListener,
   )
 })
-
-// Removed handleLocationSelectedEvent and handleStartGeneralChatEvent as their logic is now in useChatService
-
-watch(
-  () => productStore.clickedPoint,
-  () => {
-    /* Placeholder for future logic if needed */
-  },
-  { deep: true },
-)
 </script>
 
 <style scoped>

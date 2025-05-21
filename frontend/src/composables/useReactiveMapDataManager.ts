@@ -1,9 +1,11 @@
 // frontend/src/composables/useReactiveMapDataManager.ts
 import { watch, effectScope, onScopeDispose } from 'vue'
 import { useProductStore } from '@/stores/productStore'
+import { usePointDataStore } from '@/stores/pointDataStore'
 
 export function useReactiveMapDataManager() {
   const productStore = useProductStore()
+  const pointDataStore = usePointDataStore()
   const scope = effectScope()
 
   // Define an interface for the structure of our watched values
@@ -21,7 +23,7 @@ export function useReactiveMapDataManager() {
       () => {
         const pid = productStore.selectedProduct.product_id
         const pdate = productStore.selectedProduct.date
-        const pcoords = productStore.currentMapSelectionCoordinates
+        const pcoords = pointDataStore.currentMapSelectionCoordinates
 
         // Only return a "complete" object if all parts are defined and valid.
         // A valid pcoords object must have longitude and latitude.
@@ -93,7 +95,7 @@ export function useReactiveMapDataManager() {
               'Coords:',
               JSON.parse(JSON.stringify(coordinates)),
             )
-            await productStore.loadDataForClickedPointViaPolygon(
+            await pointDataStore.loadDataForClickedPoint(
               coordinates.longitude,
               coordinates.latitude,
             )
