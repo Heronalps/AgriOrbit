@@ -6,6 +6,7 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
+        "installCommand": "pnpm install --ignore-scripts",
         "buildCommand": "pnpm run build",
         "outputDirectory": "frontend/dist"
       }
