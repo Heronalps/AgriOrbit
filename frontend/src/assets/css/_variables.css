@@ -1,0 +1,92 @@
+/* Theme variables */
+:root {
+  /* PrimeVue standard surface variables (using original color values) */
+  --surface-ground: #f8f9fa; /* Original --surface-b value */
+  --surface-card: #ffffff; /* Original --surface-a, --surface-e, --surface-f value */
+  --surface-overlay: #ffffff; /* Original --surface-a, --surface-e, --surface-f value (typically same as card) */
+  --surface-border: #dee2e6; /* Original --surface-d value */
+  --surface-hover: #e9ecef; /* Original --surface-c value (plausible for hover) */
+
+  /* Aliases for backward compatibility with existing custom styles */
+  /* These can be phased out by refactoring usages to the standard PrimeVue variables above */
+  --surface-a: var(--surface-card);
+  --surface-b: var(--surface-ground);
+  --surface-c: var(--surface-hover);
+  --surface-d: var(--surface-border);
+  --surface-e: var(--surface-card);
+  --surface-f: var(--surface-card);
+
+  /* Text colors */
+  --text-color: #343a40;
+  --text-color-secondary: #6c757d;
+
+  /* App-specific colors */
+  --widget-background: #231f1fc8; /* Semi-transparent dark background for widgets */
+  --widget-text-color: #ffffff; /* White text for dark backgrounds */
+
+  /* Brand colors */
+  --primary-color: #368535;
+  --primary-color-hover: #297029;
+  --primary-dark: #225622;
+  --primary-light: #5ca25b;
+  --primary-lightest: #e3f2e3;
+
+  /* Accent colors for agricultural data visualization */
+  --crop-health-good: #38a169;
+  --crop-health-moderate: #ecc94b;
+  --crop-health-poor: #e53e3e;
+
+  /* Neutral colors */
+  --neutral-100: #f7fafc;
+  --neutral-200: #edf2f7;
+  --neutral-300: #e2e8f0;
+  --neutral-400: #cbd5e0;
+  --neutral-500: #a0aec0;
+  --neutral-700: #4a5568;
+  --neutral-800: #2d3748; /* Adding a darker neutral for dark themes */
+  --neutral-900: #1a202c;
+
+  /* Typography */
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-size-base: 16px;
+  --font-family-monospace:
+    'Courier New', Courier, monospace; /* Example monospace font */
+
+  /* Border radius */
+  --border-radius: 8px;
+  --border-radius-sm: 4px;
+  --border-radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+  /* Component-specific styles */
+  --widget-header-background: var(--primary-color);
+  --widget-header-text-color: white;
+  --widget-border-radius: var(--border-radius);
+  --widget-box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+
+  /* Input field styling */
+  --input-background: rgba(255, 255, 255, 0.1);
+  --input-border: 1px solid rgba(255, 255, 255, 0.2);
+  --input-text-color: white;
+  --input-placeholder-color: rgba(255, 255, 255, 0.5);
+
+  /* Primary text color */
+  --primary-color-text: #ffffff;
+
+  /* RGB versions of colors for opacity usage */
+  --primary-color-rgb: 54, 133, 53; /* From --primary-color: #368535; */
+  --surface-d-rgb: 222, 226, 230; /* From --surface-d: #dee2e6; */
+  --text-color-secondary-rgb:
+    108, 117, 125; /* From --text-color-secondary: #6c757d; */
+  --surface-ground-rgb: 248, 249, 250; /* From --surface-ground: #f8f9fa; */
+  --warning-color-rgb: 255, 193, 7; /* Example warning color (yellow/amber) */
+  --warning-color: #ffc107; /* Example warning color */
+  --link-color: #8ab4f8; /* Example link color */
+  --link-hover-color: #aecbfa; /* Example link hover color */
+}

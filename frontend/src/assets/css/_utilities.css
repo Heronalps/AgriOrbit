@@ -1,0 +1,59 @@
+/* General style for the resize handle element */
+.resize-handle {
+  position: absolute;
+  width: 12px; /* Slightly larger for easier grabbing */
+  height: 12px;
+  bottom: 0;
+  right: 0;
+  cursor: nwse-resize;
+  z-index: 10; /* Ensure it's above panel content, adjust if necessary for stacking context */
+  /* display: none; Temporarily hide resize handles if all resizing is disabled */
+}
+
+/* Visual indicator for bottom-right resize handle */
+.resize-handle-br:after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid var(--neutral-400);
+  border-bottom: 2px solid var(--neutral-400);
+}
+
+.limited-mode {
+  position: relative;
+}
+
+.limited-mode::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--warning-color-rgb), 0.1),
+    transparent
+  ); /* Assuming a --warning-color is defined or use specific RGB */
+  pointer-events: none;
+}
+
+.token-usage-indicator {
+  padding: 8px;
+  background: rgba(
+    var(--warning-color-rgb),
+    0.1
+  ); /* Assuming a --warning-color is defined */
+  border-top: 1px solid rgba(var(--warning-color-rgb), 0.3); /* Assuming a --warning-color is defined */
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.token-warning {
+  display: flex;
+  align-items: center;
+  color: var(--warning-color); /* Assuming a --warning-color is defined */
+  font-size: 0.85rem;
+}

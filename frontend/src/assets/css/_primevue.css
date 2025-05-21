@@ -1,0 +1,213 @@
+/* General PrimeVue Component Overrides/Base Styling */
+
+/* Button styling */
+.p-button.p-component {
+  border-radius: var(--border-radius);
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+/* Primary button styling */
+.p-button.p-component.p-button-success,
+.p-button.p-component.p-button-primary {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.p-button.p-component.p-button-success:hover,
+.p-button.p-component.p-button-primary:hover {
+  background: var(--primary-color-hover);
+  border-color: var(--primary-color-hover);
+}
+
+/* Form elements styling */
+.p-inputtext {
+  font-family: var(--font-family);
+  border-radius: var(--border-radius);
+  padding: 0.75rem;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+.p-inputtext:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+
+/* Dropdown styling */
+.p-dropdown {
+  border-radius: var(--border-radius);
+  width: 100%;
+  max-width: 20rem;
+}
+
+.p-dropdown-label {
+  font-weight: 500;
+}
+
+.p-dropdown:not(.p-disabled).p-focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-lightest);
+}
+
+/* Light theme styling for PDropdown (default) */
+.p-dropdown.p-component {
+  background-color: white;
+  border-color: var(--neutral-300);
+}
+
+.p-dropdown.p-component:hover {
+  border-color: var(--primary-light);
+}
+
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
+  background: var(--primary-lightest);
+  color: var(--primary-color);
+}
+
+/* Calendar styling */
+.p-calendar {
+  width: 100%;
+}
+
+.p-calendar .p-inputtext {
+  width: 100%;
+}
+
+.p-calendar.p-calendar-w-btn .p-datepicker-trigger {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.p-calendar.p-calendar-w-btn .p-datepicker-trigger:hover {
+  background-color: var(--primary-color-hover);
+  border-color: var(--primary-color-hover);
+}
+
+.p-calendar .p-datepicker {
+  /* General, not dark-theme specific */
+  border-radius: var(--border-radius);
+}
+
+/* Datepicker panel */
+.p-datepicker {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+}
+
+.p-datepicker:not(.p-datepicker-inline) {
+  /* General, not dark-theme specific */
+  box-shadow: var(--shadow-lg);
+}
+
+.p-datepicker .p-datepicker-header {
+  /* General, not dark-theme specific */
+  background: var(--primary-lightest);
+}
+
+.p-datepicker table td.p-datepicker-today > span {
+  border-color: var(--primary-light);
+  color: var(--primary-color);
+  background: var(
+    --neutral-200
+  ); /* Moved from a later duplicate section for consolidation */
+  /* border-color: var(--neutral-300); Already covered by border-color above? Check specificity */
+  /* color: var(--text-color); Overridden by color: var(--primary-color) */
+}
+
+.p-datepicker table td > span.p-highlight {
+  background: var(--primary-color);
+}
+
+.p-datepicker:not(.p-disabled)
+  table
+  td
+  span:not(.p-highlight):not(.p-disabled):hover {
+  background: var(--primary-lightest);
+}
+
+/* Panel styling (Default Light Theme for PPanel) */
+.p-panel .p-panel-header {
+  background: var(
+    --surface-ground
+  ); /* Light, neutral background (e.g., #f8f9fa) */
+  color: var(--text-color); /* Standard dark text color */
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  border: 1px solid var(--surface-border); /* Standard border color (e.g., #dee2e6) */
+  border-top-left-radius: var(--widget-border-radius);
+  border-top-right-radius: var(--widget-border-radius);
+}
+
+.p-panel .p-panel-content {
+  background: var(--surface-card); /* White background (e.g., #ffffff) */
+  color: var(--text-color); /* Standard dark text color */
+  padding: 1rem;
+  border: 1px solid var(--surface-border);
+  border-top: none; /* Usually content top border is omitted if header has one or panel has global border */
+  border-bottom-right-radius: var(--widget-border-radius);
+  border-bottom-left-radius: var(--widget-border-radius);
+}
+
+.p-panel .p-panel-header-icon {
+  /* color: var(--widget-header-text-color); This seems theme-dependent, might need to be in dark theme or overridden */
+  color: var(--text-color); /* Default assumption for light theme */
+  margin-right: 0.5rem;
+}
+
+.p-panel .p-panel-header-icon:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+/* Card styling */
+.p-card {
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.p-card .p-card-title {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* Toast styling */
+.p-toast {
+  font-family: var(--font-family);
+}
+
+/* OverlayPanel styling */
+.p-overlaypanel {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Dialog styling */
+.p-dialog {
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.p-dialog .p-dialog-header {
+  padding: 1.25rem;
+  background: var(--primary-lightest);
+}
+
+/* Ensure PrimeVue modals appear above other elements */
+.p-dialog-mask {
+  z-index: 1100;
+}
+
+/* Tooltip styling */
+.p-tooltip .p-tooltip-text {
+  background: var(
+    --neutral-900
+  ); /* This is dark, but often tooltips are dark by default */
+  color: white;
+  border-radius: var(--border-radius);
+  padding: 0.5rem 0.75rem;
+}
