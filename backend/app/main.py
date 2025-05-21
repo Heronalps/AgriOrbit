@@ -24,19 +24,25 @@ env_path = Path(__file__).parents[2] / "config" / ".env"
 load_dotenv(dotenv_path=env_path)
 logger.info("Loaded environment from %s", env_path)
 
+# Get allowed origins from environment variable, defaulting to localhost for development
+ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",")]
+
 app = FastAPI()
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,  # Use the configurable list
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-openai_api_key = os.getenv("OPENAI_API_KEY")
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+
+# Get the application URL from environment variable for the referer header
+APP_URL = os.getenv("APP_URL", "http://localhost:3000")  # Default for local dev
 
 if not openrouter_api_key:
     logger.warning(
@@ -222,7 +228,7 @@ async def chat(message: Message):
     headers = {
         "Authorization": f"Bearer {openrouter_api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:3000",
+        "HTTP-Referer": APP_URL,  # Use the configurable APP_URL
         "X-Title": "AgriOrbit",
     }
 
