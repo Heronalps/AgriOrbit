@@ -1,18 +1,20 @@
 {
   "version": 2,
+  "installCommand": "pnpm install --ignore-scripts",
   "builds": [
     {
-      "src": "frontend/package.json",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "outputDirectory": "dist"
+        "buildCommand": "pnpm run build",
+        "outputDirectory": "frontend/dist"
       }
     },
     {
       "src": "backend/app/main.py",
       "use": "@vercel/python",
       "config": {
-        "installCommand": "pip3 install poetry==1.7.1 && poetry install --no-dev --no-interaction --no-ansi",
+        "installCommand": "pip install poetry==1.7.1 && poetry install --no-dev --no-interaction --no-ansi",
         "pythonVersion": "3.9"
       }
     }
@@ -27,7 +29,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/index.html"
+      "dest": "/index.html"
     }
   ]
 }
