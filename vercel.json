@@ -15,7 +15,7 @@
       "src": "backend/app/main.py",
       "use": "@vercel/python",
       "config": {
-        "installCommand": "pip install poetry==1.7.1 && poetry export -f requirements.txt --output requirements.txt --without-hashes --no-dev && echo '--- requirements.txt content ---' && cat requirements.txt && echo '--- installing from requirements.txt ---' && pip install -r requirements.txt --no-cache-dir && echo '--- pip freeze output ---' && pip freeze",
+        "installCommand": "echo 'PYTHON BUILD STEP IS STARTING NOW'; (exit 1)",
         "pythonVersion": "3.12"
       }
     }
