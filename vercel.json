@@ -15,7 +15,6 @@
       "src": "backend/app/main.py",
       "use": "@vercel/python",
       "config": {
-        "installCommand": "echo 'PYTHON BUILD STEP IS STARTING NOW'; (exit 1)",
         "pythonVersion": "3.12"
       }
     }
