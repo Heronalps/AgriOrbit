@@ -15,7 +15,7 @@
       "src": "backend/app/main.py",
       "use": "@vercel/python",
       "config": {
-        "installCommand": "pip install poetry==1.7.1 && poetry install --no-dev --no-interaction --no-ansi",
+        "installCommand": "pip install poetry==1.7.1 && poetry install --no-dev --no-interaction --no-ansi --sync",
         "pythonVersion": "3.9"
       }
     }
