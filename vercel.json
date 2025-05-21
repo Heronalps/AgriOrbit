@@ -16,7 +16,7 @@
       "use": "@vercel/python",
       "config": {
         "installCommand": "pip install poetry==1.7.1 && poetry install --no-dev --no-interaction --no-ansi --sync",
-        "pythonVersion": "3.9"
+        "pythonVersion": "3.12"
       }
     }
   ],
