@@ -215,7 +215,7 @@ function renderTargetMarker() {
       }
 
       // Assert mapInstance.value as any to resolve complex type instantiation issues
-      const currentMap = mapInstance.value as any;
+      const currentMap = mapInstance.value as any
 
       if (targetMarker.value) {
         targetMarker.value.setLngLat([

@@ -223,7 +223,8 @@ export function useChatService(
     inputDisabled.value = true
 
     try {
-      const response = await fetch('http://127.0.0.1:8157/chat', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8157' // Fallback for safety, though env var should be set
+      const response = await fetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -231,6 +232,7 @@ export function useChatService(
         body: JSON.stringify({
           text: contextualizedText,
           context_type: contextType.value,
+          use_streaming: true, // Ensure streaming is explicitly requested if backend supports it
         }),
       })
 

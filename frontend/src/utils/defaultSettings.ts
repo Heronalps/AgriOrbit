@@ -1,14 +1,14 @@
 // Define viewStateType interface
 interface viewStateType {
-  latitude: number;
-  longitude: number;
-  zoom: number;
-  pitch: number;
-  bearing: number;
+  latitude: number
+  longitude: number
+  zoom: number
+  pitch: number
+  bearing: number
 }
 
 // Define mapStyles type
-type mapStyles = typeof MAP_STYLES[keyof typeof MAP_STYLES];
+type mapStyles = (typeof MAP_STYLES)[keyof typeof MAP_STYLES]
 
 export const MAP_STYLES = {
   satellite: 'mapbox://styles/mapbox/satellite-v9',

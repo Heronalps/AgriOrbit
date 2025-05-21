@@ -53,7 +53,8 @@ onMounted(() => {
       // Cast to viewStateType for type safety
       handleViewChange(newDeckViewState as viewStateType)
     },
-    onClick: (info: any, event: Event) => { // Changed PickingInfo to any for now
+    onClick: (info: any, event: Event) => {
+      // Changed PickingInfo to any for now
       // Emit a custom 'click' event with Deck.gl picking info and the original event
       emit('click', { info, event })
     },
@@ -96,7 +97,8 @@ function handleViewChange(newDeckViewState: viewStateType): void {
  * enabling them to dynamically manage the data layers on the map.
  * @param {Layer<any, any>[]} newLayers - An array of new Deck.gl layer instances to render.
  */
-function updateLayers(newLayers: Layer<any, any>[]): void { // Changed Layer[] to Layer<any, any>[]
+function updateLayers(newLayers: Layer<any, any>[]): void {
+  // Changed Layer[] to Layer<any, any>[]
   if (deckInstance) {
     deckInstance.setProps({ layers: newLayers })
   }

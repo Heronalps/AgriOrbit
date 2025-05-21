@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import {
-  TileLayer,
-} from '@deck.gl/geo-layers'
+import { TileLayer } from '@deck.gl/geo-layers'
 import { BitmapLayer } from '@deck.gl/layers'
 import { inject, useAttrs, watch, onMounted } from 'vue'
 import type { Layer } from '@deck.gl/core'
@@ -25,9 +23,9 @@ const props = defineProps({
 
 const attrs = useAttrs()
 // Inject 'updateLayers' (plural) to match the provider in DeckGL.vue
-const updateLayers = inject<((layers: Layer<any, any> | Layer<any, any>[]) => void) | undefined>(
-  'updateLayers',
-)
+const updateLayers = inject<
+  ((layers: Layer<any, any> | Layer<any, any>[]) => void) | undefined
+>('updateLayers')
 
 if (!updateLayers) {
   console.error(

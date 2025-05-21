@@ -13,7 +13,9 @@ export async function getAvailableProducts() {
   return data
 }
 
-export async function getDatasetEntries(selectedProduct: SelectedProductParams) {
+export async function getDatasetEntries(
+  selectedProduct: SelectedProductParams,
+) {
   const { product_id /*date, ...params*/ } = selectedProduct
 
   const url = `/datasets/?product_id=${product_id}&limit=10000`
