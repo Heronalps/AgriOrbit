@@ -21,7 +21,7 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/chat",
       "dest": "backend/app/main.py"
     },
     {
