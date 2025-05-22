@@ -17,7 +17,7 @@ export interface Message {
   model?: string // Optional: for identifying the sender model (e.g., "AgriBot")
 }
 
-// Enum for more robust context type management
+// Enum for context type management
 export enum ContextTypeEnum {
   GENERAL = 'general',
   FARM_SELECTED = 'farm_selected',
@@ -223,7 +223,23 @@ export function useChatService(
     inputDisabled.value = true
 
     try {
-      const response = await fetch('http://127.0.0.1:8157/chat', {
+      let apiUrlToUse;
+      const configuredApiUrl = import.meta.env.VITE_API_URL;
+
+      // Check if running in a production environment (like Vercel)
+      if (import.meta.env.PROD) {
+        // In production, always use a relative path to /chat
+        apiUrlToUse = '/chat';
+      } else {
+        // In development, use VITE_API_URL if set and not empty, otherwise fallback to default local URL
+        if (configuredApiUrl && configuredApiUrl.trim() !== '') {
+          apiUrlToUse = `${configuredApiUrl}/chat`;
+        } else {
+          apiUrlToUse = 'http://127.0.0.1:8157/chat'; // Default for local dev
+        }
+      }
+
+      const response = await fetch(apiUrlToUse, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -231,6 +247,7 @@ export function useChatService(
         body: JSON.stringify({
           text: contextualizedText,
           context_type: contextType.value,
+          use_streaming: true, // Ensure streaming is explicitly requested if backend supports it
         }),
       })
 

@@ -32,14 +32,14 @@ importers:
         specifier: ^1.9.0
         version: 1.9.0
       dompurify:
-        specifier: ^3.2.5
-        version: 3.2.5
+        specifier: ^3.2.6
+        version: 3.2.6
       mapbox-gl:
         specifier: ^3.12.0
         version: 3.12.0
       marked:
-        specifier: ^15.0.11
-        version: 15.0.11
+        specifier: ^15.0.12
+        version: 15.0.12
       pinia:
         specifier: ^3.0.2
         version: 3.0.2(typescript@5.8.3)(vue@3.5.14(typescript@5.8.3))
@@ -60,10 +60,10 @@ importers:
         version: 10.1.3(eslint@9.27.0(jiti@2.4.2))
     devDependencies:
       "@eslint/js":
-        specifier: ^9.26.0
+        specifier: ^9.27.0
         version: 9.27.0
       "@tailwindcss/postcss":
-        specifier: ^4.1.6
+        specifier: ^4.1.7
         version: 4.1.7
       "@types/mapbox-gl":
         specifier: ^3.4.1
@@ -76,7 +76,7 @@ importers:
         version: 8.32.1(eslint@9.27.0(jiti@2.4.2))(typescript@5.8.3)
       "@vitejs/plugin-vue":
         specifier: ^5.2.4
-        version: 5.2.4(vite@6.3.5(@types/node@22.15.19)(jiti@2.4.2)(lightningcss@1.30.1))(vue@3.5.14(typescript@5.8.3))
+        version: 5.2.4(vite@6.3.5(@types/node@22.15.21)(jiti@2.4.2)(lightningcss@1.30.1))(vue@3.5.14(typescript@5.8.3))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.3)
@@ -84,7 +84,7 @@ importers:
         specifier: ^9.1.2
         version: 9.1.2
       eslint:
-        specifier: ^9.26.0
+        specifier: ^9.27.0
         version: 9.27.0(jiti@2.4.2)
       eslint-config-prettier:
         specifier: ^10.1.5
@@ -102,14 +102,14 @@ importers:
         specifier: 3.5.3
         version: 3.5.3
       tailwindcss:
-        specifier: ^4.1.6
+        specifier: ^4.1.7
         version: 4.1.7
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
       vite:
         specifier: ^6.3.5
-        version: 6.3.5(@types/node@22.15.19)(jiti@2.4.2)(lightningcss@1.30.1)
+        version: 6.3.5(@types/node@22.15.21)(jiti@2.4.2)(lightningcss@1.30.1)
       vue-tsc:
         specifier: ^2.2.10
         version: 2.2.10(typescript@5.8.3)
@@ -1301,10 +1301,10 @@ packages:
         integrity: sha512-bpd8dRn9pr6xKvuEBQup8pwQfD4VUyqO/2deGjfpe6AwC8YRlyEipvefyRJUSiCJTZuCb8Pl1ciVV5ekqJ96Bg==,
       }
 
-  "@types/node@22.15.19":
+  "@types/node@22.15.21":
     resolution:
       {
-        integrity: sha512-3vMNr4TzNQyjHcRZadojpRaD9Ofr6LsonZAoQ+HMUa/9ORTPoxVIw0e0mpqWpdjj8xybyCM+oKOUH2vwFu/oEw==,
+        integrity: sha512-EV/37Td6c+MgKAbkcLG6vqZ2zEYHD7bvSrzqqs2RIhbA6w3x+Dqz8MZM3sP6kGTeLrdoOgKZe+Xja7tUB2DNkQ==,
       }
 
   "@types/offscreencanvas@2019.7.3":
@@ -1325,10 +1325,10 @@ packages:
         integrity: sha512-j3pOPiEcWZ34R6a6mN07mUkM4o4Lwf6hPNt8eilOeZhTFbxFXmKhvXl9Y28jotFPaI1bpPDJsbCprUoNke6OrA==,
       }
 
-  "@types/react@19.1.4":
+  "@types/react@19.1.5":
     resolution:
       {
-        integrity: sha512-EB1yiiYdvySuIITtD5lhW4yPyJ31RkJkkDw794LaQYrxCSaQV/47y5o1FMC4zF9ZyjUjzJMZwbovEnT5yHTW6g==,
+        integrity: sha512-piErsCVVbpMMT2r7wbawdZsq4xMvIAhQuac2gedQHysu1TZYEigE6pnFfgZT+/jQnrRuF5r+SHzuehFjfRjr4g==,
       }
 
   "@types/supercluster@7.1.3":
@@ -1873,10 +1873,10 @@ packages:
       }
     engines: { node: ">=8" }
 
-  dompurify@3.2.5:
+  dompurify@3.2.6:
     resolution:
       {
-        integrity: sha512-mLPd29uoRe9HpvwP2TxClGQBzGXeEC/we/q+bFlmPPmj2p2Ugl3r6ATu/UU1v77DXNcehiBg9zsr1dREyA/dJQ==,
+        integrity: sha512-/2GogDQlohXPZe6D6NOgQvXLPSYBqIWMnZ8zzOhn09REE4eyAzb+Hed3jhoM9OkuaJ8P6ZGTTVWQKAi8ieIzfQ==,
       }
 
   draco3d@1.5.7:
@@ -2691,10 +2691,10 @@ packages:
         integrity: sha512-DV6TRr+xoPrLSKuGiUcbyLVkoLdNaNNpn6O7+ZC27yQH7BOOIF7l6JKbTCMhfMJuZBVJfL8YRJjlMJ6MZCTggA==,
       }
 
-  marked@15.0.11:
+  marked@15.0.12:
     resolution:
       {
-        integrity: sha512-1BEXAU2euRCG3xwgLVT1y0xbJEld1XOrmRJpUwRCcy7rxhSCwMrmEu9LXoPhHSCJG41V7YcQ2mjKRr5BA3ITIA==,
+        integrity: sha512-8dD6FusOQSrpv9Z1rdNMdlSgQOIP880DHqnohobOmYLElGEqAL/JvxvuxZO16r4HtjTlfPRDC1hbvxC9dPN2nA==,
       }
     engines: { node: ">= 18" }
     hasBin: true
@@ -3295,10 +3295,10 @@ packages:
         integrity: sha512-kr1o/ErIdNhTz8uzAYL7TpaUuzKIE6QPQ4qmSdxnoX/lo+5wmUHQA6h3L5yIqEImSRnAAURDirLu/BgiXGPAhg==,
       }
 
-  tapable@2.2.1:
+  tapable@2.2.2:
     resolution:
       {
-        integrity: sha512-GNzQvQTOIP6RyTfE2Qxb8ZVlNmw0n88vp1szwWRimP02mnTsx3Wtn5qRdqY9w2XduFNUgvOwhNnQsjwCp+kqaQ==,
+        integrity: sha512-Re10+NauLTMCudc7T5WLFLAwDhQ0JWdrMK+9B2M8zR5hRExKmsRDCBA7/aV/pNJFltmBFO5BAMlQFi/vq3nKOg==,
       }
     engines: { node: ">=6" }
 
@@ -3605,7 +3605,7 @@ snapshots:
   "@danmarshall/deckgl-typings@4.9.28":
     dependencies:
       "@types/hammerjs": 2.0.46
-      "@types/react": 19.1.4
+      "@types/react": 19.1.5
       indefinitely-typed: 1.1.0
 
   "@deck.gl/core@9.1.12":
@@ -4280,7 +4280,7 @@ snapshots:
 
   "@types/brotli@1.3.4":
     dependencies:
-      "@types/node": 22.15.19
+      "@types/node": 22.15.21
 
   "@types/crypto-js@4.2.2": {}
 
@@ -4308,7 +4308,7 @@ snapshots:
       "@types/mapbox__point-geometry": 0.1.4
       "@types/pbf": 3.0.5
 
-  "@types/node@22.15.19":
+  "@types/node@22.15.21":
     dependencies:
       undici-types: 6.21.0
 
@@ -4318,7 +4318,7 @@ snapshots:
 
   "@types/pbf@3.0.5": {}
 
-  "@types/react@19.1.4":
+  "@types/react@19.1.5":
     dependencies:
       csstype: 3.1.3
 
@@ -4406,9 +4406,9 @@ snapshots:
       "@typescript-eslint/types": 8.32.1
       eslint-visitor-keys: 4.2.0
 
-  "@vitejs/plugin-vue@5.2.4(vite@6.3.5(@types/node@22.15.19)(jiti@2.4.2)(lightningcss@1.30.1))(vue@3.5.14(typescript@5.8.3))":
+  "@vitejs/plugin-vue@5.2.4(vite@6.3.5(@types/node@22.15.21)(jiti@2.4.2)(lightningcss@1.30.1))(vue@3.5.14(typescript@5.8.3))":
     dependencies:
-      vite: 6.3.5(@types/node@22.15.19)(jiti@2.4.2)(lightningcss@1.30.1)
+      vite: 6.3.5(@types/node@22.15.21)(jiti@2.4.2)(lightningcss@1.30.1)
       vue: 3.5.14(typescript@5.8.3)
 
   "@volar/language-core@2.4.14":
@@ -4692,7 +4692,7 @@ snapshots:
 
   detect-libc@2.0.4: {}
 
-  dompurify@3.2.5:
+  dompurify@3.2.6:
     optionalDependencies:
       "@types/trusted-types": 2.0.7
 
@@ -4715,7 +4715,7 @@ snapshots:
   enhanced-resolve@5.18.1:
     dependencies:
       graceful-fs: 4.2.11
-      tapable: 2.2.1
+      tapable: 2.2.2
 
   entities@4.5.0: {}
 
@@ -5168,7 +5168,7 @@ snapshots:
       tinyqueue: 3.0.0
       vt-pbf: 3.1.3
 
-  marked@15.0.11: {}
+  marked@15.0.12: {}
 
   martinez-polygon-clipping@0.7.4:
     dependencies:
@@ -5466,7 +5466,7 @@ snapshots:
 
   tailwindcss@4.1.7: {}
 
-  tapable@2.2.1: {}
+  tapable@2.2.2: {}
 
   tar@7.4.3:
     dependencies:
@@ -5525,7 +5525,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  vite@6.3.5(@types/node@22.15.19)(jiti@2.4.2)(lightningcss@1.30.1):
+  vite@6.3.5(@types/node@22.15.21)(jiti@2.4.2)(lightningcss@1.30.1):
     dependencies:
       esbuild: 0.25.4
       fdir: 6.4.4(picomatch@4.0.2)
@@ -5534,7 +5534,7 @@ snapshots:
       rollup: 4.41.0
       tinyglobby: 0.2.13
     optionalDependencies:
-      "@types/node": 22.15.19
+      "@types/node": 22.15.21
       fsevents: 2.3.3
       jiti: 2.4.2
       lightningcss: 1.30.1

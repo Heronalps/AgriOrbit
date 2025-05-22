@@ -4,6 +4,7 @@ import { computeTileLayerURL } from '@/api/tile'
 import { defineStore } from 'pinia'
 import type { ProductMeta } from '@/api.d.ts'
 import { useAvailableDataStore } from './availableDataStore'
+import type { SelectedProductParams } from '@/shared'
 
 // Interface for entries in the productEntries.results array
 export interface ProductListEntry {
@@ -206,10 +207,11 @@ export const useProductStore = defineStore('productStore', {
           return
         }
 
-        const paramsForDatasetEntries: {
-          product_id: string
-          cropmask_id?: string
-        } = { product_id: currentProductId }
+        // Construct paramsForDatasetEntries with the required 'date' property.
+        const paramsForDatasetEntries: SelectedProductParams = {
+          product_id: currentProductId,
+          date: '', // Provide an empty string as a placeholder for date
+        }
         if (currentCropmaskId) {
           paramsForDatasetEntries.cropmask_id = currentCropmaskId
         }
@@ -272,7 +274,7 @@ export const useProductStore = defineStore('productStore', {
       if (!this.selectedProduct.product_id || !this.selectedProduct.date) {
         return null // Essential parameters missing
       }
-      return computeTileLayerURL(this.selectedProduct as SelectedProductParams) // Cast to any for now if type mismatch, ideally ensure types align
+      return computeTileLayerURL(this.selectedProduct as SelectedProductParams)
     },
 
     /**

@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "installCommand": "pnpm install --ignore-scripts",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "installCommand": "pnpm install --ignore-scripts",
+        "buildCommand": "pnpm run build",
+        "outputDirectory": "frontend/dist"
+      }
+    },
+    {
+      "src": "backend/app/main.py",
+      "use": "@vercel/python",
+      "config": {
+        "pythonVersion": "3.12"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/chat",
+      "dest": "backend/app/main.py"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}

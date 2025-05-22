@@ -1,16 +1,16 @@
 import BASEURL from '@/api/baseURL'
-import { selectedProductType } from '@/shared'
+import { SelectedProductParams } from '@/shared'
 
 /**
  * Computes the complete URL for a map tile based on the selected product and its parameters.
  *
- * @param {selectedProductType} selectedProduct - The currently selected product configuration,
+ * @param {SelectedProductParams} selectedProduct - The currently selected product configuration,
  * including product ID, date, and other relevant parameters like cropmask_id.
  * @returns {string | null} The fully constructed tile URL, or null if essential parameters
  * (product_id or date) are missing.
  */
 export function computeTileLayerURL(
-  selectedProduct: selectedProductType,
+  selectedProduct: SelectedProductParams,
 ): string | null {
   const { product_id, date, ...otherParams } = selectedProduct
 
@@ -83,7 +83,7 @@ export async function fetchTile(url: string): Promise<Response | null> {
     }
     return response
   } catch (error: unknown) {
-    // Catching 'any' and then checking type is a common pattern
+    // Catching 'any' and then checking type
     let errorMessage = 'An unknown error occurred'
     if (error instanceof Error) {
       errorMessage = error.message

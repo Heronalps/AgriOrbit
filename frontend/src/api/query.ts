@@ -1,5 +1,5 @@
 import axios from '@/http-common'
-import type { selectedProductType } from '@/shared'
+import type { SelectedProductParams } from '@/shared'
 
 // GeoJSON type definitions
 export interface GeoJSONPolygon {
@@ -34,7 +34,7 @@ interface QueryPayload {
  * @throws Will throw an error if the product_id or date is missing, or if the API request fails.
  */
 export async function queryValueByGeometry(
-  selectedProduct: selectedProductType,
+  selectedProduct: SelectedProductParams,
   geom: ApiGeomType,
 ): Promise<number | Record<string, unknown> | null> {
   if (!selectedProduct.product_id) {
@@ -56,7 +56,7 @@ export async function queryValueByGeometry(
   if (selectedProduct.cropmask_id) {
     payload.cropmask_id = selectedProduct.cropmask_id
   } else {
-    payload.cropmask_id = 'no-mask' // Default to "no-mask" as per Python example for /query/
+    payload.cropmask_id = 'no-mask' // Default to "no-mask"
   }
 
   const URL = `/query/` // Base URL is configured in http-common.ts
@@ -70,7 +70,7 @@ export async function queryValueByGeometry(
     })
     console.log('Received response from /query/:', response.data)
     return response.data
-  } catch (error) {
+  } catch (error: any) {
     console.error(
       'Error in queryValueByGeometry:',
       error.response ? error.response.data : error.message,

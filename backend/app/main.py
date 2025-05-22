@@ -24,19 +24,25 @@ env_path = Path(__file__).parents[2] / "config" / ".env"
 load_dotenv(dotenv_path=env_path)
 logger.info("Loaded environment from %s", env_path)
 
+# Get allowed origins from environment variable, defaulting to localhost for development
+ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",")]
+
 app = FastAPI()
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,  # Use the configurable list
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-openai_api_key = os.getenv("OPENAI_API_KEY")
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+
+# Get the application URL from environment variable for the referer header
+APP_URL = os.getenv("APP_URL", "http://localhost:3000")  # Default for local dev
 
 if not openrouter_api_key:
     logger.warning(
@@ -72,81 +78,99 @@ async def options_chat():
 
 async def generate_streaming_response(client, url, headers, json_data):
     """Generate a streaming response from OpenRouter."""
-    async with client.stream(
-        "POST", url, headers=headers, json=json_data, timeout=90.0
-    ) as response:
-        response.raise_for_status()
+    try:
+        async with client.stream(
+            "POST", url, headers=headers, json=json_data, timeout=90.0
+        ) as response:
+            response.raise_for_status()  # Raises HTTPStatusError for 4xx/5xx
 
-        # Buffer for accumulating partial chunks
-        buffer = ""
+            # Buffer for accumulating partial chunks
+            buffer = ""
 
-        async for chunk in response.aiter_bytes():
-            if chunk.strip():
-                try:
-                    # Parse the SSE format
-                    chunk_str = chunk.decode("utf-8")
+            async for chunk in response.aiter_bytes():
+                if chunk.strip():
+                    try:
+                        # Parse the SSE format
+                        chunk_str = chunk.decode("utf-8")
 
-                    # Add to buffer and process complete lines
-                    buffer += chunk_str
-                    lines = buffer.split("\n")
+                        # Add to buffer and process complete lines
+                        buffer += chunk_str
+                        lines = buffer.split("\n")
 
-                    # Keep the last line which might be incomplete
-                    buffer = lines[-1]
-                    complete_lines = lines[:-1]
+                        # Keep the last line which might be incomplete
+                        buffer = lines[-1]
+                        complete_lines = lines[:-1]
 
-                    for line in complete_lines:
-                        if line.startswith("data:") and line.strip() != "data: [DONE]":
-                            try:
-                                json_str = line[5:].strip()  # Remove 'data: ' prefix
-                                if json_str:
-                                    chunk_data = json.loads(json_str)
-                                    content = (
-                                        chunk_data.get("choices", [{}])[0]
-                                        .get("delta", {})
-                                        .get("content", "")
+                        for line in complete_lines:
+                            if line.startswith("data:") and line.strip() != "data: [DONE]":
+                                try:
+                                    json_str = line[5:].strip()  # Remove 'data: ' prefix
+                                    if json_str:
+                                        chunk_data = json.loads(json_str)
+                                        content = (
+                                            chunk_data.get("choices", [{}])[0]
+                                            .get("delta", {})
+                                            .get("content", "")
+                                        )
+                                        if content:
+                                            data_to_yield = {"content": content}
+                                            json_string = json.dumps(data_to_yield)
+                                            yield f"data: {json_string}\n\n"
+                                except json.JSONDecodeError as e:
+                                    logger.warning(
+                                        "Incomplete JSON chunk received: %s. Error: %s",
+                                        line,
+                                        e,
                                     )
-                                    if content:
-                                        data_to_yield = {"content": content}
-                                        json_string = json.dumps(data_to_yield)
-                                        yield f"data: {json_string}\n\n"
-                            except json.JSONDecodeError as e:
-                                logger.warning(
-                                    "Incomplete JSON chunk received: %s. Error: %s",
-                                    line,
-                                    e,
+                                    # Don't yield malformed data
+                            elif line.strip() == "data: [DONE]":
+                                yield "data: [DONE]\n\n"
+                    except (ValueError, UnicodeDecodeError) as e:
+                        logger.error("Error processing chunk: %s", str(e))
+                        continue
+
+            # Clean up any remaining buffer and try to process it
+            if buffer.strip():
+                try:
+                    if buffer.startswith("data:") and buffer.strip() != "data: [DONE]":
+                        json_str = buffer[5:].strip()
+                        if json_str and json_str != "[DONE]":
+                            try:
+                                chunk_data = json.loads(json_str)
+                                content = (
+                                    chunk_data.get("choices", [{}])[0]
+                                    .get("delta", {})
+                                    .get("content", "")
                                 )
-                                # Don't yield malformed data
-                        elif line.strip() == "data: [DONE]":
-                            yield "data: [DONE]\n\n"
+                                if content:
+                                    yield f"data: {json.dumps({'content': content})}\n\n"
+                            except json.JSONDecodeError:
+                                # Skip malformed JSON in final buffer
+                                pass
+                    elif buffer.strip() == "data: [DONE]":
+                        yield "data: [DONE]\n\n"
                 except (ValueError, UnicodeDecodeError) as e:
-                    logger.error("Error processing chunk: %s", str(e))
-                    continue
+                    logger.error("Error processing final buffer: %s", str(e))
 
-        # Clean up any remaining buffer and try to process it
-        if buffer.strip():
-            try:
-                if buffer.startswith("data:") and buffer.strip() != "data: [DONE]":
-                    json_str = buffer[5:].strip()
-                    if json_str and json_str != "[DONE]":
-                        try:
-                            chunk_data = json.loads(json_str)
-                            content = (
-                                chunk_data.get("choices", [{}])[0]
-                                .get("delta", {})
-                                .get("content", "")
-                            )
-                            if content:
-                                yield f"data: {json.dumps({'content': content})}\n\n"
-                        except json.JSONDecodeError:
-                            # Skip malformed JSON in final buffer
-                            pass
-                elif buffer.strip() == "data: [DONE]":
-                    yield "data: [DONE]\n\n"
-            except (ValueError, UnicodeDecodeError) as e:
-                logger.error("Error processing final buffer: %s", str(e))
-
-        if not buffer.strip().endswith("[DONE]"):
-            yield "data: [DONE]\n\n"
+            if not buffer.strip().endswith("[DONE]"):
+                yield "data: [DONE]\n\n"
+                
+    except httpx.HTTPStatusError as e:
+        error_detail = e.response.text or f"OpenRouter returned status {e.response.status_code}"
+        logger.error(f"OpenRouter HTTPStatusError during stream setup: {e.response.status_code} - {error_detail}")
+        error_content = {"error": f"OpenRouter API error ({e.response.status_code}): {error_detail}"}
+        yield f"data: {json.dumps(error_content)}\n\n"
+        yield "data: [DONE]\n\n"
+    except httpx.RequestError as e: # Network errors
+        logger.error(f"OpenRouter RequestError during stream setup: {str(e)}")
+        error_content = {"error": f"Network error connecting to OpenRouter: {str(e)}"}
+        yield f"data: {json.dumps(error_content)}\n\n"
+        yield "data: [DONE]\n\n"
+    except Exception as e: # Other unexpected errors
+        logger.error(f"Unexpected error during OpenRouter stream setup: {str(e)}", exc_info=True)
+        error_content = {"error": f"Unexpected error setting up stream with OpenRouter: {str(e)}"}
+        yield f"data: {json.dumps(error_content)}\n\n"
+        yield "data: [DONE]\n\n"
 
 
 def select_model(text: str, context_type: str) -> str:
@@ -222,7 +246,7 @@ async def chat(message: Message):
     headers = {
         "Authorization": f"Bearer {openrouter_api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:3000",
+        "HTTP-Referer": APP_URL,  # Use the configurable APP_URL
         "X-Title": "AgriOrbit",
     }
 
