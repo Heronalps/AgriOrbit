@@ -85,7 +85,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
-import { useProductStore } from '../../stores/productStore'
 import { useDraggable } from '../../composables/useDraggable'
 import {
   useChatService,
@@ -98,7 +97,6 @@ import PPanel from 'primevue/panel'
 import ScrollPanel from 'primevue/scrollpanel'
 
 // Store instances
-const productStore = useProductStore()
 
 // Chat widget DOM element reference
 const chatWidgetRef = ref<HTMLElement | null>(null)

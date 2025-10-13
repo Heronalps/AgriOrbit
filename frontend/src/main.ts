@@ -8,16 +8,6 @@ import App from './App.vue'
 
 // Import PrimeVue and required components
 import PrimeVue from 'primevue/config'
-import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
-import Textarea from 'primevue/textarea'
-import Card from 'primevue/card'
-import Dialog from 'primevue/dialog'
-import Dropdown from 'primevue/dropdown'
-import Panel from 'primevue/panel'
-import Calendar from 'primevue/calendar'
-import OverlayPanel from 'primevue/overlaypanel'
-import Tooltip from 'primevue/tooltip'
 
 // Import PrimeVue styles
 import 'primevue/resources/themes/lara-light-green/theme.css' // base theme
@@ -30,19 +20,7 @@ const app = createApp(App)
 // Register PrimeVue
 app.use(PrimeVue, { ripple: true })
 
-// Register PrimeVue components
-app.component('PButton', Button)
-app.component('PInputText', InputText)
-app.component('PTextarea', Textarea)
-app.component('PCard', Card)
-app.component('PDialog', Dialog)
-app.component('PDropdown', Dropdown)
-app.component('PPanel', Panel)
-app.component('PCalendar', Calendar)
-app.component('POverlayPanel', OverlayPanel)
-
-// Register PrimeVue directives
-app.directive('tooltip', Tooltip)
+// PrimeVue components are now imported directly into the components that use them.
 
 app.use(pinia)
 

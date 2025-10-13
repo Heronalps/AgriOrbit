@@ -6,7 +6,6 @@ import { useProductStore } from './productStore' // To access selected product d
 
 export interface PointDataState {
   clickedPoint: ClickedPointType
-  currentMapSelectionCoordinates: { longitude: number; latitude: number } | null
 }
 
 export const usePointDataStore = defineStore('pointDataStore', {
@@ -17,58 +16,9 @@ export const usePointDataStore = defineStore('pointDataStore', {
       isLoading: false,
       errorMessage: null,
     } as ClickedPointType,
-    currentMapSelectionCoordinates: null,
   }),
 
   actions: {
-    /**
-     * Sets the screen and geographical coordinates of a point clicked on the map.
-     * This is typically used to position a popup.
-     * @param x - Screen x-coordinate.
-     * @param y - Screen y-coordinate.
-     * @param longitude - Geographical longitude.
-     * @param latitude - Geographical latitude.
-     */
-    setClickedPointCoordinates(
-      x: number,
-      y: number,
-      longitude: number,
-      latitude: number,
-    ) {
-      this.clickedPoint = {
-        ...this.clickedPoint, // Preserve existing properties like value, isLoading, errorMessage
-        x,
-        y,
-        longitude,
-        latitude,
-        show: true, // Initially show, data loading will update this
-      }
-    },
-
-    /**
-     * Sets the current map selection coordinates, used for a "pinned" point or area of interest.
-     * This might trigger other reactive processes that depend on this pinned location.
-     * @param longitude - Geographical longitude.
-     * @param latitude - Geographical latitude.
-     */
-    setCurrentMapSelectionCoordinates(longitude: number, latitude: number) {
-      this.currentMapSelectionCoordinates = { longitude, latitude }
-      // console.log('[pointDataStore] currentMapSelectionCoordinates updated:', JSON.parse(JSON.stringify(this.currentMapSelectionCoordinates)));
-    },
-
-    /**
-     * Clears the clicked point data and hides any associated UI elements (e.g., popup).
-     */
-    clearClickedPoint() {
-      this.clickedPoint = {
-        show: false,
-        value: null,
-        isLoading: false,
-        errorMessage: null,
-        // x, y, longitude, latitude can be left as is or cleared depending on desired behavior
-      }
-    },
-
     /**
      * Fetches the data value for the selected product at given geographical coordinates using a polygon.
      * Updates the clickedPoint state with the fetched value or an error message.

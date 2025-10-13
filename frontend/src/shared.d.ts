@@ -43,3 +43,30 @@ export interface ClickedPointType {
   errorMessage?: string | null // Error message if data fetching fails
   [key: string]: unknown // For any other dynamic properties
 }
+
+// --- GeoJSON Type Definitions ---
+
+/**
+ * Represents a GeoJSON Polygon geometry.
+ */
+export interface GeoJSONPolygon {
+  type: 'Polygon'
+  coordinates: number[][][] // Array of linear rings (outer ring, then inner rings)
+}
+
+/**
+ * Represents a generic GeoJSON Feature, which links a geometry to a set of properties.
+ * @template G - The type of the geometry (e.g., GeoJSONPolygon).
+ * @template P - The type of the properties object.
+ */
+export interface GeoJSONFeature<G, P = Record<string, unknown>> {
+  type: 'Feature'
+  geometry: G
+  properties: P
+}
+
+/**
+ * Specific type for the geometry payload expected by the API,
+ * which is a GeoJSON Feature containing a Polygon.
+ */
+export type ApiGeomType = GeoJSONFeature<GeoJSONPolygon>

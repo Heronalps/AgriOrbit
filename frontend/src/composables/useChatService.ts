@@ -223,19 +223,19 @@ export function useChatService(
     inputDisabled.value = true
 
     try {
-      let apiUrlToUse;
-      const configuredApiUrl = import.meta.env.VITE_API_URL;
+      let apiUrlToUse
+      const configuredApiUrl = import.meta.env.VITE_API_URL
 
       // Check if running in a production environment (like Vercel)
       if (import.meta.env.PROD) {
         // In production, always use a relative path to /chat
-        apiUrlToUse = '/chat';
+        apiUrlToUse = '/chat'
       } else {
         // In development, use VITE_API_URL if set and not empty, otherwise fallback to default local URL
         if (configuredApiUrl && configuredApiUrl.trim() !== '') {
-          apiUrlToUse = `${configuredApiUrl}/chat`;
+          apiUrlToUse = `${configuredApiUrl}/chat`
         } else {
-          apiUrlToUse = 'http://127.0.0.1:8157/chat'; // Default for local dev
+          apiUrlToUse = 'http://127.0.0.1:8157/chat' // Default for local dev
         }
       }
 
@@ -322,24 +322,11 @@ export function useChatService(
             ' Please select a product layer and then click on the map to get data for this location.'
         }
 
-        // messages.value.push({
-        //   text: await formatMessage(messageText, false),
-        //   isSent: false,
-        //   model: 'AgriBot',
-        // })
         await _addBotMessage(messageText)
       } else {
         if (farmDataMode.value) {
           farmDataMode.value = false
           contextType.value = ContextTypeEnum.GENERAL
-          // messages.value.push({
-          //   text: await formatMessage(
-          //     "Your farm location has been cleared. We're back to general chat.",
-          //     false,
-          //   ),
-          //   isSent: false,
-          //   model: 'AgriBot',
-          // })
           await _addBotMessage(
             "Your farm location has been cleared. We're back to general chat.",
           )
@@ -385,11 +372,6 @@ export function useChatService(
 
           lastProductId.value = newProduct.product_id // Ensure lastProductId is updated here
 
-          // messages.value.push({
-          //   text: await formatMessage(messageText, false), // formatMessage will handle markdown
-          //   isSent: false,
-          //   model: 'AgriBot',
-          // })
           await _addBotMessage(messageText)
         }
       }

@@ -49,9 +49,6 @@ export const useProductStore = defineStore('productStore', {
     getSelectedProduct(state): selectedProductType {
       return state.selectedProduct
     },
-    getSelectedDate(state): string {
-      return state.selectedProduct.date || ''
-    },
     getProductDates(state): Array<string> {
       // Ensure return type is string array
       if (!state.productEntries || !state.productEntries.results) return []
@@ -77,14 +74,6 @@ export const useProductStore = defineStore('productStore', {
       return dates && dates.length > 0
         ? dates[dates.length - 1].replaceAll('-', '/')
         : undefined
-    },
-    // Getter for isLoading state specific to product entries
-    isProductEntriesLoading(state): boolean {
-      return state.isLoading
-    },
-    // Getter for error state specific to product entries
-    getProductEntriesError(state): string | null {
-      return state.error
     },
   },
 
@@ -275,20 +264,6 @@ export const useProductStore = defineStore('productStore', {
         return null // Essential parameters missing
       }
       return computeTileLayerURL(this.selectedProduct as SelectedProductParams)
-    },
-
-    /**
-     * Generates and returns the tile layer URL for the current product and date.
-     * This would typically be used by a map component to display the product data.
-     * @returns {string | null} The tile layer URL or null if data is missing.
-     */
-    renderTileLayer(): string | null {
-      if (this.selectedProduct.product_id && this.selectedProduct.date) {
-        return computeTileLayerURL(
-          this.selectedProduct as SelectedProductParams,
-        ) // Pass the whole selectedProduct object, cast if needed
-      }
-      return null
     },
   },
 })

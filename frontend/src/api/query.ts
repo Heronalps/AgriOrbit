@@ -1,20 +1,10 @@
 import axios from '@/http-common'
-import type { SelectedProductParams } from '@/shared'
+import type { SelectedProductParams, ApiGeomType } from '@/shared'
 
-// GeoJSON type definitions
-export interface GeoJSONPolygon {
-  type: 'Polygon'
-  coordinates: number[][][] // Array of linear rings (outer ring, then inner rings)
-}
+export type { ApiGeomType }
+import { isAxiosError } from 'axios'
 
-export interface GeoJSONFeature<G, P = Record<string, unknown>> {
-  type: 'Feature'
-  geometry: G
-  properties: P
-}
-
-// Specific type for the geometry payload expected by the API
-export type ApiGeomType = GeoJSONFeature<GeoJSONPolygon>
+// GeoJSON type definitions are now in shared.d.ts
 
 interface QueryPayload {
   product_id: string
@@ -70,11 +60,18 @@ export async function queryValueByGeometry(
     })
     console.log('Received response from /query/:', response.data)
     return response.data
-  } catch (error: any) {
-    console.error(
-      'Error in queryValueByGeometry:',
-      error.response ? error.response.data : error.message,
-    )
+  } catch (error) {
+    if (isAxiosError(error)) {
+      console.error(
+        'Error in queryValueByGeometry:',
+        error.response ? error.response.data : error.message,
+      )
+    } else {
+      console.error(
+        'An unexpected error occurred in queryValueByGeometry:',
+        error,
+      )
+    }
     throw error // Re-throw to be handled by the calling action in the store
   }
 }

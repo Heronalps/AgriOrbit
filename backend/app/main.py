@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Any, AsyncGenerator
 
 import httpx
 import uvicorn
@@ -13,344 +14,271 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-# Configure logging
+# region: Logging and Environment Configuration
+# ==============================================================================
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# Load environment variables from .env file in config folder
-env_path = Path(__file__).parents[2] / "config" / ".env"
-load_dotenv(dotenv_path=env_path)
-logger.info("Loaded environment from %s", env_path)
+# Load environment variables from .env file in the config folder
+try:
+    env_path = Path(__file__).resolve().parents[2] / "config" / ".env"
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path)
+        logger.info("Successfully loaded environment variables from %s.", env_path)
+    else:
+        logger.info("No .env file found in config folder; using environment variables.")
+except Exception as e:
+    logger.warning(
+        "Could not load .env file. "
+        "Ensure you are in the correct working directory. Error: %s",
+        e,
+    )
 
 # Get allowed origins from environment variable, defaulting to localhost for development
 ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
 ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_STR.split(",")]
+# endregion
 
-app = FastAPI()
+# region: FastAPI Application Setup
+# ==============================================================================
+app = FastAPI(title="AgriBot API")
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,  # Use the configurable list
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# endregion
 
+# region: OpenRouter API Configuration and Models
+# ==============================================================================
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
-
-# Get the application URL from environment variable for the referer header
-APP_URL = os.getenv("APP_URL", "http://localhost:3000")  # Default for local dev
+APP_URL = os.getenv("APP_URL", "http://localhost:3000")
 
 if not openrouter_api_key:
     logger.warning(
-        "OPENROUTER_API_KEY environment variable is not set. Chat functionality will "
-        "not work."
+        "OPENROUTER_API_KEY environment variable is not set. "
+        "Chat functionality will not work."
     )
 
-# Default model settings
-DEFAULT_MODEL = "opengvlab/internvl3-2b:free"  # Efficient model for most queries
-ADVANCED_MODEL = (
-    "google/gemini-2.0-flash-exp:free"  # Higher capacity model for complex queries
-)
-FALLBACK_MODEL = (
-    "meta-llama/llama-3.2-3b-instruct:free"  # Fallback model if others fail
-)
-MAX_TOKENS = 1800  # Slightly reduced to avoid cutoffs at edge cases
-TOKEN_SAFETY_MARGIN = 200  # Buffer to prevent hitting limits
+# Model settings
+DEFAULT_MODEL = "opengvlab/internvl3-2b:free"
+ADVANCED_MODEL = "google/gemini-2.0-flash-exp:free"
+FALLBACK_MODEL = "meta-llama/llama-3.2-3b-instruct:free"
+MAX_TOKENS = 1800
+LONG_QUERY_THRESHOLD = 200
+# endregion
 
 
+# region: Pydantic Models
+# ==============================================================================
 class Message(BaseModel):
     """Represents a chat message from the user."""
 
     text: str
-    context_type: str = "general"  # Can be "general", "farm_selected", or "data_loaded"
-    use_streaming: bool = True  # Whether to use streaming responses
+    context_type: str = "general"
+    use_streaming: bool = True
 
 
-@app.options("/chat")
-async def options_chat():
-    """Handle OPTIONS requests for the /chat endpoint, typically for CORS preflight."""
-    return {"message": "OK"}
+# endregion
 
 
-async def generate_streaming_response(client, url, headers, json_data):
-    """Generate a streaming response from OpenRouter."""
-    try:
-        async with client.stream(
-            "POST", url, headers=headers, json=json_data, timeout=90.0
-        ) as response:
-            response.raise_for_status()  # Raises HTTPStatusError for 4xx/5xx
-
-            # Buffer for accumulating partial chunks
-            buffer = ""
-
-            async for chunk in response.aiter_bytes():
-                if chunk.strip():
-                    try:
-                        # Parse the SSE format
-                        chunk_str = chunk.decode("utf-8")
-
-                        # Add to buffer and process complete lines
-                        buffer += chunk_str
-                        lines = buffer.split("\n")
-
-                        # Keep the last line which might be incomplete
-                        buffer = lines[-1]
-                        complete_lines = lines[:-1]
-
-                        for line in complete_lines:
-                            if line.startswith("data:") and line.strip() != "data: [DONE]":
-                                try:
-                                    json_str = line[5:].strip()  # Remove 'data: ' prefix
-                                    if json_str:
-                                        chunk_data = json.loads(json_str)
-                                        content = (
-                                            chunk_data.get("choices", [{}])[0]
-                                            .get("delta", {})
-                                            .get("content", "")
-                                        )
-                                        if content:
-                                            data_to_yield = {"content": content}
-                                            json_string = json.dumps(data_to_yield)
-                                            yield f"data: {json_string}\n\n"
-                                except json.JSONDecodeError as e:
-                                    logger.warning(
-                                        "Incomplete JSON chunk received: %s. Error: %s",
-                                        line,
-                                        e,
-                                    )
-                                    # Don't yield malformed data
-                            elif line.strip() == "data: [DONE]":
-                                yield "data: [DONE]\n\n"
-                    except (ValueError, UnicodeDecodeError) as e:
-                        logger.error("Error processing chunk: %s", str(e))
-                        continue
-
-            # Clean up any remaining buffer and try to process it
-            if buffer.strip():
-                try:
-                    if buffer.startswith("data:") and buffer.strip() != "data: [DONE]":
-                        json_str = buffer[5:].strip()
-                        if json_str and json_str != "[DONE]":
-                            try:
-                                chunk_data = json.loads(json_str)
-                                content = (
-                                    chunk_data.get("choices", [{}])[0]
-                                    .get("delta", {})
-                                    .get("content", "")
-                                )
-                                if content:
-                                    yield f"data: {json.dumps({'content': content})}\n\n"
-                            except json.JSONDecodeError:
-                                # Skip malformed JSON in final buffer
-                                pass
-                    elif buffer.strip() == "data: [DONE]":
-                        yield "data: [DONE]\n\n"
-                except (ValueError, UnicodeDecodeError) as e:
-                    logger.error("Error processing final buffer: %s", str(e))
-
-            if not buffer.strip().endswith("[DONE]"):
-                yield "data: [DONE]\n\n"
-                
-    except httpx.HTTPStatusError as e:
-        error_detail = e.response.text or f"OpenRouter returned status {e.response.status_code}"
-        logger.error(f"OpenRouter HTTPStatusError during stream setup: {e.response.status_code} - {error_detail}")
-        error_content = {"error": f"OpenRouter API error ({e.response.status_code}): {error_detail}"}
-        yield f"data: {json.dumps(error_content)}\n\n"
-        yield "data: [DONE]\n\n"
-    except httpx.RequestError as e: # Network errors
-        logger.error(f"OpenRouter RequestError during stream setup: {str(e)}")
-        error_content = {"error": f"Network error connecting to OpenRouter: {str(e)}"}
-        yield f"data: {json.dumps(error_content)}\n\n"
-        yield "data: [DONE]\n\n"
-    except Exception as e: # Other unexpected errors
-        logger.error(f"Unexpected error during OpenRouter stream setup: {str(e)}", exc_info=True)
-        error_content = {"error": f"Unexpected error setting up stream with OpenRouter: {str(e)}"}
-        yield f"data: {json.dumps(error_content)}\n\n"
-        yield "data: [DONE]\n\n"
-
-
+# region: OpenRouter Service Logic
+# ==============================================================================
 def select_model(text: str, context_type: str) -> str:
-    """
-    Select an appropriate LLM model based on the query complexity and context type.
-
-    Args:
-        text: The user's input text.
-        context_type: The context of the conversation (e.g., "general",
-                      "farm_selected", "data_loaded").
-
-    Returns:
-        The string identifier of the selected model.
-    """
-    text_length = len(text)
-
-    # Use advanced model for data analysis or longer queries
-    if context_type == "data_loaded" or text_length > 200:
+    """Selects an appropriate LLM model based on query complexity and context."""
+    if context_type == "data_loaded" or len(text) > LONG_QUERY_THRESHOLD:
         return ADVANCED_MODEL
-
-    # Use default model for simpler queries
     return DEFAULT_MODEL
 
 
-@app.post("/chat")
-async def chat(message: Message):
-    """Handle chat requests and interact with OpenRouter."""
-    if not openrouter_api_key:
-        error_message = (
-            "OpenRouter API key is not set. "
-            "Please add OPENROUTER_API_KEY to your .env file."
-        )
-        logger.error(error_message)
-        raise HTTPException(status_code=500, detail=error_message)
-
-    # Set system prompt based on context type
-    base_system_prompt = (
+def get_system_prompt(context_type: str) -> str:
+    """Gets the system prompt based on the conversation context."""
+    base_prompt = (
         "You are AgriBot, a helpful assistant specialized in agricultural advice and "
         "data interpretation. Provide insightful and actionable farming "
         "recommendations based on location data, soil conditions, and "
         "agricultural metrics."
     )
-
-    if message.context_type == "farm_selected":
-        system_prompt = (
-            f"{base_system_prompt} The user has selected a farm location. Analyze this "
-            "geographical context to provide location-specific agricultural insights "
-            "such as suitable crops, regional climate patterns, and local best "
-            "practices. When specific values are provided (like NDVI, soil moisture, "
-            "etc.), interpret them in practical terms for the farmer."
-        )
-    elif message.context_type == "data_loaded":
-        system_prompt = (
-            f"{base_system_prompt} The user has loaded farm data. Analyze the provided "
-            "metrics and offer meaningful interpretations. For example, explain what "
-            "the values mean for crop health, soil conditions, or irrigation needs. "
-            "Translate technical data into practical farming advice. If coordinates "
-            "are provided, consider regional agricultural patterns for that location."
-        )
-    else:
-        system_prompt = (
-            f"{base_system_prompt} Provide general farming information and encourage "
-            "the user to select a farm location on the map for more tailored advice. "
-            "Explain the benefits of location-specific agricultural insights."
-        )
-
-    # Select appropriate model based on the query
-    selected_model = select_model(message.text, message.context_type)
-    logger.info(
-        "Selected model: %s for context type: %s", selected_model, message.context_type
-    )
-
-    headers = {
-        "Authorization": f"Bearer {openrouter_api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": APP_URL,  # Use the configurable APP_URL
-        "X-Title": "AgriOrbit",
+    prompts = {
+        "farm_selected": f"{base_prompt} The user has selected a farm location...",
+        "data_loaded": f"{base_prompt} The user has loaded farm data...",
+        "general": f"{base_prompt} Provide general farming information...",
     }
+    prompt = prompts.get(context_type, prompts["general"])
+    return f"{prompt} All responses must be in English."
 
-    # Setup model fallbacks
-    models_to_try = [selected_model, FALLBACK_MODEL]
 
-    # Add models parameter for OpenRouter to enable auto-fallbacks
-    json_data = {
-        "model": selected_model,
-        "models": models_to_try,
+def _prepare_request_payload(
+    model: str, system_prompt: str, user_text: str, stream: bool
+) -> dict[str, Any]:
+    """Prepares the JSON payload for the OpenRouter API request."""
+    return {
+        "model": model,
+        "models": [model, FALLBACK_MODEL],
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message.text},
+            {"role": "user", "content": user_text},
         ],
         "max_tokens": MAX_TOKENS,
         "temperature": 0.7,
+        "stream": stream,
     }
 
-    try:
-        if message.use_streaming:
-            # Handle streaming response
-            logger.info(
-                "Sending streaming request to OpenRouter with models: %s", models_to_try
-            )
 
-            async def stream_response():
-                async with httpx.AsyncClient() as client:
-                    async for chunk in generate_streaming_response(
-                        client,
-                        "https://openrouter.ai/api/v1/chat/completions",
-                        headers=headers,
-                        json_data={**json_data, "stream": True},
-                    ):
-                        yield chunk
+def _prepare_headers() -> dict[str, str]:
+    """Prepares the headers for the OpenRouter API request."""
+    return {
+        "Authorization": f"Bearer {openrouter_api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": APP_URL,
+        "X-Title": "AgriOrbit",
+    }
 
-            return StreamingResponse(stream_response(), media_type="text/event-stream")
-        else:
-            # Handle non-streaming response
-            logger.info(
-                "Sending non-streaming request to OpenRouter with models: %s",
-                models_to_try,
-            )
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers=headers,
-                    json=json_data,
-                    timeout=90.0,
-                )
-                response.raise_for_status()
-
-                logger.info("Received response from OpenRouter")
-                openrouter_response = response.json()
-
-                # Handle error responses
-                if "error" in openrouter_response:
-                    error_msg = openrouter_response["error"].get(
-                        "message", "Unknown error"
+async def _process_stream_chunk(chunk: str, buffer: str) -> tuple[str, str]:
+    """Processes a single chunk from the streaming response."""
+    buffer += chunk
+    lines = buffer.split("\n")
+    buffer = lines[-1]
+    processed_data = ""
+    for line in lines[:-1]:
+        if line.startswith("data:") and line.strip() != "data: [DONE]":
+            try:
+                json_str = line[5:].strip()
+                if json_str:
+                    chunk_data = json.loads(json_str)
+                    content = (
+                        chunk_data.get("choices", [{}])[0]
+                        .get("delta", {})
+                        .get("content", "")
                     )
-                    logger.error("OpenRouter error: %s", error_msg)
-                    raise HTTPException(status_code=400, detail=error_msg)
+                    if content:
+                        data_to_yield = {"content": content}
+                        processed_data += f"data: {json.dumps(data_to_yield)}\n\n"
+            except json.JSONDecodeError:
+                logger.warning("Incomplete JSON chunk received: %s", line)
+        elif line.strip() == "data: [DONE]":
+            processed_data += "data: [DONE]\n\n"
+            break
+    return processed_data, buffer
 
-                # Check for valid response format
-                if (
-                    "choices" not in openrouter_response
-                    or len(openrouter_response["choices"]) == 0
-                ):
-                    logger.error("Unexpected response format: %s", openrouter_response)
-                    raise ValueError("Invalid response format from OpenRouter")
 
-                # Log which model was actually used
-                used_model = openrouter_response.get("model", selected_model)
-                if used_model != selected_model:
-                    logger.info("Fallback model used: %s", used_model)
+async def generate_streaming_response(
+    json_data: dict,
+) -> AsyncGenerator[str, None]:
+    """Generates a streaming response from OpenRouter."""
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    try:
+        async with httpx.AsyncClient() as client:
+            async with client.stream(
+                "POST", url, headers=_prepare_headers(), json=json_data, timeout=90.0
+            ) as response:
+                response.raise_for_status()
+                buffer = ""
+                async for chunk in response.aiter_bytes():
+                    if chunk.strip():
+                        processed_data, buffer = await _process_stream_chunk(
+                            chunk.decode("utf-8"), buffer
+                        )
+                        if processed_data:
+                            yield processed_data
+                if not buffer.strip().endswith("[DONE]"):
+                    yield "data: [DONE]\n\n"
+    except httpx.HTTPStatusError as e:
+        error_detail = e.response.text or f"Status {e.response.status_code}"
+        logger.error(
+            "OpenRouter HTTPStatusError: %s - %s", e.response.status_code, error_detail
+        )
+        error_content = {
+            "error": f"OpenRouter API error ({e.response.status_code}): {error_detail}"
+        }
+        yield f"data: {json.dumps(error_content)}\n\n"
+        yield "data: [DONE]\n\n"
+    except Exception as e:
+        logger.error("Unexpected error during streaming: %s", e, exc_info=True)
+        error_content = {"error": f"Unexpected error: {e}"}
+        yield f"data: {json.dumps(error_content)}\n\n"
+        yield "data: [DONE]\n\n"
 
-                reply_text = openrouter_response["choices"][0]["message"]["content"]
-                logger.info("Response length: %s characters", len(reply_text))
 
-                return {"response": reply_text}
+# endregion
+
+
+# region: API Endpoints
+# ==============================================================================
+@app.options("/chat")
+async def options_chat():
+    """Handles OPTIONS requests for CORS preflight."""
+    return {"message": "OK"}
+
+
+@app.post("/chat")
+async def chat(message: Message):
+    """Handles chat requests and interacts with OpenRouter."""
+    if not openrouter_api_key:
+        raise HTTPException(
+            status_code=500, detail="OpenRouter API key is not configured."
+        )
+
+    try:
+        selected_model = select_model(message.text, message.context_type)
+        system_prompt = get_system_prompt(message.context_type)
+        json_data = _prepare_request_payload(
+            selected_model, system_prompt, message.text, message.use_streaming
+        )
+
+        logger.info(
+            "Sending request to OpenRouter with model: %s (streaming: %s)",
+            selected_model,
+            message.use_streaming,
+        )
+
+        if message.use_streaming:
+            return StreamingResponse(
+                generate_streaming_response(json_data),
+                media_type="text/event-stream",
+            )
+
+        # Non-streaming logic
+        headers = _prepare_headers()
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                url, headers=headers, json=json_data, timeout=90.0
+            )
+            response.raise_for_status()
+            return response.json()
+
     except httpx.HTTPStatusError as e:
         logger.error("HTTP error: %s - %s", e.response.status_code, e.response.text)
         raise HTTPException(
             status_code=e.response.status_code,
             detail=f"OpenRouter API error: {e.response.text}",
-        ) from e
-    except httpx.RequestError as e:
-        logger.error("Request error: %s", str(e))
-        raise HTTPException(status_code=500, detail=f"Network error: {str(e)}") from e
-    except ValueError as e:
-        logger.exception("Unexpected error in chat endpoint (ValueError): %s", str(e))
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        )
     except Exception as e:
-        logger.exception("Unexpected critical error in chat endpoint: %s", str(e))
+        logger.exception("Unexpected critical error in chat endpoint: %s", e)
         raise HTTPException(
-            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
-        ) from e
+            status_code=500, detail=f"An unexpected error occurred: {e}"
+        )
 
 
+# endregion
+
+
+# region: Main Execution
+# ==============================================================================
 def main():
-    """Run the FastAPI app."""
+    """Runs the FastAPI app."""
     logger.info("Starting API server")
     uvicorn.run("backend.app.main:app", host="127.0.0.1", port=8157, reload=True)
 
 
 if __name__ == "__main__":
     main()
+# endregion

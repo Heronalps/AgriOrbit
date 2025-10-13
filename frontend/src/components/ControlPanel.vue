@@ -116,25 +116,6 @@ watch(
   { immediate: true },
 )
 
-// Watch for product_id changes
-watch(
-  () => productStore.getSelectedProduct.product_id,
-  () => {
-    /* placeholder for product-specific logic */
-  },
-)
-
-// Watch for basemap changes
-watch(
-  () => mapStore.selectedBasemap,
-  (newBasemap?: string) => {
-    if (newBasemap) {
-      // No need to manually update dropdown with PrimeVue's two-way binding
-    }
-  },
-  { immediate: true },
-)
-
 const handleProductSelectionEvent = (event: {
   originalEvent: Event
   value: unknown
@@ -247,14 +228,6 @@ const goToNextDate = async (): Promise<void> => {
   }
 }
 
-/**
- * Filter function for PCalendar to only allow dates available in the product
- */
-// const isDateSelectable = (date: Date) => {
-//   const formattedDate = new Date(date).toLocaleDateString('en-CA') // Format as YYYY-MM-DD
-//   return allowedDatesForPicker.value.includes(formattedDate.replace(/-/g, '/'))
-// }
-
 // Computed properties for select components
 const productsForSelect = computed<Array<Record<string, unknown>>>(() => {
   return availableDataStore.getProducts || []
@@ -263,10 +236,6 @@ const productsForSelect = computed<Array<Record<string, unknown>>>(() => {
 const cropmasksForSelect = computed<CropmaskResultItem[]>(() => {
   return availableDataStore.getCropmasks || []
 })
-
-// const allowedDatesForPicker = computed<string[]>(() => {
-//   return (productStore.getProductDates || []).map((dateStr) => dateStr.replace(/-/g, '/'))
-// })
 
 const selectedProductForDropdown = ref<string | undefined>(
   productStore.getSelectedProduct.product_id,
@@ -301,15 +270,6 @@ watch(
     selectedBasemapForDropdown.value = newBasemap
   },
 )
-
-const disabledDates = ref<Date[]>([]) // Placeholder for specific disabled dates
-const disabledDays = ref<number[]>([]) // Placeholder for disabled days of the week (0=Sun, 6=Sat)
-const minSelectableDate = ref<Date | undefined>(undefined) // Placeholder
-const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
-
-// const handlePanelResize = (event: { width: number, height: number }) => {
-//   dimensions.value = { width: event.width, height: event.height };
-// };
 </script>
 
 <template>
@@ -356,10 +316,6 @@ const maxSelectableDate = ref<Date | undefined>(undefined) // Placeholder
             placeholder="Select a Date"
             class="w-full"
             :show-icon="false"
-            :min-date="minSelectableDate"
-            :max-date="maxSelectableDate"
-            :disabled-dates="disabledDates"
-            :disabled-days="disabledDays"
             :pt="calendarPt"
             @update:model-value="handleDateSelection"
           />

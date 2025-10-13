@@ -55,8 +55,6 @@ export type AvailableDataState = {
   cropmasks: CropmaskAPIResponse
   /** Holds the list of available products. */
   products: ProductAPIResponse
-  /** Holds the list of available administrative layers. (Currently not implemented) */
-  adminLayers: Array<Record<string, unknown>>
   /** Cache for product data to reduce API calls. */
   productCache: ProductAPIResponse | null
   /** Cache for cropmask data. */
@@ -78,7 +76,6 @@ export const useAvailableDataStore = defineStore('availableDataStore', {
   state: (): AvailableDataState => ({
     cropmasks: { results: [] }, // Initialize with empty results array
     products: { results: [] }, // Initialize with empty results array
-    adminLayers: [],
     productCache: null,
     cropmaskCache: null,
     productCacheTimestamp: null,
@@ -101,15 +98,6 @@ export const useAvailableDataStore = defineStore('availableDataStore', {
      */
     getProducts(state): Array<productType> {
       return state.products.results
-    },
-    /**
-     * Retrieves the list of available administrative layers.
-     * @param {AvailableDataState} state - The current store state.
-     * @returns {Array<Record<string, unknown>>} The list of admin layers.
-     * @remarks This is currently not implemented and will return an empty array.
-     */
-    getAdminLayers(state): Array<Record<string, unknown>> {
-      return state.adminLayers
     },
   },
   actions: {
@@ -189,26 +177,6 @@ export const useAvailableDataStore = defineStore('availableDataStore', {
         // Optionally, clear cropmasks or leave stale data. Current behavior: retains stale data if any.
         // To clear: this.cropmasks = { results: [] };
       }
-    },
-
-    /**
-     * Placeholder action for loading available administrative layers.
-     * This functionality is not yet implemented.
-     * It currently ensures adminLayers remains an empty array.
-     */
-    async loadAvailableAdminLayers(): Promise<void> {
-      // console.warn('[availableDataStore] loadAvailableAdminLayers is not implemented yet.');
-      // Future implementation would fetch admin layers, potentially with caching:
-      // try {
-      //   // const data = await fetchAdminLayersApi(); // Assuming an API function fetchAdminLayersApi exists
-      //   // this.adminLayers = data;
-      //   // this.error = null;
-      // } catch (err) {
-      //   console.error('[availableDataStore] Failed to load available admin layers:', err);
-      //   this.error = err instanceof Error ? err.message : 'An unknown error occurred while fetching admin layers.';
-      //   // this.adminLayers = []; // Reset on error
-      // }
-      this.adminLayers = [] // Explicitly keep it empty or set to a default state
     },
   },
 })

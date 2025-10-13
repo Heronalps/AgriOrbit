@@ -26,14 +26,17 @@
 import { ref, onMounted, nextTick, ComponentPublicInstance } from 'vue'
 import PToolbar from 'primevue/toolbar'
 import PButton from 'primevue/button'
+import { useLocationStore } from '@/stores/locationStore'
+
+const locationStore = useLocationStore()
 
 // Define refs for the buttons
 const selectLocationButtonRef = ref<ComponentPublicInstance | null>(null)
 const generalChatButtonRef = ref<ComponentPublicInstance | null>(null)
 
 function triggerLocationSelection(): void {
-  // Dispatch a global event that MapView.vue listens to
-  window.dispatchEvent(new CustomEvent('activate-location-selection'))
+  console.log('[ActionToolbar] Triggering location selection via store.')
+  locationStore.startLocationSelection()
 }
 
 function triggerGeneralChat(): void {

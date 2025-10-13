@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "ag-advisor-backend",
   "version": "0.1.0",
   "private": true,
   "description": "FastAPI backend for the agricultural advice application",

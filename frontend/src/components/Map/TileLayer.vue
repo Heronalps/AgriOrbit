@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TileLayer } from '@deck.gl/geo-layers'
+import { TileLayer, type TileLayerProps } from '@deck.gl/geo-layers'
 import { BitmapLayer } from '@deck.gl/layers'
 import { inject, useAttrs, watch, onMounted } from 'vue'
 import type { Layer } from '@deck.gl/core'
@@ -23,9 +23,9 @@ const props = defineProps({
 
 const attrs = useAttrs()
 // Inject 'updateLayers' (plural) to match the provider in DeckGL.vue
-const updateLayers = inject<
-  ((layers: Layer<any, any> | Layer<any, any>[]) => void) | undefined
->('updateLayers')
+const updateLayers = inject<((layers: Layer | Layer[]) => void) | undefined>(
+  'updateLayers',
+)
 
 if (!updateLayers) {
   console.error(
@@ -35,9 +35,9 @@ if (!updateLayers) {
 
 /**
  * Creates a new Deck.gl TileLayer instance based on the current component attributes and props.
- * @returns {TileLayer<any, any> | null} A new TileLayer instance or null if updateLayers is not available.
+ * @returns {TileLayer | null} A new TileLayer instance or null if updateLayers is not available.
  */
-function createLayer(): TileLayer<any, any> | null {
+function createLayer(): TileLayer | null {
   if (!updateLayers) return null
 
   // Construct the TileLayer props, spreading current attributes
@@ -45,18 +45,27 @@ function createLayer(): TileLayer<any, any> | null {
   return new TileLayer({
     // renderSubLayers is a function that defines how individual tiles are rendered.
     // Here, it uses a BitmapLayer to display raster tile data.
-    renderSubLayers: (renderProps: any) => {
+    renderSubLayers: (props) => {
       const {
-        bbox: { west, south, east, north },
-      } = renderProps.tile
+        bbox, // The bounding box of the tile
+      } = props.tile
 
-      return new BitmapLayer(renderProps, {
-        data: null, // Data is sourced from the parent TileLayer's image property
-        image: renderProps.data, // The image URL or texture for the tile
-        bounds: [west, south, east, north], // Geographic bounds of the tile
-      })
+      // Type guard to check for GeoBoundingBox
+      if ('west' in bbox) {
+        const { west, south, east, north } = bbox
+        return new BitmapLayer(props, {
+          data: undefined, // Data is sourced from the parent TileLayer's image property
+          image: props.data, // The image URL or texture for the tile
+          bounds: [west, south, east, north], // Geographic bounds of the tile
+        })
+      }
+      // Handle NonGeoBoundingBox or return null if it's not the expected type
+      console.warn(
+        'TileLayer: Bounding box is not in the expected geographic format.',
+      )
+      return null
     },
-    ...attrs, // Spread component attributes (e.g., data URL, minZoom, maxZoom)
+    ...(attrs as TileLayerProps), // Spread component attributes (e.g., data URL, minZoom, maxZoom)
     // Explicitly pass defined props to ensure they are used if attrs doesn't pick them up as expected
     // though ...attrs should typically include them.
     id:

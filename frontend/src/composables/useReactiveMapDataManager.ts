@@ -1,126 +1,61 @@
-// frontend/src/composables/useReactiveMapDataManager.ts
-import { watch, effectScope, onScopeDispose } from 'vue'
+import { watch, onScopeDispose, effectScope } from 'vue'
 import { useProductStore } from '@/stores/productStore'
 import { usePointDataStore } from '@/stores/pointDataStore'
+import { useLocationStore } from '@/stores/locationStore'
 
 export function useReactiveMapDataManager() {
   const productStore = useProductStore()
   const pointDataStore = usePointDataStore()
+  const locationStore = useLocationStore()
   const scope = effectScope()
-
-  // Define an interface for the structure of our watched values
-  interface WatchedProductState {
-    productId: string
-    date: string
-    coordinates: {
-      longitude: number
-      latitude: number
-    }
-  }
 
   scope.run(() => {
     watch(
-      () => {
-        const pid = productStore.selectedProduct.product_id
-        const pdate = productStore.selectedProduct.date
-        const pcoords = pointDataStore.currentMapSelectionCoordinates
-
-        // Only return a "complete" object if all parts are defined and valid.
-        // A valid pcoords object must have longitude and latitude.
-        if (
-          pid &&
-          pdate &&
-          pcoords &&
-          typeof pcoords.longitude === 'number' &&
-          typeof pcoords.latitude === 'number'
-        ) {
-          return {
-            productId: pid,
-            date: pdate,
-            coordinates: pcoords, // Return the actual reactive coordinates object
-          } as WatchedProductState // Explicitly cast to our defined type
-        }
-        // Otherwise, return null to signify an incomplete or invalid state.
-        // This prevents the watcher callback from processing partial or invalid data.
-        return null
-      },
-      async (
-        newValues: WatchedProductState | null,
-        oldValues: WatchedProductState | null,
+      // Watch for changes in the core dependencies
+      [
+        () => locationStore.targetLocation,
+        () => productStore.selectedProduct?.product_id,
+        () => productStore.selectedProduct?.date,
+      ],
+      (
+        [newLocation, newProductId, newDate],
+        [oldLocation, oldProductId, oldDate],
       ) => {
-        const newIsComplete = newValues !== null
-        const oldIsComplete = oldValues !== null
+        // 1. Guard: Ensure all necessary data is present before proceeding.
+        if (!newLocation || !newProductId || !newDate) {
+          console.log(
+            '[useReactiveMapDataManager] Watcher: Not all dependencies are ready. Skipping.',
+          )
+          return
+        }
 
-        // Log the basic transition, indicating whether the current state is considered complete and valid.
-        console.log(
-          '[useReactiveMapDataManager] Watcher callback invoked. New state:',
-          newIsComplete
-            ? JSON.parse(JSON.stringify(newValues))
-            : 'incomplete/invalid',
-          'Old state:',
-          oldIsComplete
-            ? JSON.parse(JSON.stringify(oldValues))
-            : 'incomplete/invalid',
-        )
+        // 2. Check for meaningful changes to prevent loops.
+        const locationChanged =
+          JSON.stringify(newLocation) !== JSON.stringify(oldLocation)
+        const productChanged = newProductId !== oldProductId
+        const dateChanged = newDate !== oldDate
 
-        // Proceed only if newValues is not null (i.e., all required data is present and valid).
-        if (newIsComplete) {
-          const { productId, date, coordinates } = newValues! // newValues is not null here
-
-          let hasMeaningfulChange = false
-          if (!oldIsComplete) {
-            // If there were no old complete values (state was previously incomplete/invalid),
-            // and now we have complete newValues, it's a meaningful change.
-            hasMeaningfulChange = true
-          } else {
-            // oldValues exist and were complete, compare with newValues.
-            // newValues and oldValues structure is guaranteed here by the source function.
-            // oldValues is also not null here.
-            if (
-              productId !== oldValues!.productId ||
-              date !== oldValues!.date ||
-              coordinates.longitude !== oldValues!.coordinates.longitude ||
-              coordinates.latitude !== oldValues!.coordinates.latitude
-            ) {
-              hasMeaningfulChange = true
-            }
-          }
-
-          if (hasMeaningfulChange) {
-            console.log(
-              '[useReactiveMapDataManager] Conditions met for data load. ProductId:',
-              productId,
-              'Date:',
-              date,
-              'Coords:',
-              JSON.parse(JSON.stringify(coordinates)),
-            )
-            await pointDataStore.loadDataForClickedPoint(
-              coordinates.longitude,
-              coordinates.latitude,
-            )
-          } else {
-            console.log(
-              '[useReactiveMapDataManager] State is complete, but key data (productId, date, coordinates) remains effectively unchanged. No API call.',
-            )
-          }
+        if (locationChanged || productChanged || dateChanged) {
+          console.log(
+            '[useReactiveMapDataManager] Meaningful change detected. Loading data for farm location:',
+            {
+              productId: newProductId,
+              date: newDate,
+              coords: { lon: newLocation.longitude, lat: newLocation.latitude },
+            },
+          )
+          // 3. Load data only if there's a real change.
+          pointDataStore.loadDataForClickedPoint(
+            newLocation.longitude,
+            newLocation.latitude,
+          )
         } else {
-          // newValues is null (current state is incomplete)
-          if (oldIsComplete) {
-            // Transitioned from a complete state to an incomplete state
-            console.log(
-              '[useReactiveMapDataManager] Reactive data prerequisites became unmet. Waiting for complete data.',
-            )
-          } else {
-            // Was already incomplete (oldValues was null), and remains incomplete (newValues is null).
-            // This addresses the scenario of repeated "incomplete/invalid" logs.
-            console.log(
-              '[useReactiveMapDataManager] State remains incomplete. Waiting for all data prerequisites.',
-            )
-          }
+          console.log(
+            '[useReactiveMapDataManager] Watcher triggered, but no meaningful change in dependencies. Skipping query.',
+          )
         }
       },
-      { deep: true }, // deep: true is important for changes within the coordinates object if it's mutated.
+      { deep: true }, // Use deep watch for the location object
     )
   })
 

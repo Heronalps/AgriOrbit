@@ -5,7 +5,8 @@ typically provided as a child component. */
 import { viewStateType } from '@/shared'
 import { DECKGL_SETTINGS } from '@/utils/defaultSettings'
 // Import necessary types from Deck.gl
-import { Deck, type Layer } from '@deck.gl/core'
+import { Deck, type Layer, type PickingInfo } from '@deck.gl/core'
+import type { MjolnirGestureEvent } from 'mjolnir.js'
 import { onMounted, onBeforeUnmount, provide, useAttrs, watch } from 'vue'
 import { useMapViewState } from '@/composables/useMapViewState'
 
@@ -25,7 +26,7 @@ let deckInstance: Deck | null = null
  * @emits click - Emitted when the Deck.gl canvas is clicked, providing Deck.gl's `PickingInfo` and the original MouseEvent.
  */
 const emit = defineEmits<{
-  (e: 'click', payload: { info: any; event: Event }): void // Changed PickingInfo to any for now
+  (e: 'click', payload: { info: PickingInfo; event: MjolnirGestureEvent }): void
 }>()
 
 // Define component props to accept isSelectingLocation for cursor management
@@ -53,8 +54,7 @@ onMounted(() => {
       // Cast to viewStateType for type safety
       handleViewChange(newDeckViewState as viewStateType)
     },
-    onClick: (info: any, event: Event) => {
-      // Changed PickingInfo to any for now
+    onClick: (info: PickingInfo, event: MjolnirGestureEvent) => {
       // Emit a custom 'click' event with Deck.gl picking info and the original event
       emit('click', { info, event })
     },
@@ -95,10 +95,9 @@ function handleViewChange(newDeckViewState: viewStateType): void {
  * Updates the layers rendered by the Deck.gl instance.
  * This function is provided to child components (e.g., TileLayer),
  * enabling them to dynamically manage the data layers on the map.
- * @param {Layer<any, any>[]} newLayers - An array of new Deck.gl layer instances to render.
+ * @param {Layer[]} newLayers - An array of new Deck.gl layer instances to render.
  */
-function updateLayers(newLayers: Layer<any, any>[]): void {
-  // Changed Layer[] to Layer<any, any>[]
+function updateLayers(newLayers: Layer[]): void {
   if (deckInstance) {
     deckInstance.setProps({ layers: newLayers })
   }

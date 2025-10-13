@@ -29,11 +29,9 @@ langgraph = "*"
 openai = "*"
 
 [tool.poetry.group.dev.dependencies]
-black = "*"
-flake8 = "*"
+ruff = "*"
 pytest = "*"
 pytest-asyncio = "*"
-isort = "*"
 
 [build-system]
 requires = ["poetry-core"]
@@ -44,11 +42,11 @@ testpaths = ["backend/tests"]
 python_files = ["test_*.py"]
 asyncio_default_fixture_loop_scope = "function"
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ['py39']
-include = '\.pyi?$'
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "C90", "N", "PL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["scripts"]
